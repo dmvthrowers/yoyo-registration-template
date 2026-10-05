@@ -18,7 +18,7 @@
  * Never rename a key once responses exist — add a new one instead.
  */
 
-import { contest, monthDay } from '@/contest.config';
+import { contest, competition, monthDay } from '@/contest.config';
 import { VOLUNTEER_ROLES } from './volunteer-roles';
 import { DIVISIONS } from './standings';
 
@@ -92,6 +92,13 @@ const NEXT = contest.nextShortName;
 const VENUE = contest.venue.name;
 /** Presenting sponsor name, or '' when there isn't one. */
 const SPONSOR: string = contest.presentedBy.name;
+/** "yo-yo", "kendama", … from contest.config.ts → competition.toy */
+const TOY = competition.toy.singular;
+const TOYS = competition.toy.plural;
+const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+/** Prize options; stored answers use these exact strings. */
+const PRIZE_TOY = cap(TOY);
+const PRIZE_ACCESSORY = 'Accessory';
 
 // ─── Shared option sets ──────────────────────────────────────────────────────
 
@@ -223,7 +230,7 @@ function weekendSection({ includeVendorSpend = true } = {}): SurveySection {
       hint: 'Tells the venue how many new visitors the contest brought in',
       options: ['No, I came for the contest', 'Maybe', 'Yes, I would have been there anyway'],
     },
-    { key: 'vendor_visit', kind: 'single', label: 'Did you stop at a yo-yo vendor table?', options: VENDOR_VISIT },
+    { key: 'vendor_visit', kind: 'single', label: 'Did you stop at a vendor table?', options: VENDOR_VISIT },
     // Only asked once organizers have filled in VENDORS.
     ...(VENDORS.length
       ? [{ key: 'vendors_visited', kind: 'multi', label: 'Which vendors?', hint: 'Tap all that apply', options: VENDORS, showIf: VENDOR_STOPPED } as SurveyQuestion]
@@ -291,7 +298,7 @@ function sponsorSection(sponsorView = false): SurveySection {
       },
       {
         key: 'sponsor_affinity', kind: 'single',
-        label: `Seeing ${SPONSOR} back a yo-yo contest, do you think more or less of them?`,
+        label: `Seeing ${SPONSOR} back a ${TOY} contest, do you think more or less of them?`,
         options: SPONSOR_AFFINITY,
       },
       {
@@ -381,7 +388,7 @@ const spectatorDay: SurveySection = {
   questions: [
     { key: 'watch_mode', kind: 'single', label: `How did you watch ${NAME}?`, hint: 'The livestream counts whether you watched live or the replay', options: WATCH_MODES, required: true },
     { key: 'heard_from', kind: 'single', label: `How did you hear about ${NAME}?`, options: HEARD_FROM, required: true },
-    { key: 'first_contest', kind: 'single', label: 'Was this your first yo-yo contest?', options: ['Yes, first one', 'No, been before'] },
+    { key: 'first_contest', kind: 'single', label: `Was this your first ${TOY} contest?`, options: ['Yes, first one', 'No, been before'] },
     { key: 'rsvped', kind: 'single', label: 'Did you RSVP online before the contest?', options: ['Yes', 'No, just showed up', 'Not sure'], hideIf: STREAM_ONLY },
     {
       key: 'time_on_site', kind: 'single', label: 'How long did you stay?',
@@ -497,16 +504,16 @@ const winnerPrizes: SurveySection = {
     },
     {
       key: 'prizes_received', kind: 'multi', label: 'What did you take home?', hint: 'Tap all that apply', required: true,
-      options: ['Yo-yo', 'String', 'Gift card', 'Sponsor product', 'Something else'],
+      options: [PRIZE_TOY, PRIZE_ACCESSORY, 'Gift card', 'Sponsor product', 'Something else'],
     },
     {
       // Prize bags are often packed on the day from sponsor drops, so this doubles as a record of what went out.
-      key: 'prize_items_detail', kind: 'short', label: 'Which yo-yo, string, or product did you get?', hint: 'Brand or model if you know it',
-      maxLength: 300, showIf: { key: 'prizes_received', anyOf: ['Yo-yo', 'String', 'Sponsor product', 'Something else'] },
+      key: 'prize_items_detail', kind: 'short', label: `Which ${TOY}, accessory, or product did you get?`, hint: 'Brand or model if you know it',
+      maxLength: 300, showIf: { key: 'prizes_received', anyOf: [PRIZE_TOY, PRIZE_ACCESSORY, 'Sponsor product', 'Something else'] },
     },
     {
-      key: 'gear_prize_rating', kind: 'scale5', label: 'Rate the yo-yo / string you got', scaleLabels: PRIZE_RATING_LABELS,
-      showIf: { key: 'prizes_received', anyOf: ['Yo-yo', 'String'] },
+      key: 'gear_prize_rating', kind: 'scale5', label: 'Rate the gear you got', scaleLabels: PRIZE_RATING_LABELS,
+      showIf: { key: 'prizes_received', anyOf: [PRIZE_TOY, PRIZE_ACCESSORY] },
     },
     {
       key: 'sponsor_prize_rating', kind: 'scale5', label: 'Rate the sponsor products you got', scaleLabels: PRIZE_RATING_LABELS,
@@ -516,7 +523,7 @@ const winnerPrizes: SurveySection = {
     { key: 'prize_posted', kind: 'single', label: 'Did you post your prizes?', hint: 'Tagging the sponsors helps us keep them for next year', options: ['Yes, tagged the sponsors', 'Yes, no tags', 'Planning to', 'No'] },
     {
       key: 'prize_wishlist', kind: 'multi', label: 'What prizes would you most want next year?', hint: 'Tap all that apply',
-      options: ['Yo-yos / gear', 'Cash', 'Trophy / medal', 'Sponsor product baskets', 'Apparel', 'Gift cards', 'Free entry next year'],
+      options: [`${cap(TOYS)} / gear`, 'Cash', 'Trophy / medal', 'Sponsor product baskets', 'Apparel', 'Gift cards', 'Free entry next year'],
     },
     { key: 'prize_feedback', kind: 'text', label: 'Favorite thing you took home, or anything else about the prizes?', maxLength: 1000 },
   ],

@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
-import { contest } from '@/contest.config';
+import { contest, DIVISION_CODES } from '@/contest.config';
 
-const DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof DIVISIONS[number];
+const DIVISIONS = DIVISION_CODES;
+type Division = string;
 
 interface Performer {
   position: number;
@@ -41,7 +41,7 @@ export default function DJPage() {
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  const [division, setDivision] = useState<Division>('1A');
+  const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
   const [data, setData] = useState<RunOrderResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);

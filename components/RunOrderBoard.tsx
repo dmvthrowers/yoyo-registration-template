@@ -2,13 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const DIVISIONS = [
-  { code: '1A',  label: '1A — Single String' },
-  { code: 'X',   label: 'X Division' },
-  { code: 'SBJ', label: 'Sport / Beginner / Junior' },
-] as const;
+import { DIVISIONS } from '@/lib/standings';
 
-type Division = typeof DIVISIONS[number]['code'];
+type Division = string;
 type Status = 'upcoming' | 'performing' | 'done';
 
 interface Performer {
@@ -29,7 +25,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const POLL_MS = 15000;
 
 export default function RunOrderBoard() {
-  const [division, setDivision] = useState<Division>('1A');
+  const [division, setDivision] = useState<Division>(DIVISIONS[0]?.code ?? '');
   const [performers, setPerformers] = useState<Performer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

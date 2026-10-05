@@ -1,24 +1,32 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { divisionByCode } from '@/contest.config';
+import { DIVISIONS, type Division } from '@/lib/standings';
 
 // Live admin data — never prerender at build time.
 export const dynamic = 'force-dynamic';
 
-const DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof DIVISIONS[number];
-
-interface ScoreRow {
+/** One judge's score for one competitor, as computed by the contest_results view. */
+interface ResultRow {
   registration_id: string;
   division: string;
   judge_name: string;
   display_name: string;
   city: string | null;
   state: string | null;
-  execution: number;
-  difficulty: number;
-  presentation: number;
+  style_code: string | null;
+  tech_execution_normalized: number | string;
+  total_eval: number | string;
+  deduction_points: number | string;
+  final_score: number | string;
+}
+
+interface JudgeScore {
+  judge_name: string;
+  style_code: string | null;
+  tech: number;
+  evalTotal: number;
+  ded: number;
   total: number;
-  notes: string | null;
-  created_at: string;
 }
 
 interface Competitor {
@@ -26,77 +34,73 @@ interface Competitor {
   display_name: string;
   city: string | null;
   state: string | null;
-  scores: { judge_name: string; execution: number; difficulty: number; presentation: number; total: number }[];
-  avg_execution: number;
-  avg_difficulty: number;
-  avg_presentation: number;
+  scores: JudgeScore[];
+  avg_tech: number;
+  avg_eval: number;
+  avg_ded: number;
   avg_total: number;
   judge_count: number;
 }
 
+const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : 0);
+
+function emptyResults(): Record<Division, Competitor[]> {
+  return Object.fromEntries(DIVISIONS.map(({ code }) => [code, [] as Competitor[]]));
+}
+
+/** Final score per judge comes from contest_results; competitors are ranked by the average across judges. */
 async function getResults(): Promise<Record<Division, Competitor[]>> {
   const supabase = createAdminClient();
+  const { data, error } = await supabase.from('contest_results').select('*');
+  if (error || !data) return emptyResults();
 
-  const { data: scores, error } = await supabase
-    .from('contest_results')
-    .select('*');
+  const grouped: Record<Division, Map<string, Competitor>> =
+    Object.fromEntries(DIVISIONS.map(({ code }) => [code, new Map<string, Competitor>()]));
 
-  if (error || !scores) return { '1A': [], X: [], SBJ: [] };
-
-  const grouped: Record<Division, Map<string, Competitor>> = {
-    '1A': new Map(),
-    X: new Map(),
-    SBJ: new Map(),
-  };
-
-  for (const row of scores as ScoreRow[]) {
-    const div = row.division as Division;
-    if (!grouped[div]) continue;
-
-    if (!grouped[div].has(row.registration_id)) {
-      grouped[div].set(row.registration_id, {
+  for (const row of data as ResultRow[]) {
+    const div = grouped[row.division];
+    if (!div) continue;
+    if (!div.has(row.registration_id)) {
+      div.set(row.registration_id, {
         registration_id: row.registration_id,
         display_name: row.display_name,
         city: row.city,
         state: row.state,
         scores: [],
-        avg_execution: 0,
-        avg_difficulty: 0,
-        avg_presentation: 0,
-        avg_total: 0,
-        judge_count: 0,
+        avg_tech: 0, avg_eval: 0, avg_ded: 0, avg_total: 0, judge_count: 0,
       });
     }
-
-    const comp = grouped[div].get(row.registration_id)!;
-    comp.scores.push({
+    div.get(row.registration_id)!.scores.push({
       judge_name: row.judge_name,
-      execution: Number(row.execution),
-      difficulty: Number(row.difficulty),
-      presentation: Number(row.presentation),
-      total: Number(row.total),
+      style_code: row.style_code,
+      tech: Number(row.tech_execution_normalized) || 0,
+      evalTotal: Number(row.total_eval) || 0,
+      ded: Number(row.deduction_points) || 0,
+      total: Number(row.final_score) || 0,
     });
   }
 
-  const result: Record<Division, Competitor[]> = { '1A': [], X: [], SBJ: [] };
-
-  for (const div of DIVISIONS) {
-    for (const comp of grouped[div].values()) {
-      const n = comp.scores.length;
-      comp.judge_count = n;
-      comp.avg_execution = Math.round((comp.scores.reduce((s, x) => s + x.execution, 0) / n) * 100) / 100;
-      comp.avg_difficulty = Math.round((comp.scores.reduce((s, x) => s + x.difficulty, 0) / n) * 100) / 100;
-      comp.avg_presentation = Math.round((comp.scores.reduce((s, x) => s + x.presentation, 0) / n) * 100) / 100;
-      comp.avg_total = Math.round((comp.scores.reduce((s, x) => s + x.total, 0) / n) * 100) / 100;
-      result[div].push(comp);
+  const result = emptyResults();
+  for (const { code } of DIVISIONS) {
+    for (const comp of grouped[code].values()) {
+      comp.judge_count = comp.scores.length;
+      comp.avg_tech = avg(comp.scores.map((s) => s.tech));
+      comp.avg_eval = avg(comp.scores.map((s) => s.evalTotal));
+      comp.avg_ded = avg(comp.scores.map((s) => s.ded));
+      comp.avg_total = avg(comp.scores.map((s) => s.total));
+      result[code].push(comp);
     }
-    result[div].sort((a, b) => b.avg_total - a.avg_total);
+    result[code].sort((a, b) => b.avg_total - a.avg_total);
   }
-
   return result;
 }
 
 export const revalidate = 10;
+
+const th = { padding: '0.5rem 0.75rem', fontSize: '0.6rem', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' } as const;
+const num = { padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--text-body)', fontFamily: 'monospace' } as const;
+const subTh = { padding: '0.4rem 0.6rem', textAlign: 'left', fontSize: '0.55rem', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-muted)' } as const;
+const subNum = { padding: '0.4rem 0.6rem', fontFamily: 'monospace', color: 'var(--text-body)' } as const;
 
 export default async function AdminResultsPage() {
   const results = await getResults();
@@ -116,16 +120,27 @@ export default async function AdminResultsPage() {
         </p>
       </div>
 
-      {DIVISIONS.map((div) => {
-        const comps = results[div];
+      {DIVISIONS.map(({ code, label }) => {
+        const comps = results[code];
+        const def = divisionByCode(code);
+        const freestyle = def?.scoring.format === 'freestyle' ? def.scoring : null;
+        const hasStyles = !!def?.styles;
+        const scoreNote = freestyle
+          ? `Freestyle: Tech /${freestyle.techCap} + 4 × /${freestyle.evalCap}${freestyle.deductions ? ' − deductions' : ''}`
+          : def?.scoring.format === 'manual' ? `Manual score /${def.scoring.max}` : '';
+        const headers = freestyle
+          ? ['Rank', 'Competitor', 'Location', 'Judges', 'Avg Tech', 'Avg Eval', ...(freestyle.deductions ? ['Avg Ded'] : []), 'Avg Total']
+          : ['Rank', 'Competitor', 'Location', 'Judges', 'Avg Score'];
+        const subHeaders = ['Competitor', 'Judge', ...(hasStyles ? ['Style'] : []),
+          ...(freestyle ? ['Tech', 'Eval', ...(freestyle.deductions ? ['Ded'] : [])] : []), 'Total'];
         return (
-          <section key={div} style={{ marginBottom: '2.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+          <section key={code} style={{ marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem 0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
               <h2 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.1rem', margin: 0 }}>
-                {div} Division
+                {label}
               </h2>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                {comps.length} scored
+                {comps.length} scored{scoreNote && ` · ${scoreNote}`}
               </span>
             </div>
 
@@ -136,8 +151,8 @@ export default async function AdminResultsPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: 'var(--navy)', borderBottom: '2px solid var(--navy-border)' }}>
-                      {['Rank', 'Competitor', 'Location', 'Judges', 'Avg Exec', 'Avg Diff', 'Avg Pres', 'Avg Total'].map((h) => (
-                        <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: h === 'Avg Total' || h === 'Rank' ? 'center' : 'left', fontSize: '0.6rem', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {headers.map((h) => (
+                        <th key={h} scope="col" style={{ ...th, textAlign: h === 'Rank' ? 'center' : h.startsWith('Avg') ? 'right' : 'left' }}>
                           {h}
                         </th>
                       ))}
@@ -158,10 +173,14 @@ export default async function AdminResultsPage() {
                         <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                           {comp.judge_count}
                         </td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--text-body)', fontFamily: 'monospace' }}>{comp.avg_execution.toFixed(1)}</td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--text-body)', fontFamily: 'monospace' }}>{comp.avg_difficulty.toFixed(1)}</td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--text-body)', fontFamily: 'monospace' }}>{comp.avg_presentation.toFixed(1)}</td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', fontWeight: 800, color: i === 0 ? 'var(--gold)' : '#fff', fontFamily: 'monospace', fontSize: '1rem' }}>
+                        {freestyle && (
+                          <>
+                            <td style={num}>{comp.avg_tech.toFixed(1)}</td>
+                            <td style={num}>{comp.avg_eval.toFixed(1)}</td>
+                            {freestyle.deductions && <td style={num}>{comp.avg_ded > 0 ? `−${comp.avg_ded.toFixed(1)}` : '0.0'}</td>}
+                          </>
+                        )}
+                        <td style={{ ...num, fontWeight: 800, color: i === 0 ? 'var(--gold)' : '#fff', fontSize: '1rem' }}>
                           {comp.avg_total.toFixed(1)}
                         </td>
                       </tr>
@@ -179,21 +198,24 @@ export default async function AdminResultsPage() {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                         <thead>
                           <tr style={{ background: 'var(--navy)', borderBottom: '1px solid var(--navy-border)' }}>
-                            {['Competitor', 'Judge', 'Exec', 'Diff', 'Pres', 'Total'].map((h) => (
-                              <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontSize: '0.55rem', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-muted)' }}>{h}</th>
-                            ))}
+                            {subHeaders.map((h) => <th key={h} scope="col" style={subTh}>{h}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {comps.slice(0, 3).flatMap((comp) =>
                             comp.scores.map((s, si) => (
-                              <tr key={`${comp.registration_id}-${s.judge_name}`} style={{ borderBottom: '1px solid var(--navy-border)', background: si % 2 === 0 ? 'var(--navy)' : 'transparent' }}>
+                              <tr key={`${comp.registration_id}-${s.judge_name}-${si}`} style={{ borderBottom: '1px solid var(--navy-border)', background: si % 2 === 0 ? 'var(--navy)' : 'transparent' }}>
                                 <td style={{ padding: '0.4rem 0.6rem', color: '#fff', fontWeight: si === 0 ? 700 : 400 }}>{si === 0 ? comp.display_name : ''}</td>
                                 <td style={{ padding: '0.4rem 0.6rem', color: 'var(--text-muted)' }}>{s.judge_name}</td>
-                                <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'monospace', color: 'var(--text-body)' }}>{s.execution.toFixed(1)}</td>
-                                <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'monospace', color: 'var(--text-body)' }}>{s.difficulty.toFixed(1)}</td>
-                                <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'monospace', color: 'var(--text-body)' }}>{s.presentation.toFixed(1)}</td>
-                                <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--gold)' }}>{s.total.toFixed(1)}</td>
+                                {hasStyles && <td style={{ padding: '0.4rem 0.6rem', color: 'var(--text-muted)' }}>{s.style_code ?? '—'}</td>}
+                                {freestyle && (
+                                  <>
+                                    <td style={subNum}>{s.tech.toFixed(1)}</td>
+                                    <td style={subNum}>{s.evalTotal.toFixed(1)}</td>
+                                    {freestyle.deductions && <td style={subNum}>{s.ded.toFixed(1)}</td>}
+                                  </>
+                                )}
+                                <td style={{ ...subNum, fontWeight: 700, color: 'var(--gold)' }}>{s.total.toFixed(1)}</td>
                               </tr>
                             ))
                           )}

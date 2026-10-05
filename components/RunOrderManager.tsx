@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { DIVISION_CODES } from '@/contest.config';
 
-const DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof DIVISIONS[number];
+const DIVISIONS = DIVISION_CODES;
+type Division = string;
 type TimePref = 'no_pref' | 'early' | 'late' | 'conflict' | null;
 
 interface ScheduledRow {
@@ -56,7 +57,7 @@ const PREF_COLORS: Record<string, string> = {
  * which accept admin, dj, and audio_tech roles.
  */
 export default function RunOrderManager({ token }: { token: string }) {
-  const [division, setDivision] = useState<Division>('1A');
+  const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
   const [data, setData] = useState<AdminRunOrderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

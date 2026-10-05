@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { DIVISION_PLAYLIST_URLS } from '@/lib/contest-videos';
 import type { Division } from '@/lib/standings';
-import { contest, deadlineLabel } from '@/contest.config';
+import { contest, deadlineLabel, divisionByCode } from '@/contest.config';
 
 type AuthMode = 'login' | 'signup';
 
@@ -395,7 +395,7 @@ export default function PlayerPortalPage() {
                 </button>
               </div>
               <div className="mt-4 text-sm text-text-body">
-                <p>Divisions: <span className="text-white">{profile.divisions.join(', ')}</span></p>
+                <p>Divisions: <span className="text-white">{profile.divisions.map((d) => divisionByCode(d)?.name ?? d).join(', ')}</span></p>
                 {profile.divisions.some((d) => d in DIVISION_PLAYLIST_URLS) && (
                   <p>
                     Contest videos:{' '}

@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-const DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof DIVISIONS[number];
+import { DIVISION_CODES } from '@/contest.config';
+
+const DIVISIONS = DIVISION_CODES;
+type Division = string;
 type TimePref = 'no_pref' | 'early' | 'late' | 'conflict' | null;
 
 interface ScheduledRow {
@@ -50,7 +52,7 @@ const PREF_COLORS: Record<string, string> = {
 };
 
 export default function AdminRunOrderPage() {
-  const [division, setDivision] = useState<Division>('1A');
+  const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
   const [data, setData] = useState<AdminRunOrderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

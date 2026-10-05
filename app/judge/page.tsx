@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
-import { contest } from '@/contest.config';
+import { contest, competition, divisionByCode } from '@/contest.config';
+import { effectiveStyle, freestyleBreakdown, manualBreakdown, styleMultiplier } from '@/lib/divisions-core';
 
-const DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof DIVISIONS[number];
+/**
+ * Score sheet per division comes from contest.config.ts → competition.divisions:
+ *  - "freestyle": NYYL-style sheet (clicker tally normalized per judge + four evaluation
+ *    categories − optional deductions)
+ *  - "manual": the judge types one score from 0 to max
+ */
+type Division = string;
+const DIVISIONS = competition.divisions;
 
 interface Performer {
   position: number;
@@ -15,6 +22,8 @@ interface Performer {
   display_name: string;
   city: string | null;
   state: string | null;
+  /** This competitor's style(s) in this division, e.g. "2A, 3A". Null when the division has no styles. */
+  style: string | null;
 }
 
 interface ScoreEntry {
@@ -34,14 +43,14 @@ interface ScoreEntry {
   detach_count: number;
   deduction_points: number;
   final_score: number;
+  style_code: string | null;
+  registered_styles: string[];
+  manual_score: number | null;
   notes: string | null;
 }
 
-/** Tech Execution cap: Sport/SBJ scores to /20, 1A/X to /60 — see NYYL freestyle rules. */
-const TECH_EXECUTION_CAP: Record<Division, number> = { '1A': 60, X: 60, SBJ: 20 };
-
-/** Per-category Routine Evaluation cap: Sport/SBJ is /20 each (Eval /80), 1A/X /10 each (Eval /40). Matches migration 0023. */
-const EVAL_CATEGORY_CAP: Record<Division, number> = { '1A': 10, X: 10, SBJ: 20 };
+const splitStyles = (s: string | null | undefined): string[] =>
+  (s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
 interface StaffMe {
   auth_user_id: string;
@@ -74,12 +83,14 @@ function ScoreInput({
   disabled?: boolean;
   accent?: string;
 }) {
+  const id = useId();
   return (
     <div style={{ flex: 1, minWidth: 90 }}>
-      <label style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.1em', fontWeight: 800, color: accent ?? 'var(--gold)', marginBottom: '0.3rem' }}>
+      <label htmlFor={id} style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.1em', fontWeight: 800, color: accent ?? 'var(--gold)', marginBottom: '0.3rem' }}>
         {label} <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{sublabel ?? `/${max}`}</span>
       </label>
       <input
+        id={id}
         type="number"
         min={min}
         max={max}
@@ -114,7 +125,7 @@ export default function JudgePage() {
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  const [division, setDivision] = useState<Division>('1A');
+  const [division, setDivision] = useState<Division>(DIVISIONS[0]?.code ?? '');
   const [runOrder, setRunOrder] = useState<Performer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -126,6 +137,8 @@ export default function JudgePage() {
   const [stopCount, setStopCount] = useState<number | ''>(0);
   const [discardCount, setDiscardCount] = useState<number | ''>(0);
   const [detachCount, setDetachCount] = useState<number | ''>(0);
+  const [styleCode, setStyleCode] = useState('');
+  const [manualScore, setManualScore] = useState<number | ''>(0);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -246,6 +259,8 @@ export default function JudgePage() {
       setStopCount(existing.stop_count);
       setDiscardCount(existing.discard_count);
       setDetachCount(existing.detach_count);
+      setStyleCode(existing.style_code ?? '');
+      setManualScore(existing.manual_score ?? 0);
       setNotes(existing.notes ?? '');
     } else {
       setTechExecutionRaw(0);
@@ -256,10 +271,61 @@ export default function JudgePage() {
       setStopCount(0);
       setDiscardCount(0);
       setDetachCount(0);
+      setStyleCode('');
+      setManualScore(0);
       setNotes('');
     }
     setSubmitMsg(null);
   }, [selectedId, myScores]);
+
+  // ---- derived from the selected division's scoring config
+  const divDef = divisionByCode(division);
+  const scoring = divDef?.scoring;
+  const isManual = scoring?.format === 'manual';
+  const freestyle = scoring?.format === 'freestyle' ? scoring : null;
+  const deductions = freestyle?.deductions ?? null;
+
+  const selectedPerformer = runOrder.find((p) => p.registration_id === selectedId);
+  const alreadyScored = myScores.find((s) => s.registration_id === selectedId);
+  // The competitor's registered styles: from the run order, else from an existing score.
+  const selectedStyles = selectedPerformer?.style !== undefined
+    ? splitStyles(selectedPerformer.style)
+    : alreadyScored?.registered_styles ?? [];
+  const needsStylePick = selectedStyles.length > 1;
+  const styleLabel = (code: string) => divDef?.styles?.options.find((o) => o.code === code)?.label ?? code;
+
+  // Live preview, using the same math as the server (lib/divisions-core.ts).
+  let preview: { tech: number; evalTotal: number; ded: number; final: number } | null = null;
+  if (freestyle && divDef) {
+    const mult = styleMultiplier(divDef, effectiveStyle(styleCode || null, selectedStyles));
+    const sheet = {
+      tech_execution_raw: Number(techExecutionRaw) || 0,
+      trick_presentation: Number(trickPresentation) || 0,
+      performance_quality: Number(performanceQuality) || 0,
+      musicality: Number(musicality) || 0,
+      routine_construction: Number(routineConstruction) || 0,
+      stop_count: deductions ? Number(stopCount) || 0 : 0,
+      discard_count: deductions ? Number(discardCount) || 0 : 0,
+      detach_count: deductions ? Number(detachCount) || 0 : 0,
+    };
+    // Normalize against this judge's own highest multiplied tally, counting this entry.
+    const others = myScores
+      .filter((s) => s.registration_id !== selectedId && s.tech_execution_raw > 0)
+      .map((s) => s.tech_execution_raw * styleMultiplier(divDef, effectiveStyle(s.style_code, s.registered_styles)));
+    const mine = sheet.tech_execution_raw > 0 ? [sheet.tech_execution_raw * mult] : [];
+    const all = [...others, ...mine];
+    const b = freestyleBreakdown(sheet, freestyle, mult, all.length > 0 ? Math.max(...all) : null);
+    preview = { tech: b.tech_execution_normalized, evalTotal: b.total_eval, ded: b.deduction_points, final: b.final_score };
+  } else if (scoring?.format === 'manual') {
+    const b = manualBreakdown(Number(manualScore) || 0, scoring);
+    preview = { tech: 0, evalTotal: 0, ded: 0, final: b.final_score };
+  }
+
+  const multiplierNote = freestyle && divDef?.styles?.options.some((o) => (o.multiplier ?? 1) !== 1)
+    ? `Enter the raw tally only: the style multiplier (${divDef.styles.options
+        .map((o) => `${o.code} ×${(o.multiplier ?? 1).toFixed(2)}`)
+        .join(', ')}) is applied automatically before normalization.`
+    : '';
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -289,14 +355,36 @@ export default function JudgePage() {
 
   async function handleSubmitScore(e: React.FormEvent) {
     e.preventDefault();
-    if (!token || !selectedId) return;
-    if (techExecutionRaw === '' || trickPresentation === '' || performanceQuality === '' || musicality === '' || routineConstruction === '') {
+    if (!token || !selectedId || !divDef) return;
+    if (needsStylePick && !styleCode) {
+      setSubmitMsg({ ok: false, text: `Pick which style this routine was (${selectedStyles.join(' or ')}).` });
+      return;
+    }
+    if (isManual) {
+      if (manualScore === '') {
+        setSubmitMsg({ ok: false, text: 'A score is required.' });
+        return;
+      }
+    } else if (techExecutionRaw === '' || trickPresentation === '' || performanceQuality === '' || musicality === '' || routineConstruction === '') {
       setSubmitMsg({ ok: false, text: 'Tech Execution, Trick Presentation, Performance Quality, Musicality, and Routine Construction are required.' });
       return;
     }
 
     setSubmitting(true);
     setSubmitMsg(null);
+
+    const sheet = isManual
+      ? { manual_score: Number(manualScore) }
+      : {
+          tech_execution_raw: Number(techExecutionRaw),
+          trick_presentation: Number(trickPresentation),
+          performance_quality: Number(performanceQuality),
+          musicality: Number(musicality),
+          routine_construction: Number(routineConstruction),
+          stop_count: deductions ? Number(stopCount) || 0 : 0,
+          discard_count: deductions ? Number(discardCount) || 0 : 0,
+          detach_count: deductions ? Number(detachCount) || 0 : 0,
+        };
 
     try {
       const res = await fetch('/api/scores', {
@@ -308,14 +396,8 @@ export default function JudgePage() {
         body: JSON.stringify({
           registration_id: selectedId,
           division,
-          tech_execution_raw: Number(techExecutionRaw),
-          trick_presentation: Number(trickPresentation),
-          performance_quality: Number(performanceQuality),
-          musicality: Number(musicality),
-          routine_construction: Number(routineConstruction),
-          stop_count: division === 'SBJ' ? 0 : Number(stopCount) || 0,
-          discard_count: division === 'SBJ' ? 0 : Number(discardCount) || 0,
-          detach_count: division === 'SBJ' ? 0 : Number(detachCount) || 0,
+          ...(needsStylePick ? { style_code: styleCode } : {}),
+          ...sheet,
           notes: notes.trim() || undefined,
         }),
       });
@@ -384,25 +466,21 @@ export default function JudgePage() {
     );
   }
 
-  const selectedPerformer = runOrder.find((p) => p.registration_id === selectedId);
-  const alreadyScored = myScores.find((s) => s.registration_id === selectedId);
-  const categoryTotal = (Number(trickPresentation) || 0) + (Number(performanceQuality) || 0) + (Number(musicality) || 0) + (Number(routineConstruction) || 0);
-  const totalDeductionPoints = division === 'SBJ' ? 0 : (Number(stopCount) || 0) * 1 + (Number(discardCount) || 0) * 3 + (Number(detachCount) || 0) * 5;
-  const techExecutionCap = TECH_EXECUTION_CAP[division];
-  const evalCategoryCap = EVAL_CATEGORY_CAP[division];
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--navy-deep)' }}>
       <header style={{ background: 'var(--navy)', borderBottom: '2px solid var(--red)', padding: '0 1.5rem' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 56, flexWrap: 'wrap', gap: '0.5rem 1rem', padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem 2rem', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontWeight: 700, fontSize: '1rem' }}>
               Judge Portal
             </span>
-            <nav style={{ display: 'flex', gap: '0.5rem' }}>
-              {DIVISIONS.map((div) => (
+            <nav aria-label="Divisions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {DIVISIONS.map(({ code: div, name }) => (
                 <button
                   key={div}
+                  type="button"
+                  title={name}
+                  aria-pressed={division === div}
                   onClick={() => {
                     setDivision(div);
                     setSelectedId(null);
@@ -474,8 +552,8 @@ export default function JudgePage() {
           </section>
         </main>
       ) : (
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem', alignItems: 'start' }}>
-        <div>
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
+        <div style={{ flex: '999 1 420px', minWidth: 0 }}>
           <section style={{ marginBottom: '1.5rem' }}>
             <div style={{ fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.5rem' }}>
               CURRENT DIVISION ORDER
@@ -533,41 +611,85 @@ export default function JudgePage() {
             </div>
 
             <form onSubmit={handleSubmitScore}>
-              <div style={{ marginBottom: '0.3rem' }}>
-                <ScoreInput
-                  label="TECH EXECUTION"
-                  sublabel={`(raw clicker → /${techExecutionCap})`}
-                  min={division === 'SBJ' ? 0 : -100}
-                  max={100}
-                  step={1}
-                  value={techExecutionRaw}
-                  onChange={setTechExecutionRaw}
-                  disabled={!selectedId || submitting}
-                />
-              </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.68rem', margin: '0 0 1rem' }}>
-                Enter your net clicker tally (+ for landed elements, − for misses{division === 'SBJ' ? ', though Sport/SBJ uses no negative clicks' : ''}).
-                It&rsquo;s normalized to /{techExecutionCap} against your own highest score in this division once saved.
-                {division === 'X' && ' Enter the raw tally only: the style multiplier (2A ×1.40, 3A ×1.50, 4A ×1.30, 5A ×1.60) is applied automatically before normalization, per NYYL.'}
-              </p>
+              {needsStylePick && (
+                <fieldset style={{ border: '1px solid var(--navy-border)', padding: '0.6rem 0.75rem', margin: '0 0 1rem' }}>
+                  <legend style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', padding: '0 0.3rem' }}>
+                    STYLE PERFORMED (REQUIRED)
+                  </legend>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem' }}>
+                    {selectedStyles.map((code) => (
+                      <label key={code} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="style_code"
+                          value={code}
+                          checked={styleCode === code}
+                          onChange={() => setStyleCode(code)}
+                          disabled={submitting}
+                          required
+                        />
+                        {styleLabel(code)}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem' }}>
-                <ScoreInput label="TRICK PRES." max={evalCategoryCap} value={trickPresentation} onChange={setTrickPresentation} disabled={!selectedId || submitting} />
-                <ScoreInput label="PERF. QUALITY" max={evalCategoryCap} value={performanceQuality} onChange={setPerformanceQuality} disabled={!selectedId || submitting} />
-                <ScoreInput label="MUSICALITY" max={evalCategoryCap} value={musicality} onChange={setMusicality} disabled={!selectedId || submitting} />
-                <ScoreInput label="ROUTINE CONSTR." max={evalCategoryCap} value={routineConstruction} onChange={setRoutineConstruction} disabled={!selectedId || submitting} />
-              </div>
+              {scoring?.format === 'manual' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <ScoreInput
+                    label="MANUAL SCORE"
+                    max={scoring.max}
+                    step={0.1}
+                    value={manualScore}
+                    onChange={setManualScore}
+                    disabled={!selectedId || submitting}
+                  />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.68rem', margin: '0.3rem 0 0' }}>
+                    Type one score from 0 to {scoring.max}. Judges&rsquo; scores are averaged.
+                  </p>
+                </div>
+              )}
 
-              {division !== 'SBJ' && (
+              {freestyle && (
                 <>
-                  <div style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: '#ff6b6b', marginBottom: '0.4rem' }}>
-                    MAJOR DEDUCTIONS (count of each)
+                  <div style={{ marginBottom: '0.3rem' }}>
+                    <ScoreInput
+                      label="TECH EXECUTION"
+                      sublabel={`(raw clicker → /${freestyle.techCap})`}
+                      min={freestyle.negativeClicks ? -500 : 0}
+                      max={500}
+                      step={1}
+                      value={techExecutionRaw}
+                      onChange={setTechExecutionRaw}
+                      disabled={!selectedId || submitting}
+                    />
                   </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.68rem', margin: '0 0 1rem' }}>
+                    Enter your net clicker tally ({freestyle.negativeClicks ? '+ for landed elements, − for misses' : '+ for landed elements; this division uses no negative clicks'}).
+                    It&rsquo;s normalized to /{freestyle.techCap} against your own highest score in this division once saved.
+                    {multiplierNote && ` ${multiplierNote}`}
+                  </p>
+
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem' }}>
-                    <ScoreInput label="STOP" sublabel="× −1" step={1} max={20} value={stopCount} onChange={setStopCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
-                    <ScoreInput label="DISCARD" sublabel="× −3" step={1} max={20} value={discardCount} onChange={setDiscardCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
-                    <ScoreInput label="DETACH" sublabel="× −5" step={1} max={20} value={detachCount} onChange={setDetachCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
+                    <ScoreInput label="TRICK PRES." max={freestyle.evalCap} value={trickPresentation} onChange={setTrickPresentation} disabled={!selectedId || submitting} />
+                    <ScoreInput label="PERF. QUALITY" max={freestyle.evalCap} value={performanceQuality} onChange={setPerformanceQuality} disabled={!selectedId || submitting} />
+                    <ScoreInput label="MUSICALITY" max={freestyle.evalCap} value={musicality} onChange={setMusicality} disabled={!selectedId || submitting} />
+                    <ScoreInput label="ROUTINE CONSTR." max={freestyle.evalCap} value={routineConstruction} onChange={setRoutineConstruction} disabled={!selectedId || submitting} />
                   </div>
+
+                  {deductions && (
+                    <>
+                      <div style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: '#ff6b6b', marginBottom: '0.4rem' }}>
+                        MAJOR DEDUCTIONS (count of each)
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem' }}>
+                        <ScoreInput label="STOP" sublabel={`× −${deductions.stop}`} step={1} max={20} value={stopCount} onChange={setStopCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
+                        <ScoreInput label="DISCARD" sublabel={`× −${deductions.discard}`} step={1} max={20} value={discardCount} onChange={setDiscardCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
+                        <ScoreInput label="DETACH" sublabel={`× −${deductions.detach}`} step={1} max={20} value={detachCount} onChange={setDetachCount} disabled={!selectedId || submitting} accent="#ff6b6b" />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 
@@ -586,13 +708,22 @@ export default function JudgePage() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.8rem', flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  Category subtotal (unnormalized): <span style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 700 }}>{categoryTotal.toFixed(1)}</span>
-                  {totalDeductionPoints > 0 && (
-                    <span style={{ color: '#ff6b6b', fontFamily: 'monospace' }}> − {totalDeductionPoints.toFixed(1)}</span>
-                  )}
-                  <br />
-                  <span style={{ fontSize: '0.72rem' }}>Final score (with normalized Tech Execution) shows in My Scores after saving.</span>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }} aria-live="polite">
+                  {preview && freestyle ? (
+                    <>
+                      Estimate: <span style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 700 }}>
+                        {preview.tech.toFixed(1)} + {preview.evalTotal.toFixed(1)}
+                      </span>
+                      {preview.ded > 0 && (
+                        <span style={{ color: '#ff6b6b', fontFamily: 'monospace' }}> − {preview.ded.toFixed(1)}</span>
+                      )}
+                      {' = '}<span style={{ color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 800 }}>{preview.final.toFixed(1)}</span>
+                      <br />
+                      <span style={{ fontSize: '0.72rem' }}>Tech Execution is normalized against your highest tally so far, so earlier scores shift as you go. My Scores shows the saved totals.</span>
+                    </>
+                  ) : preview ? (
+                    <>Manual score: <span style={{ color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 800 }}>{preview.final.toFixed(1)}</span>{scoring?.format === 'manual' && ` / ${scoring.max}`}</>
+                  ) : null}
                 </div>
                 {alreadyScored && <div style={{ color: '#7fff7f', fontSize: '0.75rem' }}>Existing score will be updated</div>}
               </div>
@@ -623,7 +754,7 @@ export default function JudgePage() {
           </section>
         </div>
 
-        <aside>
+        <aside style={{ flex: '1 1 280px', minWidth: 0 }}>
           <section style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '1rem' }}>
             <div style={{ fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.75rem' }}>
               MY SCORES ({division})
@@ -637,12 +768,19 @@ export default function JudgePage() {
                     <div style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.display_name}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginBottom: '0.2rem' }}>
-                      TE {s.tech_execution_raw.toFixed(0)} raw → {s.tech_execution_normalized.toFixed(1)} | TP {s.trick_presentation.toFixed(1)} | PQ {s.performance_quality.toFixed(1)} | MU {s.musicality.toFixed(1)} | RC {s.routine_construction.toFixed(1)}
-                      {s.deduction_points > 0 && (
-                        <span style={{ color: '#ff6b6b' }}> | −{s.deduction_points.toFixed(1)}</span>
-                      )}
-                    </div>
+                    {(s.style_code || s.registered_styles?.length === 1) && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', marginBottom: '0.2rem' }}>
+                        Style: {styleLabel(s.style_code ?? s.registered_styles[0])}
+                      </div>
+                    )}
+                    {freestyle && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginBottom: '0.2rem' }}>
+                        TE {s.tech_execution_raw.toFixed(0)} raw → {s.tech_execution_normalized.toFixed(1)} | TP {s.trick_presentation.toFixed(1)} | PQ {s.performance_quality.toFixed(1)} | MU {s.musicality.toFixed(1)} | RC {s.routine_construction.toFixed(1)}
+                        {s.deduction_points > 0 && (
+                          <span style={{ color: '#ff6b6b' }}> | −{s.deduction_points.toFixed(1)}</span>
+                        )}
+                      </div>
+                    )}
                     <div style={{ color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 800, fontSize: '0.92rem' }}>
                       {s.final_score.toFixed(1)}
                     </div>

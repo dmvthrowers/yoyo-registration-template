@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatCents } from '@/lib/pricing';
+import { DIVISION_CODES } from '@/contest.config';
 
 interface RegRow {
   id: string;
@@ -115,7 +116,7 @@ export default async function AdminPage({
         {pill('Has music', sp.music === '1', filterLink({ music: '1' }))}
         {pill('No music', sp.music === '0', filterLink({ music: '0' }))}
         <span style={{ width: 1, background: 'var(--navy-border)', height: 20, display: 'inline-block', margin: '0 4px' }} />
-        {['1A', '2A', '3A', '4A', '5A', 'X', 'Beginner', 'Junior'].map(d =>
+        {DIVISION_CODES.map(d =>
           pill(d, sp.division === d, filterLink({ division: sp.division === d ? '' : d }))
         )}
       </div>

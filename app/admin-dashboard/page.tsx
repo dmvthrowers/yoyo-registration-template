@@ -41,7 +41,8 @@ interface Contestant {
   city: string | null;
   state: string | null;
   divisions: string[];
-  x_substyle: string | null;
+  /** Styles per division, e.g. { X: ['2A', '3A'] } */
+  division_styles: Record<string, string[]> | null;
   fee_cents: number;
   paid: boolean;
   paid_at: string | null;
@@ -50,6 +51,13 @@ interface Contestant {
   is_public: boolean;
   admin_notes: string | null;
   registration_source: string;
+}
+
+/** "1A, X: 2A, 3A" — divisions with any registered styles. */
+function divisionsLabel(c: Pick<Contestant, 'divisions' | 'division_styles'>): string {
+  return c.divisions
+    .map((d) => (c.division_styles?.[d]?.length ? `${d}: ${c.division_styles[d].join(', ')}` : d))
+    .join(' · ');
 }
 
 interface Spectator {
@@ -239,7 +247,7 @@ export default function AdminDashboardPage() {
         c.last_name,
         c.preferred_bracket_name ?? '',
         c.email,
-        c.divisions.join(','),
+        divisionsLabel(c),
         c.registration_source,
       ].join(' ').toLowerCase();
       return hay.includes(q);
@@ -1020,7 +1028,7 @@ function ContestantRow({
         <div className="text-white font-semibold">{contestant.preferred_bracket_name || `${contestant.first_name} ${contestant.last_name}`}</div>
         <div className="text-xs text-text-muted">{contestant.email}</div>
       </td>
-      <td className="py-2 pr-3 text-xs text-text-body min-w-[140px]">{contestant.divisions.join(', ')}</td>
+      <td className="py-2 pr-3 text-xs text-text-body min-w-[140px]">{divisionsLabel(contestant)}</td>
       <td className="py-2 pr-3">
         <input aria-label="Mark contestant paid" title="Mark contestant paid" type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} className="w-4 h-4 accent-gold" />
       </td>

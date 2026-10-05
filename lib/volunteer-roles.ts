@@ -69,11 +69,13 @@ export const VOLUNTEER_ROLES: VolunteerRoleDef[] = [
   },
 
   // --- Judges: three sub-roles sharing one pool, cap 9 total ---
+  // The keys are legacy IDs stored in volunteer rows (migrations 0018/0019): never rename them.
+  // Only the labels and descriptions are shown, so they stay division-neutral.
   {
     key: 'sport_division_judge',
-    label: 'Sport Division Judge',
+    label: 'Freestyle Judge',
     category: 'judge',
-    description: 'Scores freestyles for the Sport division. Goal: 3–4 judges per panel plus a senior judge.',
+    description: 'Scores routines on a judging panel. Goal: 3–4 judges per panel plus a senior judge.',
     maxCapacity: null,
     groupKey: 'judge_pool',
     groupMaxCapacity: 9,
@@ -82,9 +84,9 @@ export const VOLUNTEER_ROLES: VolunteerRoleDef[] = [
   },
   {
     key: '1a_pro_judge',
-    label: '1A Pro Division Judge',
+    label: 'Head / Senior Judge',
     category: 'judge',
-    description: 'Scores freestyles for the 1A Pro division. Goal: 3–4 judges per panel plus a senior judge.',
+    description: 'Leads a judging panel and scores routines. Best for experienced judges.',
     maxCapacity: null,
     groupKey: 'judge_pool',
     groupMaxCapacity: 9,
@@ -93,9 +95,9 @@ export const VOLUNTEER_ROLES: VolunteerRoleDef[] = [
   },
   {
     key: 'x_division_judge',
-    label: 'X Division Judge',
+    label: 'Judge (second panel)',
     category: 'judge',
-    description: 'Scores freestyles for the X division. Goal: 3–4 judges per panel plus a senior judge.',
+    description: 'Scores routines on a second panel, for contests that judge divisions in parallel.',
     maxCapacity: null,
     groupKey: 'judge_pool',
     groupMaxCapacity: 9,

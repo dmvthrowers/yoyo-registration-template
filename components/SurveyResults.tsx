@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SURVEYS, SURVEY_TYPES, type SurveyQuestion, type SurveyType } from '@/lib/surveys';
 import SurveyContacts from './SurveyContacts';
-import { contest } from '@/contest.config';
+import { contest, competition } from '@/contest.config';
 
 const SPONSOR: string = contest.presentedBy.name;
 
@@ -31,7 +31,8 @@ interface InviteAudience {
 interface WinnerRow {
   registration_id: string;
   display_name: string;
-  division: '1A' | 'X' | 'SBJ';
+  /** Division code from contest.config.ts */
+  division: string;
   place: number;
 }
 
@@ -538,7 +539,7 @@ export default function SurveyResults({ token }: { token: string }) {
               <h3 className="text-xs font-black tracking-caps text-gold mb-3">PRIZES (WINNERS)</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <Stat label="Prize package" value={kpis.prizeOverall ? `${kpis.prizeOverall.toFixed(1)} / 5` : '—'} />
-                <Stat label="Gear (yo-yo, string)" value={kpis.gearPrize ? `${kpis.gearPrize.toFixed(1)} / 5` : '—'} />
+                <Stat label={`Gear (${competition.toy.singular} / accessory)`} value={kpis.gearPrize ? `${kpis.gearPrize.toFixed(1)} / 5` : '—'} />
                 <Stat label="Sponsor products" value={kpis.sponsorPrize ? `${kpis.sponsorPrize.toFixed(1)} / 5` : '—'} />
                 <Stat label="Posted + tagged sponsors" value={pct(kpis.prizeTagged, kpis.prizePostedN)} note={`${kpis.prizeTagged} of ${kpis.prizePostedN}`} />
               </div>

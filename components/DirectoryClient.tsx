@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, type CSSProperties } from 'react';
+import { competition } from '@/contest.config';
 
 export interface DirectorySocials {
   instagram?: string | null;
@@ -34,7 +35,14 @@ const roleLabel: Record<string, string> = {
 };
 
 type RoleFilter = 'all' | 'competitor' | 'spectator' | 'staff';
-type DivisionFilter = 'all' | '1A' | 'X' | 'SBJ';
+/** 'all' or a division code from contest.config.ts */
+type DivisionFilter = string;
+
+/** Filter chips: the division name when it's short, else its code. */
+const DIVISION_TABS: { key: DivisionFilter; label: string; title: string }[] = [
+  { key: 'all', label: 'All Divisions', title: 'All divisions' },
+  ...competition.divisions.map((d) => ({ key: d.code, label: d.name.length <= 16 ? d.name : d.code, title: d.name })),
+];
 
 const STAFF_ROLES = new Set(['judge', 'dj', 'audio_tech', 'admin']);
 
@@ -163,13 +171,6 @@ export default function DirectoryClient({ profiles }: { profiles: DirectoryProfi
     { key: 'staff', label: 'Judges & Staff' },
   ];
 
-  const divisionTabs: { key: DivisionFilter; label: string }[] = [
-    { key: 'all', label: 'All Divisions' },
-    { key: '1A', label: '1A' },
-    { key: 'X', label: 'X' },
-    { key: 'SBJ', label: 'SBJ' },
-  ];
-
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -217,10 +218,12 @@ export default function DirectoryClient({ profiles }: { profiles: DirectoryProfi
 
         {hasCompetitors && (roleFilter === 'all' || roleFilter === 'competitor') && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            {divisionTabs.map((tab) => (
+            {DIVISION_TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
+                title={tab.title}
+                aria-pressed={divisionFilter === tab.key}
                 onClick={() => setDivisionFilter(tab.key)}
                 style={{
                   fontSize: '0.65rem',

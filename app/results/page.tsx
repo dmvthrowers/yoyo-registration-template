@@ -3,7 +3,7 @@ import { getEventFlagBoolean } from '@/lib/event-flags';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { DIVISIONS, fetchStandings, type Division, type Standing } from '@/lib/standings';
-import { contest, monthDay, bannerLine } from '@/contest.config';
+import { contest, competition, monthDay, bannerLine, type DivisionDef } from '@/contest.config';
 import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/lib/contest-videos';
 
 // Public results are gated with an admin-toggleable flag and env fallback.
@@ -14,6 +14,21 @@ async function getStandings(): Promise<Record<Division, Standing[]>> {
 
 // Refresh at most once per minute once published.
 export const revalidate = 60;
+
+/** One plain-language line describing how a division is scored, from its config. */
+function scoringSummary(d: DivisionDef): string {
+  const sc = d.scoring;
+  if (sc.format === 'manual') return `one score out of ${sc.max} per judge.`;
+  const total = sc.techCap + 4 * sc.evalCap;
+  const parts = [
+    `out of ${total}: ${sc.techCap} technical execution (clicker tally, each judge's top tally normalized to ${sc.techCap}) + ${4 * sc.evalCap} evaluation`,
+  ];
+  if (sc.deductions) parts.push(`minus deductions (stop −${sc.deductions.stop}, discard −${sc.deductions.discard}, detach −${sc.deductions.detach})`);
+  if (!sc.negativeClicks) parts.push('no negative clicks');
+  const mults = d.styles?.options.filter((o) => (o.multiplier ?? 1) !== 1) ?? [];
+  if (mults.length) parts.push(`style multipliers ${mults.map((o) => `${o.code} ×${o.multiplier}`).join(', ')}`);
+  return parts.join('; ') + '.';
+}
 
 const PLACE_COLORS = ['var(--gold)', '#c7c7d1', '#cd7f32']; // 1st gold · 2nd silver · 3rd bronze
 
@@ -155,13 +170,18 @@ export default async function ResultsPage() {
 
         <footer style={{ borderTop: '1px solid var(--navy-border)', paddingTop: '1.5rem', marginTop: '1rem' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
-            Scores are out of 100 and averaged across all judges. 1A and X: 60 technical execution (clickers) + 40 evaluation, minus
-            major deductions (stop −1, discard −3, detach −5). Sport / Beginner / Junior: 20 technical execution + 80 evaluation, with no
-            negative clicks or deductions. Each judge&rsquo;s top clicker score is normalized to the full 60 (or 20).{' '}
-            <a href={`${contest.links.rules}#scoring`} style={{ color: 'var(--gold-light)' }}>How scoring worked</a>
-            {' · '}
-            <a href="https://yoyocontest.com/freestyle-rules-for-nyyl-events/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-light)' }}>Source: NYYL freestyle rules</a>
+            How scoring works: each judge scores every routine and the judges&rsquo; scores are averaged.
           </p>
+          <ul style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.4rem 0 0', paddingLeft: '1.1rem' }}>
+            {competition.divisions.map((d) => (
+              <li key={d.code}>{d.name}: {scoringSummary(d)}</li>
+            ))}
+          </ul>
+          {contest.links.rules && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>
+              <a href={contest.links.rules} style={{ color: 'var(--gold-light)' }}>Full contest rules</a>
+            </p>
+          )}
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>
             Questions about results?{' '}
             <a href={`mailto:${contest.contactEmail}`} style={{ color: 'var(--gold-light)' }}>{contest.contactEmail}</a>
