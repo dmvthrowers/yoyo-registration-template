@@ -58,6 +58,16 @@ export const contest = {
     url: 'https://example.org',
   },
 
+  /**
+   * Home-state champion: in each division, the top finisher from this state gets this title on
+   * the results page, even if they finished off the podium (e.g. "VA State Champion"). Matched
+   * on the 2-letter state competitors enter when they register. Set state to '' to turn it off.
+   */
+  stateChampion: {
+    state: 'IL',
+    title: 'IL State Champion',
+  },
+
   /** Presenting sponsor ("Brought to you by ..."). Leave name "" for none. */
   presentedBy: {
     name: '',

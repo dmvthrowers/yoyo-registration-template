@@ -24,6 +24,8 @@ Edit **`contest.config.ts`**. It's the only file most contests need to change:
 - name, short name (`SYO-27`), next year's short name, tagline
 - date, start and end time, time zone (IANA name, e.g. `America/Chicago`)
 - venue, organizer, presenting sponsor (leave `name: ''` for none)
+- `stateChampion`: each division's top finisher from your state gets a title on the results page,
+  even off the podium (e.g. `{ state: 'VA', title: 'VA State Champion' }`). `state: ''` turns it off.
 - deadlines: early bird, online registration close, music upload, comp-code expiry. Write them
   as ISO timestamps with your venue's UTC offset, e.g. `2027-03-11T23:59:59-06:00`.
 - links to your contest website. Leave one `''` to hide it from the nav and footer. No site yet?
