@@ -148,6 +148,12 @@ export default function Footer() {
           <span style={{ fontSize: '0.68rem', color: '#3a4a6a', fontFamily: 'var(--font-body)' }}>
             {whenWhere}
           </span>
+          <span style={{ fontSize: '0.68rem', color: '#3a4a6a', fontFamily: 'var(--font-body)', flexBasis: '100%' }}>
+            Registration app template by{' '}
+            <a href="https://dmvthrowers.club/" target="_blank" rel="noopener noreferrer" style={{ color: '#3a4a6a' }}>
+              DMV Throwers
+            </a>
+          </span>
         </div>
       </div>
     </footer>
