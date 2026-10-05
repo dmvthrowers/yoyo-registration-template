@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isPublished, publishedDivisions } from '@/lib/results-visibility';
+import { getEventFlagBoolean } from '@/lib/event-flags';
+import { isPublished, publishedDivisions, visibilityFrom, type ResultsVisibility } from '@/lib/results-visibility';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { fetchStandings, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
@@ -12,6 +13,16 @@ import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/
 
 async function getStandings(): Promise<Record<Division, DivisionStandings>> {
   return fetchStandings(createAdminClient());
+}
+
+/** Which results are public. Without database credentials (e.g. a CI build), only the global flag counts. */
+async function getVisibility(): Promise<ResultsVisibility> {
+  try {
+    return await publishedDivisions(createAdminClient());
+  } catch (e) {
+    console.error('[results] visibility check failed:', e);
+    return visibilityFrom(await getEventFlagBoolean('results_published', process.env.RESULTS_PUBLISHED === 'true'), []);
+  }
 }
 
 // Refresh at most once per minute once published.
@@ -82,7 +93,7 @@ function StandingsList({ rows, label }: { rows: StandingRow[]; label: string }) 
 }
 
 export default async function ResultsPage() {
-  const vis = await publishedDivisions(createAdminClient());
+  const vis = await getVisibility();
   const resultsPublished = vis.all;
   // Divisions with at least one released round, in config order.
   const shown = competition.divisions.filter((d) => isPublished(vis, d.code));
