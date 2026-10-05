@@ -46,9 +46,11 @@ Then:
   - `freestyle`: an NYYL-style sheet. A clicker tally is normalized per judge to `techCap`,
     with an optional style multiplier, plus four 0–`evalCap` evaluation categories, minus
     optional stop/discard/detach deductions.
-  - `simple`: each judge enters one score from 0 to `max`, and judges are averaged. Use it
-    for kendama, a 100-point sheet, or "longest spin in seconds".
-  - Trick ladders and battle brackets aren't built in.
+  - `manual`: a judge types in one score from 0 to `max` (their own total, a paper sheet's
+    result, seconds spun), and several judges are averaged. Use it for kendama, a 100-point
+    sheet, or "longest spin in seconds".
+  - There's no built-in trick-ladder or battle-bracket screen. Run those on paper and enter
+    the result as a manual score, e.g. the highest rung reached.
 - **Logos**: replace `public/logo-32.png`, `logo-180.png` and `logo-512.png` (square PNGs).
 - **Colors**: `app/globals.css` and `tailwind.config.js` (navy + gold by default).
 

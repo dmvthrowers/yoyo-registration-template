@@ -102,7 +102,7 @@ components, so they can't export metadata themselves). The root layout sets the 
 | `stripe-refund.ts` | `refundTransition()`: full refund → `paid=false`; partial → audit log only |
 | `outbox.ts`, `email.ts`, `email-policy.ts` | Email outbox with daily cap (`EMAIL_DAILY_LIMIT`) and a reserve for confirmations |
 | `event-flags.ts` | Runtime flags from `contest_event_flags` (`online_registration_open`, `results_published`), cached 30s |
-| `divisions-core.ts` | Pure division logic from `contest.config.ts → competition`: fees and combos, selection rules, freestyle/simple scoring math, and the generator for `supabase/divisions.sql`. Unit-tested |
+| `divisions-core.ts` | Pure division logic from `contest.config.ts → competition`: fees and combos, selection rules, freestyle/manual scoring math, and the generator for `supabase/divisions.sql`. Unit-tested |
 | `pricing.ts`, `validation.ts`, `tokens.ts`, `filename.ts` | Fee wrappers, zod schemas, signed upload tokens, canonical music filenames |
 
 ### Tests
@@ -157,12 +157,12 @@ integrity triggers need the caps and multipliers too.
   A trigger rejects unknown divisions or styles; another blocks deleting a division or style
   that registrations still use.
 - **Scores**: one row per judge per competitor per division. `freestyle` divisions fill the
-  sheet columns; `simple` divisions fill `simple_score`. `style_code` records which style the
+  sheet columns; `manual` divisions fill `manual_score`. `style_code` records which style the
   routine was judged under when the competitor entered more than one; otherwise their only
   style is used. A trigger checks every value against the division's caps.
 - **`contest_results`** (view) turns rows into `final_score`. Freestyle tech is normalized to
   each judge's own best multiplied tally. `lib/divisions-core.ts` (`freestyleBreakdown`,
-  `simpleBreakdown`) does the same math for the judge screen and `/api/scores`; change both
+  `manualBreakdown`) does the same math for the judge screen and `/api/scores`; change both
   together. Standings average each competitor's `final_score` across judges.
 
 ### Music upload

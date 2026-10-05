@@ -6,29 +6,29 @@
 -- * contest_registrations.divisions: enum array → text[]; x_substyle → division_styles
 --   jsonb ({"X": ["2A"]}), so any division can have styles and players can pick several.
 -- * contest_scores: division FK, optional style_code (which style the routine was judged
---   under), simple_score for the "simple" format; range checks read the division's caps.
+--   under), manual_score for the "manual" format; range checks read the division's caps.
 -- * contest_results: rebuilt to read caps, multipliers and deductions from those tables.
---   Mirrors lib/divisions-core.ts (freestyleBreakdown / simpleBreakdown); keep in sync.
+--   Mirrors lib/divisions-core.ts (freestyleBreakdown / manualBreakdown); keep in sync.
 
 -- ── Division tables ──────────────────────────────────────────────────────────
 
 create table public.contest_divisions (
   code            text primary key check (code ~ '^[A-Za-z0-9_-]{1,20}$'),
   name            text not null,
-  scoring_format  text not null check (scoring_format in ('freestyle', 'simple')),
+  scoring_format  text not null check (scoring_format in ('freestyle', 'manual')),
   tech_cap        numeric(7,2),
   eval_cap        numeric(5,2),
   allow_negative  boolean not null default false,
   stop_points     numeric(5,2) not null default 0,
   discard_points  numeric(5,2) not null default 0,
   detach_points   numeric(5,2) not null default 0,
-  simple_max      numeric(7,2),
+  manual_max      numeric(7,2),
   has_music       boolean not null default true,
   sort_order      integer not null default 0,
   updated_at      timestamptz not null default now(),
   constraint contest_divisions_format_fields check (
     (scoring_format = 'freestyle' and tech_cap > 0 and eval_cap > 0)
-    or (scoring_format = 'simple' and simple_max > 0)
+    or (scoring_format = 'manual' and manual_max > 0)
   )
 );
 
@@ -49,7 +49,7 @@ create policy public_can_view_division_styles on public.contest_division_styles 
 create policy service_role_all_division_styles on public.contest_division_styles using (auth.role() = 'service_role');
 
 insert into public.contest_divisions
-  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, simple_max, has_music, sort_order)
+  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, manual_max, has_music, sort_order)
 values
   ('1A', '1A — Single String', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 1),
   ('X', 'X Division', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 2),
@@ -151,12 +151,12 @@ alter table public.contest_scores
   add constraint contest_scores_division_fkey foreign key (division)
   references public.contest_divisions (code) on update cascade;
 alter table public.contest_scores add column style_code text;
-alter table public.contest_scores add column simple_score numeric(7,2) check (simple_score >= 0);
+alter table public.contest_scores add column manual_score numeric(7,2) check (manual_score >= 0);
 alter table public.contest_scores
   add constraint contest_scores_eval_nonnegative check (
     trick_presentation >= 0 and performance_quality >= 0 and musicality >= 0 and routine_construction >= 0);
 
--- Ranges depend on the division: eval categories ≤ eval_cap, simple_score ≤ simple_max,
+-- Ranges depend on the division: eval categories ≤ eval_cap, manual_score ≤ manual_max,
 -- no negative clicks where the division doesn't allow them, style must exist.
 create function public.contest_check_score() returns trigger
 language plpgsql set search_path = '' as $$
@@ -174,8 +174,8 @@ begin
     if not d.allow_negative and new.tech_execution_raw < 0 then
       raise exception '% does not use negative clicks', d.code using errcode = '23514';
     end if;
-  elsif new.simple_score is not null and new.simple_score > d.simple_max then
-    raise exception '% is scored out of %', d.code, d.simple_max using errcode = '23514';
+  elsif new.manual_score is not null and new.manual_score > d.manual_max then
+    raise exception '% is scored out of %', d.code, d.manual_max using errcode = '23514';
   end if;
   if new.style_code is not null and not exists (
        select 1 from public.contest_division_styles s where s.division_code = new.division and s.code = new.style_code) then
@@ -220,7 +220,7 @@ with scored as (
   select s.*,
          r.is_minor, r.is_public, r.nickname, r.preferred_bracket_name, r.first_name, r.last_name,
          r.city as reg_city, r.state as reg_state, r.socials as reg_socials,
-         d.scoring_format, d.tech_cap, d.eval_cap, d.stop_points, d.discard_points, d.detach_points, d.simple_max,
+         d.scoring_format, d.tech_cap, d.eval_cap, d.stop_points, d.discard_points, d.detach_points, d.manual_max,
          coalesce(st.multiplier, 1.00) as style_multiplier,
          coalesce(s.style_code,
            case when jsonb_typeof(r.division_styles -> s.division) = 'array'
@@ -296,10 +296,10 @@ select
   c.discard_count,
   c.detach_count,
   c.deductions as deduction_points,
-  c.simple_score,
+  c.manual_score,
   case
     when c.is_official_import then c.final_score_override
-    when c.scoring_format = 'simple' then least(c.simple_max, greatest(0, round(coalesce(c.simple_score, 0), 2)))
+    when c.scoring_format = 'manual' then least(c.manual_max, greatest(0, round(coalesce(c.manual_score, 0), 2)))
     else greatest(0, round(c.tech_norm + c.trick_presentation + c.performance_quality + c.musicality + c.routine_construction - c.deductions, 2))
   end as final_score,
   c.notes,

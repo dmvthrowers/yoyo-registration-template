@@ -1,11 +1,11 @@
 /**
  * Pure division logic shared by the server, the browser and the tests: fees, selection
- * rules, freestyle/simple scoring math, and the SQL that syncs divisions into the database.
+ * rules, freestyle/manual scoring math, and the SQL that syncs divisions into the database.
  *
  * Takes the `competition` block from contest.config.ts as an argument (type-only import),
  * so `npm test` can run it under plain Node.
  */
-import type { DivisionDef, FreestyleScoring, SimpleScoring, competition as Competition } from '@/contest.config';
+import type { DivisionDef, FreestyleScoring, ManualScoring, competition as Competition } from '@/contest.config';
 
 type CompetitionConfig = typeof Competition;
 
@@ -190,7 +190,7 @@ export function freestyleBreakdown(s: FreestyleSheet, scoring: FreestyleScoring,
   return { tech_execution_normalized: tech, total_eval: totalEval, deduction_points: ded, final_score: Math.max(0, r2(tech + totalEval - ded)) };
 }
 
-export function simpleBreakdown(score: number, scoring: SimpleScoring): ScoreBreakdown {
+export function manualBreakdown(score: number, scoring: ManualScoring): ScoreBreakdown {
   const v = Math.min(scoring.max, Math.max(0, r2(score)));
   return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: v };
 }
@@ -228,7 +228,7 @@ export function configIssues(c: CompetitionConfig): string[] {
         out.push(`${d.code}: freestyle techCap must be 1–1000 and evalCap 1–99`);
       }
     } else if (!(sc.max > 0 && sc.max <= 9999)) {
-      out.push(`${d.code}: simple max must be 1–9999`);
+      out.push(`${d.code}: manual max must be 1–9999`);
     }
   }
   for (const k of c.combos) {
@@ -250,7 +250,7 @@ export function divisionsSql(c: CompetitionConfig): string {
       q(d.code), q(d.name), q(s.format),
       f ? num(f.techCap) : 'null', f ? num(f.evalCap) : 'null', f ? String(f.negativeClicks) : 'false',
       num(f?.deductions?.stop ?? 0), num(f?.deductions?.discard ?? 0), num(f?.deductions?.detach ?? 0),
-      s.format === 'simple' ? num(s.max) : 'null', String(d.music), String(i + 1),
+      s.format === 'manual' ? num(s.max) : 'null', String(d.music), String(i + 1),
     ].join(', ')})`;
   });
   const styles = c.divisions.flatMap((d) =>
@@ -267,14 +267,14 @@ export function divisionsSql(c: CompetitionConfig): string {
 begin;
 
 insert into public.contest_divisions
-  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, simple_max, has_music, sort_order)
+  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, manual_max, has_music, sort_order)
 values
 ${rows.join(',\n')}
 on conflict (code) do update set
   name = excluded.name, scoring_format = excluded.scoring_format, tech_cap = excluded.tech_cap,
   eval_cap = excluded.eval_cap, allow_negative = excluded.allow_negative, stop_points = excluded.stop_points,
   discard_points = excluded.discard_points, detach_points = excluded.detach_points,
-  simple_max = excluded.simple_max, has_music = excluded.has_music, sort_order = excluded.sort_order,
+  manual_max = excluded.manual_max, has_music = excluded.has_music, sort_order = excluded.sort_order,
   updated_at = now();
 
 ${styles.length ? `insert into public.contest_division_styles (division_code, code, label, multiplier, sort_order)

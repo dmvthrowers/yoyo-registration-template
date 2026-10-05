@@ -133,9 +133,12 @@ export interface FreestyleScoring {
   deductions: { stop: number; discard: number; detach: number } | null;
 }
 
-/** "simple": each judge enters one score from 0 to max; judges are averaged. */
-export interface SimpleScoring {
-  format: 'simple';
+/**
+ * "manual": a judge types in one score from 0 to max — their own total, a paper sheet's
+ * result, seconds spun, tricks landed. With several judges, scores are averaged.
+ */
+export interface ManualScoring {
+  format: 'manual';
   max: number;
 }
 
@@ -152,7 +155,7 @@ export interface DivisionDef {
   styles?: { options: StyleDef[]; min: number; max: number };
   /** Division codes this one can't be entered together with */
   cannotCombineWith?: string[];
-  scoring: FreestyleScoring | SimpleScoring;
+  scoring: FreestyleScoring | ManualScoring;
 }
 
 /**

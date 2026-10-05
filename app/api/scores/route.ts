@@ -6,7 +6,7 @@ import { getEventFlagBoolean } from '@/lib/event-flags';
 import { z } from 'zod';
 import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import {
-  effectiveStyle, freestyleBreakdown, simpleBreakdown, styleMultiplier,
+  effectiveStyle, freestyleBreakdown, manualBreakdown, styleMultiplier,
   type FreestyleSheet, type ScoreBreakdown,
 } from '@/lib/divisions-core';
 
@@ -15,7 +15,7 @@ type Division = string;
 /**
  * Scoring rules per division come from contest.config.ts → competition.divisions:
  *  - freestyle: clicker tally normalized per judge (×style multiplier) + 4 eval categories − deductions
- *  - simple: one 0–max score per judge
+ *  - manual: one 0–max score per judge
  * The math lives in lib/divisions-core.ts and mirrors the contest_results view.
  */
 const sheetNumber = z.number().min(0).max(99).optional().default(0);
@@ -33,16 +33,16 @@ const scoreSubmitSchema = z.object({
   stop_count:            z.number().int().min(0).optional().default(0),
   discard_count:         z.number().int().min(0).optional().default(0),
   detach_count:          z.number().int().min(0).optional().default(0),
-  /** Simple format: the judge's one score. */
-  simple_score:          z.number().min(0).max(9999).optional(),
+  /** Manual format: the judge's one score. */
+  manual_score:          z.number().min(0).max(9999).optional(),
   notes:                 z.string().trim().max(500).optional(),
 }).superRefine((data, ctx) => {
   const d = divisionByCode(data.division);
   if (!d) return;
   const sc = d.scoring;
-  if (sc.format === 'simple') {
-    if (data.simple_score === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} needs a score`, path: ['simple_score'] });
-    else if (data.simple_score > sc.max) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} is scored out of ${sc.max}`, path: ['simple_score'] });
+  if (sc.format === 'manual') {
+    if (data.manual_score === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} needs a score`, path: ['manual_score'] });
+    else if (data.manual_score > sc.max) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} is scored out of ${sc.max}`, path: ['manual_score'] });
     return;
   }
   if (!sc.negativeClicks && data.tech_execution_raw < 0) {
@@ -61,7 +61,7 @@ interface ScoreRow extends FreestyleSheet {
   style_code: string | null;
   /** Styles the competitor registered for this division */
   registered_styles: string[];
-  simple_score: number | null;
+  manual_score: number | null;
 }
 
 const multiplierOf = (r: ScoreRow) =>
@@ -70,7 +70,7 @@ const multiplierOf = (r: ScoreRow) =>
 function computeScoreBreakdown(r: ScoreRow, maxRawForJudge: number | null): ScoreBreakdown {
   const d = divisionByCode(r.division);
   if (!d) return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: 0 };
-  if (d.scoring.format === 'simple') return simpleBreakdown(r.simple_score ?? 0, d.scoring);
+  if (d.scoring.format === 'manual') return manualBreakdown(r.manual_score ?? 0, d.scoring);
   return freestyleBreakdown(r, d.scoring, multiplierOf(r), maxRawForJudge);
 }
 
@@ -88,7 +88,7 @@ function toRow(s: Record<string, unknown>, division: Division, reg: RegJoin): Sc
     division,
     style_code: (s.style_code as string | null) ?? null,
     registered_styles: stylesFor(reg, division),
-    simple_score: s.simple_score === null || s.simple_score === undefined ? null : Number(s.simple_score),
+    manual_score: s.manual_score === null || s.manual_score === undefined ? null : Number(s.manual_score),
     tech_execution_raw: Number(s.tech_execution_raw),
     trick_presentation: Number(s.trick_presentation),
     performance_quality: Number(s.performance_quality),
@@ -158,7 +158,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       discard_count,
       detach_count,
       style_code,
-      simple_score,
+      manual_score,
       notes,
       created_at,
       contest_registrations (
@@ -208,7 +208,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
         detach_count: s.detach_count,
         style_code: s.style_code,
         registered_styles: s.registered_styles,
-        simple_score: s.simple_score,
+        manual_score: s.manual_score,
         ...breakdown,
         notes: raw.notes ?? null,
         created_at: raw.created_at,
@@ -310,9 +310,9 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   const { registration_id, division, notes } = parsed.data;
-  const isSimple = divisionByCode(division)?.scoring.format === 'simple';
-  // A simple-format score keeps the freestyle columns at zero.
-  const sheet = isSimple
+  const isManual = divisionByCode(division)?.scoring.format === 'manual';
+  // A manual score keeps the freestyle columns at zero.
+  const sheet = isManual
     ? { tech_execution_raw: 0, trick_presentation: 0, performance_quality: 0, musicality: 0, routine_construction: 0, stop_count: 0, discard_count: 0, detach_count: 0 }
     : {
         tech_execution_raw: parsed.data.tech_execution_raw, trick_presentation: parsed.data.trick_presentation,
@@ -320,7 +320,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         routine_construction: parsed.data.routine_construction, stop_count: parsed.data.stop_count,
         discard_count: parsed.data.discard_count, detach_count: parsed.data.detach_count,
       };
-  const simple_score = isSimple ? parsed.data.simple_score ?? 0 : null;
+  const manual_score = isManual ? parsed.data.manual_score ?? 0 : null;
 
   const supabase = createAdminClient();
 
@@ -358,7 +358,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         judge_display_name: identity.displayName,
         ...sheet,
         style_code,
-        simple_score,
+        manual_score,
         notes: notes ?? null,
       },
       { onConflict: 'registration_id,division,judge_user_id' }
@@ -375,7 +375,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   // division, so re-fetch all of this judge's scores here to get an up-to-date baseline.
   const { data: judgeScores, error: judgeScoresError } = await supabase
     .from('contest_scores')
-    .select('registration_id, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count, style_code, simple_score, contest_registrations ( division_styles )')
+    .select('registration_id, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count, style_code, manual_score, contest_registrations ( division_styles )')
     .eq('division', division)
     .eq('judge_user_id', identity.authUserId);
 
@@ -386,7 +386,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 
   const judgeRows = (judgeScores ?? []).map((r) =>
     toRow(r, division, (Array.isArray(r.contest_registrations) ? r.contest_registrations[0] : r.contest_registrations) as RegJoin));
-  const thisRow: ScoreRow = { division, style_code, registered_styles: registeredStyles, simple_score, ...sheet };
+  const thisRow: ScoreRow = { division, style_code, registered_styles: registeredStyles, manual_score, ...sheet };
   const breakdown = computeScoreBreakdown(thisRow, maxPositiveRaw(judgeRows));
 
   return NextResponse.json(
@@ -397,7 +397,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       division,
       ...sheet,
       style_code,
-      simple_score,
+      manual_score,
       ...breakdown,
     },
     { status: 200, headers: { 'x-request-id': requestId } }
