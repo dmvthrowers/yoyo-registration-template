@@ -113,7 +113,7 @@ export default function BracketView({ division, token, mode, onAction, onData, p
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [poll, setPoll] = useState<{ a: string; b: string }>({ a: '', b: '' });
   const onDataRef = useRef(onData);
-  onDataRef.current = onData;
+  useEffect(() => { onDataRef.current = onData; }, [onData]);
 
   const load = useCallback(async (): Promise<BracketData | null> => {
     if (fixture) return fixture;
