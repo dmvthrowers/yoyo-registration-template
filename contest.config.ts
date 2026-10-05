@@ -108,6 +108,126 @@ export const contest = {
   },
 } as const;
 
+// ---------------------------------------------------------------- divisions & scoring
+
+/** A style inside a division, e.g. X Division's 2A–5A, or a kendama "ken / no ken" category. */
+export interface StyleDef {
+  code: string;
+  label: string;
+  description?: string;
+  /** Freestyle only: raw clicks are multiplied by this before normalizing (1 = none). */
+  multiplier?: number;
+}
+
+/**
+ * "freestyle": NYYL-style sheet. A clicker tally (Technical Execution, normalized per judge to
+ * techCap) + four evaluation categories (0–evalCap each) − deductions.
+ */
+export interface FreestyleScoring {
+  format: 'freestyle';
+  techCap: number;
+  evalCap: number;
+  /** Can a judge click below zero (misses)? */
+  negativeClicks: boolean;
+  /** Points per stop / discard / detach. null = no deductions. */
+  deductions: { stop: number; discard: number; detach: number } | null;
+}
+
+/** "simple": each judge enters one score from 0 to max; judges are averaged. */
+export interface SimpleScoring {
+  format: 'simple';
+  max: number;
+}
+
+export interface DivisionDef {
+  /** Short, permanent ID stored in the database: letters, numbers, - or _. Never rename one in use. */
+  code: string;
+  name: string;
+  description: string;
+  /** Entry fee in cents */
+  priceCents: number;
+  /** Does this division perform to uploaded music? */
+  music: boolean;
+  /** Optional styles. Registrants pick between min and max of them. */
+  styles?: { options: StyleDef[]; min: number; max: number };
+  /** Division codes this one can't be entered together with */
+  cannotCombineWith?: string[];
+  scoring: FreestyleScoring | SimpleScoring;
+}
+
+/**
+ * The toy, the divisions and how they're judged. Edit this block for a kendama, diabolo,
+ * spintop or mixed contest. After changing divisions, run `npm run divisions` and apply
+ * supabase/divisions.sql (see docs/SETUP.md) so the database matches.
+ */
+export const competition: {
+  toy: { singular: string; plural: string };
+  /** Labels for the three optional "setup" fields on profiles. "" hides a field. */
+  gear: { yoyo: string; string: string; counterweight: string };
+  divisions: DivisionDef[];
+  /** Bundle prices: entering every listed division costs priceCents instead of the sum. */
+  combos: { divisions: string[]; priceCents: number }[];
+  pricing: {
+    earlyBirdDiscountCents: number;
+    walkUpSurchargeCents: number;
+    /** true shows "TBD" instead of prices on public pages (checkout still charges the real amount). */
+    pricesTbd: boolean;
+  };
+} = {
+  toy: { singular: 'yo-yo', plural: 'yo-yos' },
+  gear: { yoyo: 'Yo-yo', string: 'String', counterweight: 'Counterweight' },
+
+  divisions: [
+    {
+      code: '1A',
+      name: '1A — Single String',
+      description: 'One yo-yo on one string. The classic string-trick style.',
+      priceCents: 3000,
+      music: true,
+      scoring: { format: 'freestyle', techCap: 60, evalCap: 10, negativeClicks: true, deductions: { stop: 1, discard: 3, detach: 5 } },
+    },
+    {
+      code: 'X',
+      name: 'X Division',
+      description: 'The other four styles compete together, with a per-style multiplier.',
+      priceCents: 2500,
+      music: true,
+      styles: {
+        min: 1,
+        max: 2,
+        options: [
+          { code: '2A', label: '2A — Looping', description: 'Two looping yo-yos focused on rhythm and control.', multiplier: 1.4 },
+          { code: '3A', label: '3A — Two-Handed String', description: 'Two string-trick yo-yos, one in each hand.', multiplier: 1.5 },
+          { code: '4A', label: '4A — Offstring', description: 'The yo-yo is not attached to the string.', multiplier: 1.3 },
+          { code: '5A', label: '5A — Freehand', description: 'Counterweight instead of a finger loop.', multiplier: 1.6 },
+        ],
+      },
+      scoring: { format: 'freestyle', techCap: 60, evalCap: 10, negativeClicks: true, deductions: { stop: 1, discard: 3, detach: 5 } },
+    },
+    {
+      code: 'SBJ',
+      name: 'Sport / Beginner / Junior',
+      description: 'For newer players. Shorter routines, no negative clicks or deductions.',
+      priceCents: 2000,
+      music: true,
+      cannotCombineWith: ['1A', 'X'],
+      scoring: { format: 'freestyle', techCap: 20, evalCap: 20, negativeClicks: false, deductions: null },
+    },
+  ],
+
+  combos: [{ divisions: ['1A', 'X'], priceCents: 5000 }],
+
+  pricing: { earlyBirdDiscountCents: 500, walkUpSurchargeCents: 1000, pricesTbd: false },
+};
+
+/** Look up a division by code */
+export const divisionByCode = (code: string): DivisionDef | undefined =>
+  competition.divisions.find((d) => d.code === code);
+
+/** All division codes, in display order */
+export const DIVISION_CODES: string[] = competition.divisions.map((d) => d.code);
+
+
 // ---------------------------------------------------------------- derived helpers
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',

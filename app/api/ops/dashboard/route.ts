@@ -25,7 +25,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const [registrationsRes, spectatorsRes] = await Promise.all([
     supabase
       .from('contest_registrations')
-      .select('id, created_at, first_name, last_name, preferred_bracket_name, email, city, state, divisions, x_substyle, fee_cents, paid, paid_at, music_filename, music_uploaded_at, is_public, admin_notes, registration_source')
+      .select('id, created_at, first_name, last_name, preferred_bracket_name, email, city, state, divisions, division_styles, fee_cents, paid, paid_at, music_filename, music_uploaded_at, is_public, admin_notes, registration_source')
       .order('created_at', { ascending: false }),
     supabase
       .from('contest_spectators')

@@ -3,9 +3,10 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRunOrderEditorRequest } from '@/lib/auth/admin-request';
 import { z } from 'zod';
+import { DIVISION_CODES } from '@/contest.config';
 
 const advanceSchema = z.object({
-  division: z.enum(['1A', 'X', 'SBJ']),
+  division: z.string().trim().refine((d) => DIVISION_CODES.includes(d), 'Unknown division'),
 });
 
 /**
@@ -15,7 +16,7 @@ const advanceSchema = z.object({
  * - Marks the current 'performing' competitor as 'done'
  * - Promotes the lowest-position 'upcoming' competitor to 'performing'
  *
- * Body: { division: "1A" }
+ * Body: { division: "<code>" }
  *
  * Returns the new state (who is now performing, who is next).
  */
@@ -114,7 +115,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
  * Resets the run order for a division: all rows back to 'upcoming'.
  * Use before starting or to restart a division.
  *
- * Body: { division: "1A" }
+ * Body: { division: "<code>" }
  */
 export const DELETE = withErrorHandling(async (requestId, req: NextRequest) => {
   const auth = await requireRunOrderEditorRequest(req, requestId);

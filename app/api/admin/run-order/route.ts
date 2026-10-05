@@ -3,11 +3,10 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRunOrderEditorRequest } from '@/lib/auth/admin-request';
 import { z } from 'zod';
-
-const VALID_DIVISIONS = ['1A', 'X', 'SBJ'] as const;
+import { DIVISION_CODES } from '@/contest.config';
 
 const saveRunOrderSchema = z.object({
-  division: z.enum(['1A', 'X', 'SBJ']),
+  division: z.string().trim().refine((d) => DIVISION_CODES.includes(d), 'Unknown division'),
   /** Ordered array of registration IDs — determines position 1, 2, 3… */
   registration_ids: z.array(z.string().uuid()).min(1).max(200),
 });
@@ -19,7 +18,7 @@ const saveRunOrderSchema = z.object({
  * Completely replaces any existing order for that division.
  * Preserves status for rows that already exist; new rows start as 'upcoming'.
  *
- * Body: { division: "1A", registration_ids: ["uuid1", "uuid2", ...] }
+ * Body: { division: "<code>", registration_ids: ["uuid1", "uuid2", ...] }
  */
 export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   const auth = await requireRunOrderEditorRequest(req, requestId);
@@ -111,8 +110,8 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
 
   const division = req.nextUrl.searchParams.get('division');
 
-  if (!division || !VALID_DIVISIONS.includes(division as typeof VALID_DIVISIONS[number])) {
-    return apiError('bad_request', 'division must be one of: 1A, X, SBJ', requestId);
+  if (!division || !DIVISION_CODES.includes(division)) {
+    return apiError('bad_request', `division must be one of: ${DIVISION_CODES.join(', ')}`, requestId);
   }
 
   const supabase = createAdminClient();

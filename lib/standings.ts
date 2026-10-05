@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { competition } from '@/contest.config';
 
 /**
  * Final standings from contest_results — one row per judge per competitor per
@@ -6,13 +7,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * survey invites so "who placed" is computed the same way everywhere.
  */
 
-export type Division = '1A' | 'X' | 'SBJ';
+/** A division code from contest.config.ts → competition.divisions */
+export type Division = string;
 
-export const DIVISIONS: { code: Division; label: string }[] = [
-  { code: '1A',  label: '1A — Single String' },
-  { code: 'X',   label: 'X Division' },
-  { code: 'SBJ', label: 'Sport / Beginner / Junior' },
-];
+export const DIVISIONS: { code: Division; label: string }[] =
+  competition.divisions.map((d) => ({ code: d.code, label: d.name }));
 
 /** Places that win prizes (and get the winner survey). */
 export const PRIZE_PLACES = 3;
@@ -36,13 +35,12 @@ export interface Standing {
 }
 
 export function emptyStandings(): Record<Division, Standing[]> {
-  return { '1A': [], X: [], SBJ: [] };
+  return Object.fromEntries(DIVISIONS.map(({ code }) => [code, [] as Standing[]]));
 }
 
 export function computeStandings(rows: ResultRow[]): Record<Division, Standing[]> {
-  const grouped: Record<Division, Map<string, { s: Standing; sum: number }>> = {
-    '1A': new Map(), X: new Map(), SBJ: new Map(),
-  };
+  const grouped: Record<Division, Map<string, { s: Standing; sum: number }>> =
+    Object.fromEntries(DIVISIONS.map(({ code }) => [code, new Map()]));
 
   for (const row of rows) {
     const div = row.division as Division;

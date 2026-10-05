@@ -4,104 +4,100 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { getEventFlagBoolean } from '@/lib/event-flags';
 import { z } from 'zod';
+import { DIVISION_CODES, divisionByCode } from '@/contest.config';
+import {
+  effectiveStyle, freestyleBreakdown, simpleBreakdown, styleMultiplier,
+  type FreestyleSheet, type ScoreBreakdown,
+} from '@/lib/divisions-core';
 
-const VALID_DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof VALID_DIVISIONS[number];
-
-/** NYYL Tech Execution cap: Sport/SBJ divisions score to /20, 1A/X to /60. */
-const TECH_EXECUTION_CAP: Record<Division, number> = { '1A': 60, X: 60, SBJ: 20 };
+type Division = string;
 
 /**
- * NYYL X Division style multipliers, applied to the raw clicker tally before
- * normalization. Mirrors the contest_results view (migration 0031) -- keep in sync.
- * https://yoyocontest.com/freestyle-rules-for-nyyl-events/#x-division-championship
+ * Scoring rules per division come from contest.config.ts → competition.divisions:
+ *  - freestyle: clicker tally normalized per judge (×style multiplier) + 4 eval categories − deductions
+ *  - simple: one 0–max score per judge
+ * The math lives in lib/divisions-core.ts and mirrors the contest_results view.
  */
-const X_STYLE_MULTIPLIER: Record<string, number> = { '2A': 1.4, '3A': 1.5, '4A': 1.3, '5A': 1.6 };
-
-/** NYYL Routine Evaluation per-category cap: Sport/SBJ /20 each (Eval /80), 1A/X /10 each (Eval /40). Matches the DB check constraints from migration 0023. */
-const EVAL_CATEGORY_CAP: Record<Division, number> = { '1A': 10, X: 10, SBJ: 20 };
-
+const sheetNumber = z.number().min(0).max(99).optional().default(0);
 const scoreSubmitSchema = z.object({
   registration_id:       z.string().uuid(),
-  division:              z.enum(['1A', 'X', 'SBJ']),
-  /** Raw net clicker tally (+ landed elements, - misses), NOT the final 0-60/0-20 score. Normalized server-side. */
-  tech_execution_raw:    z.number().min(-200).max(200),
-  trick_presentation:    z.number().min(0).max(20),
-  performance_quality:   z.number().min(0).max(20),
-  musicality:            z.number().min(0).max(20),
-  routine_construction:  z.number().min(0).max(20),
+  division:              z.string().trim().max(20).refine((d) => DIVISION_CODES.includes(d), 'Unknown division'),
+  /** Which of the competitor's styles this routine was judged under (only needed when they registered several). */
+  style_code:            z.string().trim().max(20).optional().nullable(),
+  /** Freestyle: raw net clicker tally (+ landed elements, − misses), NOT the normalized score. */
+  tech_execution_raw:    z.number().min(-500).max(500).optional().default(0),
+  trick_presentation:    sheetNumber,
+  performance_quality:   sheetNumber,
+  musicality:            sheetNumber,
+  routine_construction:  sheetNumber,
   stop_count:            z.number().int().min(0).optional().default(0),
   discard_count:         z.number().int().min(0).optional().default(0),
   detach_count:          z.number().int().min(0).optional().default(0),
+  /** Simple format: the judge's one score. */
+  simple_score:          z.number().min(0).max(9999).optional(),
   notes:                 z.string().trim().max(500).optional(),
-}).refine(
-  (data) => data.division !== 'SBJ' || data.tech_execution_raw >= 0,
-  { message: 'Sport/SBJ freestyle does not use negative clicks', path: ['tech_execution_raw'] }
-).refine(
-  (data) => {
-    const cap = EVAL_CATEGORY_CAP[data.division];
-    return [data.trick_presentation, data.performance_quality, data.musicality, data.routine_construction].every((v) => v <= cap);
-  },
-  { message: 'Evaluation categories are scored out of 10 in 1A/X and out of 20 in Sport/SBJ', path: ['trick_presentation'] }
-);
+}).superRefine((data, ctx) => {
+  const d = divisionByCode(data.division);
+  if (!d) return;
+  const sc = d.scoring;
+  if (sc.format === 'simple') {
+    if (data.simple_score === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} needs a score`, path: ['simple_score'] });
+    else if (data.simple_score > sc.max) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} is scored out of ${sc.max}`, path: ['simple_score'] });
+    return;
+  }
+  if (!sc.negativeClicks && data.tech_execution_raw < 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} does not use negative clicks`, path: ['tech_execution_raw'] });
+  }
+  if ([data.trick_presentation, data.performance_quality, data.musicality, data.routine_construction].some((v) => v > sc.evalCap)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Evaluation categories in ${d.name} are scored out of ${sc.evalCap}`, path: ['trick_presentation'] });
+  }
+  if (data.style_code && !d.styles?.options.some((o) => o.code === data.style_code)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unknown ${d.name} style`, path: ['style_code'] });
+  }
+});
 
-interface RawScoreFields {
+interface ScoreRow extends FreestyleSheet {
   division: Division;
-  /** X Division style (2A-5A) from the registration; ignored outside X. */
-  x_substyle?: string | null;
-  tech_execution_raw: number;
-  trick_presentation: number;
-  performance_quality: number;
-  musicality: number;
-  routine_construction: number;
-  stop_count: number;
-  discard_count: number;
-  detach_count: number;
+  style_code: string | null;
+  /** Styles the competitor registered for this division */
+  registered_styles: string[];
+  simple_score: number | null;
 }
 
-interface ScoreBreakdown {
-  tech_execution_normalized: number;
-  total_eval: number;
-  deduction_points: number;
-  final_score: number;
+const multiplierOf = (r: ScoreRow) =>
+  styleMultiplier(divisionByCode(r.division), effectiveStyle(r.style_code, r.registered_styles));
+
+function computeScoreBreakdown(r: ScoreRow, maxRawForJudge: number | null): ScoreBreakdown {
+  const d = divisionByCode(r.division);
+  if (!d) return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: 0 };
+  if (d.scoring.format === 'simple') return simpleBreakdown(r.simple_score ?? 0, d.scoring);
+  return freestyleBreakdown(r, d.scoring, multiplierOf(r), maxRawForJudge);
 }
 
-/**
- * NYYL scoring: Tech Execution is a raw clicker tally, normalized per judge
- * per division — that judge's own highest positive raw score maps to the
- * division cap (60 for 1A/X, 20 for Sport/SBJ), everyone else scales
- * proportionally. SBJ has no major deductions. Final = normalized Tech Exec
- * + the four evaluation categories (/10 each in 1A/X, /20 each in Sport/SBJ)
- * - deduction points, floored at 0.
- * https://yoyocontest.com/freestyle-rules-for-nyyl-events/#technical-execution
- */
-function styleMultiplier(s: { division: Division; x_substyle?: string | null }): number {
-  return s.division === 'X' ? X_STYLE_MULTIPLIER[s.x_substyle ?? ''] ?? 1 : 1;
-}
-
-/** Raw tally after the X Division style multiplier (1x for 1A and SBJ). */
-function adjustedRaw(s: { division: Division; x_substyle?: string | null; tech_execution_raw: number }): number {
-  return s.tech_execution_raw * styleMultiplier(s);
-}
-
-function computeScoreBreakdown(s: RawScoreFields, maxRawForJudge: number | null): ScoreBreakdown {
-  const cap = TECH_EXECUTION_CAP[s.division];
-  const techExecutionNormalized =
-    maxRawForJudge === null || s.tech_execution_raw <= 0
-      ? 0
-      : Math.min(cap, Math.round((adjustedRaw(s) / maxRawForJudge) * cap * 100) / 100);
-
-  const totalEval = Math.round((s.trick_presentation + s.performance_quality + s.musicality + s.routine_construction) * 100) / 100;
-  const deductionPoints = s.division === 'SBJ' ? 0 : s.stop_count * 1 + s.discard_count * 3 + s.detach_count * 5;
-  const finalScore = Math.max(0, Math.round((techExecutionNormalized + totalEval - deductionPoints) * 100) / 100);
-
-  return { tech_execution_normalized: techExecutionNormalized, total_eval: totalEval, deduction_points: deductionPoints, final_score: finalScore };
-}
-
-/** Highest positive raw Tech Execution score (after X multipliers) across a set of rows (this judge's own baseline), or null if none. */
-function maxPositiveRaw(rows: { division: Division; x_substyle?: string | null; tech_execution_raw: number }[]): number | null {
-  const positives = rows.filter((r) => r.tech_execution_raw > 0).map(adjustedRaw);
+/** Highest positive raw Tech Execution (after style multipliers) in this judge's rows, or null. */
+function maxPositiveRaw(rows: ScoreRow[]): number | null {
+  const positives = rows.filter((r) => r.tech_execution_raw > 0).map((r) => r.tech_execution_raw * multiplierOf(r));
   return positives.length > 0 ? Math.max(...positives) : null;
+}
+
+type RegJoin = { division_styles?: Record<string, string[]> | null } | null;
+const stylesFor = (reg: RegJoin, division: string): string[] => reg?.division_styles?.[division] ?? [];
+
+function toRow(s: Record<string, unknown>, division: Division, reg: RegJoin): ScoreRow {
+  return {
+    division,
+    style_code: (s.style_code as string | null) ?? null,
+    registered_styles: stylesFor(reg, division),
+    simple_score: s.simple_score === null || s.simple_score === undefined ? null : Number(s.simple_score),
+    tech_execution_raw: Number(s.tech_execution_raw),
+    trick_presentation: Number(s.trick_presentation),
+    performance_quality: Number(s.performance_quality),
+    musicality: Number(s.musicality),
+    routine_construction: Number(s.routine_construction),
+    stop_count: Number(s.stop_count),
+    discard_count: Number(s.discard_count),
+    detach_count: Number(s.detach_count),
+  };
 }
 
 /**
@@ -114,8 +110,8 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const division = req.nextUrl.searchParams.get('division');
   const mine = req.nextUrl.searchParams.get('mine') === '1';
 
-  if (!division || !VALID_DIVISIONS.includes(division as Division)) {
-    return apiError('bad_request', 'division must be one of: 1A, X, SBJ', requestId);
+  if (!division || !DIVISION_CODES.includes(division)) {
+    return apiError('bad_request', `division must be one of: ${DIVISION_CODES.join(', ')}`, requestId);
   }
   const div = division as Division;
 
@@ -161,6 +157,8 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       stop_count,
       discard_count,
       detach_count,
+      style_code,
+      simple_score,
       notes,
       created_at,
       contest_registrations (
@@ -169,7 +167,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
         preferred_bracket_name,
         city,
         state,
-        x_substyle
+        division_styles
       )
     `)
     .eq('division', division);
@@ -186,28 +184,17 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   if (mine) {
-    const rows = (scores ?? []).map((s) => ({
-      ...s,
-      division: div,
-      x_substyle: (Array.isArray(s.contest_registrations) ? s.contest_registrations[0] : s.contest_registrations)?.x_substyle ?? null,
-      tech_execution_raw: Number(s.tech_execution_raw),
-      trick_presentation: Number(s.trick_presentation),
-      performance_quality: Number(s.performance_quality),
-      musicality: Number(s.musicality),
-      routine_construction: Number(s.routine_construction),
-      stop_count: Number(s.stop_count),
-      discard_count: Number(s.discard_count),
-      detach_count: Number(s.detach_count),
-    }));
-    const maxRaw = maxPositiveRaw(rows);
-
-    const result = rows.map((s) => {
+    const rows = (scores ?? []).map((s) => {
       const reg = Array.isArray(s.contest_registrations) ? s.contest_registrations[0] : s.contest_registrations;
-      const fields: RawScoreFields = { ...s, division: div };
-      const breakdown = computeScoreBreakdown(fields, maxRaw);
+      return { s, reg, fields: toRow(s, div, reg) };
+    });
+    const maxRaw = maxPositiveRaw(rows.map((r) => r.fields));
+
+    const result = rows.map(({ s: raw, reg, fields: s }) => {
+      const breakdown = computeScoreBreakdown(s, maxRaw);
       return {
-        id: s.id,
-        registration_id: s.registration_id,
+        id: raw.id,
+        registration_id: raw.registration_id,
         display_name: reg?.preferred_bracket_name ?? `${reg?.first_name} ${reg?.last_name}`,
         city: reg?.city ?? null,
         state: reg?.state ?? null,
@@ -219,9 +206,12 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
         stop_count: s.stop_count,
         discard_count: s.discard_count,
         detach_count: s.detach_count,
+        style_code: s.style_code,
+        registered_styles: s.registered_styles,
+        simple_score: s.simple_score,
         ...breakdown,
-        notes: s.notes ?? null,
-        created_at: s.created_at,
+        notes: raw.notes ?? null,
+        created_at: raw.created_at,
       };
     });
     return NextResponse.json(
@@ -231,26 +221,15 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   // Public aggregated standings — normalize within each judge's own scores first, then average across judges.
-  const byJudge = new Map<string, RawScoreFields[]>();
-  const rowsByJudge = new Map<string, { registration_id: string; display_name: string; city: string | null; state: string | null; fields: RawScoreFields }[]>();
+  const byJudge = new Map<string, ScoreRow[]>();
+  const rowsByJudge = new Map<string, { registration_id: string; display_name: string; city: string | null; state: string | null; fields: ScoreRow }[]>();
 
   for (const s of scores ?? []) {
     const reg = Array.isArray(s.contest_registrations) ? s.contest_registrations[0] : s.contest_registrations;
     const displayName = reg?.preferred_bracket_name ?? `${reg?.first_name} ${reg?.last_name}`;
     const judgeKey = s.judge_user_id ?? `legacy:${s.judge_name}`;
 
-    const fields: RawScoreFields = {
-      division: div,
-      x_substyle: reg?.x_substyle ?? null,
-      tech_execution_raw: Number(s.tech_execution_raw),
-      trick_presentation: Number(s.trick_presentation),
-      performance_quality: Number(s.performance_quality),
-      musicality: Number(s.musicality),
-      routine_construction: Number(s.routine_construction),
-      stop_count: Number(s.stop_count),
-      discard_count: Number(s.discard_count),
-      detach_count: Number(s.detach_count),
-    };
+    const fields = toRow(s, div, reg);
 
     if (!byJudge.has(judgeKey)) byJudge.set(judgeKey, []);
     byJudge.get(judgeKey)!.push(fields);
@@ -330,18 +309,25 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('forbidden', 'Judge access required', requestId);
   }
 
-  const {
-    registration_id, division, notes,
-    tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction,
-    stop_count, discard_count, detach_count,
-  } = parsed.data;
+  const { registration_id, division, notes } = parsed.data;
+  const isSimple = divisionByCode(division)?.scoring.format === 'simple';
+  // A simple-format score keeps the freestyle columns at zero.
+  const sheet = isSimple
+    ? { tech_execution_raw: 0, trick_presentation: 0, performance_quality: 0, musicality: 0, routine_construction: 0, stop_count: 0, discard_count: 0, detach_count: 0 }
+    : {
+        tech_execution_raw: parsed.data.tech_execution_raw, trick_presentation: parsed.data.trick_presentation,
+        performance_quality: parsed.data.performance_quality, musicality: parsed.data.musicality,
+        routine_construction: parsed.data.routine_construction, stop_count: parsed.data.stop_count,
+        discard_count: parsed.data.discard_count, detach_count: parsed.data.detach_count,
+      };
+  const simple_score = isSimple ? parsed.data.simple_score ?? 0 : null;
 
   const supabase = createAdminClient();
 
   // Verify registration exists and is in this division
   const { data: reg, error: regError } = await supabase
     .from('contest_registrations')
-    .select('id, divisions, paid')
+    .select('id, divisions, division_styles, paid')
     .eq('id', registration_id)
     .single();
 
@@ -354,6 +340,11 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   if (!reg.paid) {
     return apiError('unprocessable', 'Competitor has not paid', requestId);
   }
+  const registeredStyles = stylesFor(reg as RegJoin, division);
+  const style_code = parsed.data.style_code || null;
+  if (style_code && !registeredStyles.includes(style_code)) {
+    return apiError('unprocessable', 'Competitor did not register that style', requestId);
+  }
 
   // Upsert score by authenticated judge account.
   const { data: score, error: upsertError } = await supabase
@@ -365,14 +356,9 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         judge_user_id: identity.authUserId,
         judge_name: identity.displayName,
         judge_display_name: identity.displayName,
-        tech_execution_raw,
-        trick_presentation,
-        performance_quality,
-        musicality,
-        routine_construction,
-        stop_count,
-        discard_count,
-        detach_count,
+        ...sheet,
+        style_code,
+        simple_score,
         notes: notes ?? null,
       },
       { onConflict: 'registration_id,division,judge_user_id' }
@@ -389,7 +375,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   // division, so re-fetch all of this judge's scores here to get an up-to-date baseline.
   const { data: judgeScores, error: judgeScoresError } = await supabase
     .from('contest_scores')
-    .select('tech_execution_raw, registration_id, contest_registrations ( x_substyle )')
+    .select('registration_id, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count, style_code, simple_score, contest_registrations ( division_styles )')
     .eq('division', division)
     .eq('judge_user_id', identity.authUserId);
 
@@ -398,18 +384,10 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('upstream_error', 'Score saved, but failed to compute normalized total', requestId);
   }
 
-  const substyleOf = (reg: { x_substyle: string | null } | { x_substyle: string | null }[] | null) =>
-    (Array.isArray(reg) ? reg[0] : reg)?.x_substyle ?? null;
-  const maxRaw = maxPositiveRaw((judgeScores ?? []).map((r) => ({
-    division,
-    x_substyle: substyleOf(r.contest_registrations),
-    tech_execution_raw: Number(r.tech_execution_raw),
-  })));
-  const thisSubstyle = substyleOf((judgeScores ?? []).find((r) => r.registration_id === registration_id)?.contest_registrations ?? null);
-  const breakdown = computeScoreBreakdown(
-    { division, x_substyle: thisSubstyle, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count },
-    maxRaw
-  );
+  const judgeRows = (judgeScores ?? []).map((r) =>
+    toRow(r, division, (Array.isArray(r.contest_registrations) ? r.contest_registrations[0] : r.contest_registrations) as RegJoin));
+  const thisRow: ScoreRow = { division, style_code, registered_styles: registeredStyles, simple_score, ...sheet };
+  const breakdown = computeScoreBreakdown(thisRow, maxPositiveRaw(judgeRows));
 
   return NextResponse.json(
     {
@@ -417,14 +395,9 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       judge_name: score.judge_display_name ?? identity.displayName,
       registration_id,
       division,
-      tech_execution_raw,
-      trick_presentation,
-      performance_quality,
-      musicality,
-      routine_construction,
-      stop_count,
-      discard_count,
-      detach_count,
+      ...sheet,
+      style_code,
+      simple_score,
       ...breakdown,
     },
     { status: 200, headers: { 'x-request-id': requestId } }

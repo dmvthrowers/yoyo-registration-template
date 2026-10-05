@@ -47,7 +47,7 @@ region). Only `main` deploys; preview deployments are disabled in `vercel.json`.
 | `lib/` | Shared server logic: errors, auth, Stripe, payments, email, rate limits, pricing, validation |
 | `components/` | `BudgetManager`, `DirectoryClient`, `Footer`, `NavBar`, `RunOrderBoard`, `RunOrderManager`, `SurveyContacts`, `SurveyForm`, `SurveyResults`, `VolunteerManager` |
 | `middleware.ts` | Redirects legacy `/admin*` pages to `/admin-dashboard`, blocks bot user agents on API GETs, sets `X-Robots-Tag: noindex` on APIs |
-| `supabase/migrations/` | 40 migration files, replayed from scratch in CI. `supabase/seed-demo.sql` loads fake data |
+| `supabase/migrations/` | 41 migration files, replayed from scratch in CI. `supabase/divisions.sql` (generated) loads your divisions; `supabase/seed-demo.sql` loads fake data |
 | `docs/` | `SETUP.md` (new contest checklist), `STRIPE_PAYMENTS.md`, this guide |
 | `contest.config.ts` | Name, date, venue, deadlines, links, logos — the one file to edit per contest |
 | `.github/workflows/` | `ci.yml`: typecheck → lint → test → build, plus a job that replays every migration on empty Postgres (`scripts/check-migrations.sh`) |
@@ -102,7 +102,8 @@ components, so they can't export metadata themselves). The root layout sets the 
 | `stripe-refund.ts` | `refundTransition()`: full refund → `paid=false`; partial → audit log only |
 | `outbox.ts`, `email.ts`, `email-policy.ts` | Email outbox with daily cap (`EMAIL_DAILY_LIMIT`) and a reserve for confirmations |
 | `event-flags.ts` | Runtime flags from `contest_event_flags` (`online_registration_open`, `results_published`), cached 30s |
-| `pricing.ts`, `validation.ts`, `tokens.ts`, `filename.ts` | Fee engine, zod schemas, signed upload tokens, canonical music filenames |
+| `divisions-core.ts` | Pure division logic from `contest.config.ts → competition`: fees and combos, selection rules, freestyle/simple scoring math, and the generator for `supabase/divisions.sql`. Unit-tested |
+| `pricing.ts`, `validation.ts`, `tokens.ts`, `filename.ts` | Fee wrappers, zod schemas, signed upload tokens, canonical music filenames |
 
 ### Tests
 
@@ -145,13 +146,32 @@ validates the bearer token with Supabase and looks up an active `admin` row in
 `contest_staff_accounts`. There is **no** shared admin password or PIN: `ADMIN_USERNAME`,
 `ADMIN_PASSWORD`, `DJ_PIN` and `JUDGE_PIN` are not read by any code.
 
+### Divisions and scoring
+
+Divisions live in `contest.config.ts → competition.divisions`. The app reads them directly;
+the database gets a copy in `contest_divisions` / `contest_division_styles` through the
+generated `supabase/divisions.sql` (`npm run divisions`), because the results view and the
+integrity triggers need the caps and multipliers too.
+
+- **Registrations** store `divisions text[]` and `division_styles jsonb` (`{"X": ["2A","3A"]}`).
+  A trigger rejects unknown divisions or styles; another blocks deleting a division or style
+  that registrations still use.
+- **Scores**: one row per judge per competitor per division. `freestyle` divisions fill the
+  sheet columns; `simple` divisions fill `simple_score`. `style_code` records which style the
+  routine was judged under when the competitor entered more than one; otherwise their only
+  style is used. A trigger checks every value against the division's caps.
+- **`contest_results`** (view) turns rows into `final_score`. Freestyle tech is normalized to
+  each judge's own best multiplied tally. `lib/divisions-core.ts` (`freestyleBreakdown`,
+  `simpleBreakdown`) does the same math for the judge screen and `/api/scores`; change both
+  together. Standings average each competitor's `final_score` across judges.
+
 ### Music upload
 
 `/upload?token=…` (token minted at registration) → `POST /api/upload {action:'sign'}` checks
-payment, deadline (`contest.deadlines.musicUpload`), mime (mp3/wav/m4a) and size (128 MB) and returns a
+payment, deadline (`contest.deadlines.musicUpload`), that a division uses music, mime (mp3/wav/m4a) and size (128 MB) and returns a
 signed upload URL for bucket `contest-music` → browser PUTs the file → `{action:'confirm'}`
 re-derives the filename server-side, checks the object exists, records it and emails a receipt.
-Known bug: the filename is built from `divisions[0]` only, so a player in two divisions
+Known bug: the filename is built from the first music division only, so a player in two divisions
 overwrites their own track.
 
 ## 5. Config and environments

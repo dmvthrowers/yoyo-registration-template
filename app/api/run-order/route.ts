@@ -3,15 +3,15 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { runOrderDisplayName, isNameRestricted } from '@/lib/display-name';
+import { DIVISION_CODES } from '@/contest.config';
 
-const VALID_DIVISIONS = ['1A', 'X', 'SBJ'] as const;
-type Division = typeof VALID_DIVISIONS[number];
+type Division = string;
 
 const REGISTRATION_FIELDS =
-  'id, first_name, last_name, preferred_bracket_name, nickname, is_minor, is_public, city, state, music_filename, x_substyle';
+  'id, first_name, last_name, preferred_bracket_name, nickname, is_minor, is_public, city, state, music_filename, division_styles';
 
 /**
- * GET /api/run-order?division=1A
+ * GET /api/run-order?division=<code>
  *
  * Returns the performance order for a division.
  * Falls back to registration order (by created_at) if no run order has been set.
@@ -25,8 +25,8 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const division = req.nextUrl.searchParams.get('division') as Division | null;
   const includeMusic = req.nextUrl.searchParams.get('include_music') === '1';
 
-  if (!division || !VALID_DIVISIONS.includes(division)) {
-    return apiError('bad_request', 'division must be one of: 1A, X, SBJ', requestId);
+  if (!division || !DIVISION_CODES.includes(division)) {
+    return apiError('bad_request', `division must be one of: ${DIVISION_CODES.join(', ')}`, requestId);
   }
 
   // Any active staff member may see full names; only DJ/audio/admin get music.
@@ -76,7 +76,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
     city: string | null;
     state: string | null;
     music_filename: string | null;
-    x_substyle: string | null;
+    division_styles: Record<string, string[]> | null;
   };
 
   const toPerformer = (
@@ -95,9 +95,9 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       city: hideLocation ? null : (reg?.city ?? null),
       state: hideLocation ? null : (reg?.state ?? null),
       music_filename: withMusic ? (reg?.music_filename ?? null) : null,
-      // X division freestyle style (2A/3A/4A/5A). Null for every other division —
-      // not sensitive, just not applicable outside X.
-      style: reg?.x_substyle ?? null,
+      // The style(s) this competitor entered in this division, e.g. "2A, 3A".
+      // Null for divisions without styles. Not sensitive.
+      style: reg?.division_styles?.[division]?.join(', ') || null,
     };
   };
 

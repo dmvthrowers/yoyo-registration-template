@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Replay every migration, then the demo seed, on an empty plain-Postgres database.
+# Replay every migration, the generated divisions, then the demo seed, on an empty plain-Postgres database.
 # Catches migrations that only work on a database that already has history.
 #
 #   DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres scripts/check-migrations.sh
@@ -13,6 +13,8 @@ for f in $(ls supabase/migrations/*.sql | sort); do
   echo "apply ${f##*/}"
   psql_ -f "$f" > /dev/null
 done
+psql_ -f supabase/divisions.sql   # generated from contest.config.ts
+psql_ -f supabase/divisions.sql   # and safe to re-apply
 psql_ -f supabase/seed-demo.sql
 psql_ -f supabase/seed-demo.sql   # the seed must be safe to re-run
 

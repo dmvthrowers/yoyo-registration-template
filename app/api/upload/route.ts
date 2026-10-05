@@ -5,7 +5,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { sendMusicReceivedEmail } from '@/lib/email';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { contest, deadlineLabel } from '@/contest.config';
+import { contest, deadlineLabel, divisionByCode } from '@/contest.config';
 
 export const runtime = 'nodejs';
 
@@ -73,7 +73,11 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('unprocessable', `Music upload deadline has passed (${deadlineLabel(contest.deadlines.musicUpload)})`, requestId);
   }
 
-  const primaryDivision = reg.divisions[0] as string;
+  // Music is filed under the first division that performs to music (contest.config.ts).
+  const primaryDivision = (reg.divisions as string[]).find((d) => divisionByCode(d)?.music);
+  if (!primaryDivision) {
+    return apiError('unprocessable', 'None of your divisions use music', requestId);
+  }
 
   // ---------- STEP 1: mint a signed upload URL ----------
   if (body.action === 'sign') {

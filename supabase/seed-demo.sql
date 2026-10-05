@@ -20,37 +20,40 @@ end $$;
 delete from public.contest_registrations where email like '%@example.com';
 delete from public.contest_spectators   where email like '%@example.com';
 
+-- Each demo competitor is placed in one of your configured divisions (contest_divisions,
+-- round robin) and, where that division has styles, its first style, so the seed works
+-- for any toy. Fees are placeholders.
+with divs as (
+  select d.code, row_number() over (order by d.sort_order, d.code) - 1 as idx, count(*) over () as n,
+         (select s.code from public.contest_division_styles s where s.division_code = d.code order by s.sort_order, s.code limit 1) as style
+    from public.contest_divisions d
+),
+people (i, first_name, last_name, nickname, age, pronouns, email, phone, city, state, club, parent_name, parent_email,
+        emergency_name, emergency_phone, paid, days_ago, method, fee, source, bio, gear, is_public) as (
+  values
+  (0, 'Avery',  'Sample',      'Spinner', 24, 'they/them', 'avery@example.com',  '555-0101', 'Springfield', 'IL', 'Springfield Throwers', null, null, 'Pat Sample', '555-0102', true, 20, 'stripe', 2500, 'online', 'Practicing since 2019.', 'Demo Pro', true),
+  (1, 'Jordan', 'Example',     null,      16, 'he/him',    'jordan@example.com', '555-0103', 'Peoria',      'IL', null, 'Casey Example', 'casey@example.com', 'Casey Example', '555-0104', true, 12, 'stripe', 2500, 'online', 'First contest!', null, true),
+  (2, 'Riley',  'Placeholder', 'Loopy',   31, 'she/her',   'riley@example.com',  '555-0105', 'Chicago',     'IL', 'Windy City Throwers', null, null, 'Sam Placeholder', '555-0106', true, 9, 'stripe', 2500, 'online', null, 'Demo Looper', true),
+  (3, 'Morgan', 'Testcase',    null,      12, null,        'morgan@example.com', '555-0107', 'Decatur',     'IL', null, 'Drew Testcase', 'drew@example.com', 'Drew Testcase', '555-0108', false, 0, 'pending', 2000, 'online', null, null, true),
+  (4, 'Quinn',  'Demo',        null,      45, null,        'quinn@example.com',  '555-0109', 'Champaign',   'IL', 'Springfield Throwers', null, null, 'Lee Demo', '555-0110', true, 3, 'stripe', 3000, 'online', 'Back after twenty years off.', null, false),
+  (5, 'Sky',    'Fakename',    null,      19, 'any',       'sky@example.com',    '555-0111', 'St. Louis',   'MO', null, null, null, 'Ash Fakename', '555-0112', true, 1, 'cash', 3500, 'walk_up', null, null, true)
+)
 insert into public.contest_registrations
-  (first_name, last_name, preferred_bracket_name, age_on_event, pronouns, email, phone, city, state,
-   club_affiliation, parent_name, parent_email, parent_consented, divisions, x_substyle, combo_applied,
-   early_bird_applied, walk_up_surcharge, fee_cents, registration_source, liability_waiver_accepted, photo_video_consent,
-   code_of_conduct_accepted, emergency_contact_name, emergency_contact_phone, paid, paid_at,
-   payment_method, amount_paid_cents, paid_currency, nickname, bio, yoyo, string, is_public)
-values
-  ('Avery',  'Sample',  'Avery S.', 24, 'they/them', 'avery@example.com',  '555-0101', 'Springfield', 'IL',
-   'Springfield Throwers', null, null, false, '{1A}', null, false,
-   true, false, 2500, 'online', true, true, true, 'Pat Sample', '555-0102', true, now() - interval '20 days',
-   'stripe', 2500, 'usd', 'Spinner', 'Throwing since 2019. Loves slack tricks.', 'Demo Pro', 'Poly 8', true),
-  ('Jordan', 'Example', null, 16, 'he/him', 'jordan@example.com', '555-0103', 'Peoria', 'IL',
-   null, 'Casey Example', 'casey@example.com', true, '{1A,X}', '5A', true,
-   false, false, 5000, 'online', true, true, true, 'Casey Example', '555-0104', true, now() - interval '12 days',
-   'stripe', 5000, 'usd', null, 'First contest!', null, null, true),
-  ('Riley',  'Placeholder', null, 31, 'she/her', 'riley@example.com', '555-0105', 'Chicago', 'IL',
-   'Windy City Yo', null, null, false, '{X}', '2A', false,
-   false, false, 2500, 'online', true, true, true, 'Sam Placeholder', '555-0106', true, now() - interval '9 days',
-   'stripe', 2500, 'usd', 'Loopy', null, 'Demo Looper', null, true),
-  ('Morgan', 'Testcase', null, 12, null, 'morgan@example.com', '555-0107', 'Decatur', 'IL',
-   null, 'Drew Testcase', 'drew@example.com', true, '{SBJ}', null, false,
-   false, false, 2000, 'online', true, true, true, 'Drew Testcase', '555-0108', false, null,
-   'pending', null, null, null, null, null, null, true),
-  ('Quinn',  'Demo', null, 45, null, 'quinn@example.com', '555-0109', 'Champaign', 'IL',
-   'Springfield Throwers', null, null, false, '{1A}', null, false,
-   false, false, 3000, 'online', true, true, true, 'Lee Demo', '555-0110', true, now() - interval '3 days',
-   'stripe', 3000, 'usd', null, 'Back after twenty years off.', null, null, false),
-  ('Sky',    'Fakename', null, 19, 'any', 'sky@example.com', '555-0111', 'St. Louis', 'MO',
-   null, null, null, false, '{X}', '4A', false,
-   false, true, 3500, 'walk_up', true, true, true, 'Ash Fakename', '555-0112', true, now() - interval '1 day',
-   'cash', 3500, 'usd', null, null, null, null, true);
+  (first_name, last_name, age_on_event, pronouns, email, phone, city, state, club_affiliation,
+   parent_name, parent_email, parent_consented, divisions, division_styles, fee_cents, registration_source,
+   walk_up_surcharge, liability_waiver_accepted, photo_video_consent, code_of_conduct_accepted,
+   emergency_contact_name, emergency_contact_phone, paid, paid_at, payment_method, amount_paid_cents,
+   paid_currency, nickname, bio, yoyo, is_public)
+select p.first_name, p.last_name, p.age, p.pronouns, p.email, p.phone, p.city, p.state, p.club,
+       p.parent_name, p.parent_email, p.parent_name is not null, array[d.code],
+       case when d.style is null then '{}'::jsonb else jsonb_build_object(d.code, jsonb_build_array(d.style)) end,
+       p.fee, p.source::public.registration_source, p.source = 'walk_up', true, true, true,
+       p.emergency_name, p.emergency_phone, p.paid,
+       case when p.paid then now() - make_interval(days => p.days_ago) end,
+       p.method::public.payment_method, case when p.paid then p.fee end, case when p.paid then 'usd' end,
+       p.nickname, p.bio, p.gear, p.is_public
+  from people p
+  join divs d on d.idx = p.i % d.n;
 
 insert into public.contest_spectators
   (first_name, last_name, nickname, email, state, club, is_public, liability_accepted, code_of_conduct_accepted, volunteer_interest)

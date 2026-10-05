@@ -15,7 +15,11 @@ changes with production care, not prototype care.
 
 - `contest.config.ts` — every contest-specific value (name, date, venue, deadlines, sponsor,
   links, logos). If you're tempted to hardcode a date, venue or name anywhere, put it here.
-- `lib/pricing.ts` — fees. `lib/surveys.ts` — survey questions.
+- `contest.config.ts` → `competition` — toy wording, divisions, styles, combos, prices and
+  judging format per division. `lib/divisions-core.ts` holds the pure rules (fees, selection
+  checks, scoring math, the SQL generator) and is unit-tested. `presets/competitions.ts` has
+  kendama / diabolo / spintop / mixed examples.
+- `lib/surveys.ts` — survey questions.
 - `docs/SETUP.md` — the human setup checklist. Keep it accurate when you change setup steps.
 - `docs/REPO_GUIDE.md` — architecture and file map. `docs/STRIPE_PAYMENTS.md` — read before
   touching anything that moves money.
@@ -26,6 +30,11 @@ changes with production care, not prototype care.
 - **Config, not literals.** No contest names, dates, venues, sponsor names or organizer URLs in
   code. Use `contest.config.ts` and its helpers (`longDate`, `venueLine`, `deadlineLabel`, …).
   Files tested by `npm test` (`lib/*.test.mjs` targets) must not use the `@/` import alias.
+- **Divisions are data.** Never hardcode a division code, style, price or cap in a page or
+  route. Read `competition.divisions` (or `DIVISIONS` / `divisionByCode`). After changing
+  divisions, run `npm run divisions`: `npm test` fails if `supabase/divisions.sql` is stale.
+  The scoring math exists twice, in `lib/divisions-core.ts` and the `contest_results` view
+  (migration 0037), so change both together.
 - **Migrations replay from scratch.** CI applies every migration to an empty database
   (`scripts/check-migrations.sh`). Add new ones with `supabase migration new`; never edit one a
   deployed contest has already applied. Every public table needs RLS on.

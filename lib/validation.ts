@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { competition } from '@/contest.config';
+import { selectionIssues } from './divisions-core';
 import { VOLUNTEER_ROLE_KEYS, SHIFT_PREFERENCES, OTHER_ROLE_KEY, isExperienceRequired } from './volunteer-roles';
 
 const nameSchema = z.string().trim().min(1).max(50);
@@ -18,6 +20,16 @@ const socialsSchema = z.object({
   other:     z.string().trim().max(200).optional().or(z.literal('')),
 }).partial();
 
+export const divisionsSchema = z.array(z.string().trim().max(20)).min(1, 'Select at least one division');
+export const divisionStylesSchema = z.record(z.string().max(20), z.array(z.string().max(20)).max(20)).optional().default({});
+
+/** Adds the config's division/style rules (combinations, style counts) as zod issues. */
+export function addSelectionIssues(divisions: string[], styles: Record<string, string[]> | undefined, ctx: z.RefinementCtx) {
+  for (const issue of selectionIssues(divisions, styles ?? {}, competition)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: issue.message, path: [issue.path] });
+  }
+}
+
 export const registrationSchema = z.object({
   // Player info
   first_name:             nameSchema,
@@ -36,9 +48,9 @@ export const registrationSchema = z.object({
   parent_email:     z.string().trim().email().toLowerCase().optional().or(z.literal('')),
   parent_consented: z.boolean().optional(),
 
-  // Divisions
-  divisions:  z.array(z.enum(['1A', 'X', 'SBJ'])).min(1, 'Select at least one division'),
-  x_substyles: z.array(z.enum(['2A', '3A', '4A', '5A'])).optional(),
+  // Divisions and styles — allowed values and rules come from contest.config.ts → competition
+  divisions:       divisionsSchema,
+  division_styles: divisionStylesSchema,
 
   // Comp code
   comp_code: z.string().trim().toUpperCase().max(40).optional().or(z.literal('')),
@@ -94,29 +106,7 @@ export const registrationSchema = z.object({
     }
   }
 
-  const hasSBJ = data.divisions.includes('SBJ');
-  const hasProDivision = data.divisions.includes('1A') || data.divisions.includes('X');
-  if (hasSBJ && hasProDivision) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Sport / Beginner / Junior cannot be combined with 1A or X Division', path: ['divisions'] });
-  }
-
-  const selectedXSubstyles = data.x_substyles ?? [];
-  if (data.divisions.includes('X') && selectedXSubstyles.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select at least one X Division sub-style (2A, 3A, 4A, or 5A)', path: ['x_substyles'] });
-  }
-  const maxXSubstyles = data.divisions.includes('1A') ? 1 : 2;
-  if (data.divisions.includes('X') && selectedXSubstyles.length > maxXSubstyles) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: data.divisions.includes('1A')
-        ? 'When 1A is selected, choose only one X Division sub-style (max 2 total styles)'
-        : 'Choose at most two X Division sub-styles',
-      path: ['x_substyles'],
-    });
-  }
-  if (!data.divisions.includes('X') && selectedXSubstyles.length > 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'X Division sub-styles can only be selected when X Division is selected', path: ['x_substyles'] });
-  }
+  addSelectionIssues(data.divisions, data.division_styles, ctx);
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;

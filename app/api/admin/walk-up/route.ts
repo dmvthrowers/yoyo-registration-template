@@ -7,6 +7,8 @@ import { logAudit } from '@/lib/audit';
 import { sendConfirmationEmail } from '@/lib/email';
 import { requireAdminRequest } from '@/lib/auth/admin-request';
 import { z } from 'zod';
+import { divisionsSchema, divisionStylesSchema, addSelectionIssues } from '@/lib/validation';
+import { cleanStyles } from '@/lib/divisions-core';
 import type { Division } from '@/lib/pricing';
 import { contest } from '@/contest.config';
 
@@ -15,7 +17,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
 /**
  * Simplified walk-up registration schema.
  * No comp code, no scheduling prefs, no merch — streamlined for day-of check-in.
- * Walk-up surcharge (+$10) is applied automatically.
+ * The walk-up surcharge is applied automatically.
  */
 const walkUpSchema = z.object({
   first_name:                z.string().trim().min(1).max(60),
@@ -26,8 +28,8 @@ const walkUpSchema = z.object({
   phone:                     z.string().trim().max(30).optional(),
   city:                      z.string().trim().min(1).max(80),
   state:                     z.string().trim().length(2),
-  divisions:                 z.array(z.enum(['1A', 'X', 'SBJ'])).min(1).max(3),
-  x_substyle:                z.enum(['2A', '3A', '4A', '5A']).optional(),
+  divisions:                 divisionsSchema,
+  division_styles:           divisionStylesSchema,
   parent_name:               z.string().trim().max(120).optional(),
   parent_email:              z.string().trim().email().max(254).optional(),
   parent_consented:          z.boolean().default(false),
@@ -35,13 +37,13 @@ const walkUpSchema = z.object({
   code_of_conduct_accepted:  z.literal(true, { errorMap: () => ({ message: 'Code of conduct must be accepted' }) }),
   /** If true, marks this as paid immediately (cash collected at table) */
   paid_at_table:             z.boolean().default(false),
-});
+}).superRefine((data, ctx) => addSelectionIssues(data.divisions, data.division_styles, ctx));
 
 /**
  * POST /api/admin/walk-up
  *
  * Creates a walk-up registration. No rate limiting (admin-only endpoint).
- * Automatically applies walk_up_surcharge (+$10).
+ * Automatically applies the walk-up surcharge (competition.pricing).
  * Skips the online registration window check.
  */
 export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
@@ -90,7 +92,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       parent_email:             data.parent_email || null,
       parent_consented:         data.parent_consented,
       divisions:                data.divisions,
-      x_substyle:               data.x_substyle ?? null,
+      division_styles:          cleanStyles(data.divisions, data.division_styles),
       combo_applied:            feeResult.combo_applied,
       comp_code:                null,
       early_bird_applied:       feeResult.early_bird_applied,

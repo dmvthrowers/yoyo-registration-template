@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { isCodeLocked, recordFailedCodeAttempt } from '@/lib/comp-code-guard';
 import { registrationSchema } from '@/lib/validation';
 import { calculateFee } from '@/lib/pricing';
+import { cleanStyles } from '@/lib/divisions-core';
 import { generateToken } from '@/lib/tokens';
 import { logAudit } from '@/lib/audit';
 import { sendConfirmationEmail } from '@/lib/email';
@@ -80,7 +81,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   // 6. Calculate fee
   const source: RegistrationSource = 'online';
   const feeResult = calculateFee(data.divisions as Division[], compDiscountPercent, now, source);
-  const xSubstyles = data.x_substyles?.length ? data.x_substyles.join(', ') : null;
+  const divisionStyles = cleanStyles(data.divisions, data.division_styles);
 
   // 7. Generate music upload token (expires at the music deadline)
   const musicUploadToken = generateToken(32);
@@ -109,7 +110,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       parent_email:             data.parent_email || null,
       parent_consented:         data.parent_consented ?? false,
       divisions:                data.divisions,
-      x_substyle:               xSubstyles,
+      division_styles:          divisionStyles,
       combo_applied:            feeResult.combo_applied,
       comp_code:                data.comp_code || null,
       early_bird_applied:       feeResult.early_bird_applied,

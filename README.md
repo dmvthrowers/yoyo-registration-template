@@ -16,8 +16,9 @@ copy to open registration.
 
 ## What you get
 
-- **Competitor registration** with divisions (1A, X, SBJ), combo pricing, early bird, walk-up
-  surcharge and comp/discount codes
+- **Competitor registration** for any skill toy: your own divisions, styles, combo pricing,
+  early bird, walk-up surcharge and comp/discount codes. Presets for yo-yo, kendama, diabolo,
+  spinning top and mixed contests
 - **Stripe Checkout** with webhook reconciliation, duplicate-payment protection and refunds
 - **Music upload** straight to storage, with a deadline, and a DJ page that plays it in run order
 - **Spectator and volunteer RSVPs** with an opt-in public directory
@@ -31,8 +32,8 @@ copy to open registration.
 
 | File | What |
 |---|---|
-| `contest.config.ts` | Name, date, venue, deadlines, sponsor, links, logos. Most contests only edit this |
-| `lib/pricing.ts` | Entry fees |
+| `contest.config.ts` | Name, date, venue, deadlines, sponsor, links, logos, and the `competition` block: toy, divisions, prices, judging. Most contests only edit this |
+| `presets/competitions.ts` | Ready-made kendama, diabolo, spinning top and mixed-toy division sets |
 | `public/logo-*.png` | Your logo |
 | `app/globals.css`, `tailwind.config.js` | Colors |
 | `.env.local` / Vercel env vars | Service keys (see `.env.local.example`) |
@@ -68,6 +69,7 @@ Forward Stripe webhooks while testing payments:
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Unit tests for the payment, email and date logic |
+| `npm run divisions` | Check the divisions in your config and regenerate `supabase/divisions.sql` |
 | `npm run auth-emails` | Fill the Supabase auth email templates from your config |
 | `scripts/check-migrations.sh` | Replay every migration and the demo seed on an empty Postgres (`DATABASE_URL`) |
 
