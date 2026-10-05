@@ -22,6 +22,24 @@ const portals = [
     cta: 'Open DJ login',
   },
   {
+    title: 'Run the Day',
+    description: 'Start each block, close judging and publish results. Later times move on their own.',
+    href: '/admin/schedule',
+    cta: 'Open schedule controls',
+  },
+  {
+    title: 'Side Events',
+    description: 'Stopwatch and tap counter for the side table, with a live leaderboard.',
+    href: '/staff/side-events',
+    cta: 'Open side-event tools',
+  },
+  {
+    title: 'Battle Brackets',
+    description: 'Draw brackets, set the live battle and confirm winners (admins).',
+    href: '/admin/brackets',
+    cta: 'Open brackets',
+  },
+  {
     title: 'Admin Dashboard',
     description: 'Secure event-ops dashboard for staff admins to manage contestants, spectators, and live controls.',
     href: '/admin-dashboard',

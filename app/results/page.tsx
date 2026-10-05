@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getEventFlagBoolean } from '@/lib/event-flags';
+import { isPublished, publishedDivisions } from '@/lib/results-visibility';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { fetchStandings, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
@@ -7,7 +7,8 @@ import { contest, competition, monthDay, bannerLine } from '@/contest.config';
 import { formatSummary } from '@/lib/divisions-core';
 import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/lib/contest-videos';
 
-// Public results are gated with an admin-toggleable flag and env fallback.
+// Public results are gated by the results_published flag (admin toggle, env fallback) or, per
+// division and round, by Publish results on the admin schedule (lib/results-visibility.ts).
 
 async function getStandings(): Promise<Record<Division, DivisionStandings>> {
   return fetchStandings(createAdminClient());
@@ -81,10 +82,13 @@ function StandingsList({ rows, label }: { rows: StandingRow[]; label: string }) 
 }
 
 export default async function ResultsPage() {
-  const resultsPublished = await getEventFlagBoolean('results_published', process.env.RESULTS_PUBLISHED === 'true');
-  const standings = resultsPublished ? await getStandings() : null;
+  const vis = await publishedDivisions(createAdminClient());
+  const resultsPublished = vis.all;
+  // Divisions with at least one released round, in config order.
+  const shown = competition.divisions.filter((d) => isPublished(vis, d.code));
+  const standings = shown.length ? await getStandings() : null;
   const total = standings
-    ? Object.values(standings).reduce((n, d) => n + d.final.length, 0)
+    ? shown.reduce((n, d) => n + (standings[d.code]?.final.length ?? 0), 0)
     : 0;
 
   return (
@@ -99,11 +103,13 @@ export default async function ResultsPage() {
             Contest Results
           </h1>
           <p style={{ color: 'var(--text-body)', margin: 0 }}>
-            {!resultsPublished
+            {!shown.length
               ? 'Final standings will be posted here after the contest.'
               : total === 0
-                ? 'Results are being finalized — check back shortly.'
-                : 'Final standings for every division.'}
+                ? 'Results are being finalized. Check back shortly.'
+                : resultsPublished
+                  ? 'Final standings for every division.'
+                  : 'Results so far. More divisions post here as judging wraps up.'}
           </p>
           {resultsPublished && (
             <p style={{ color: 'var(--text-body)', margin: '0.5rem 0 0' }}>
@@ -112,6 +118,8 @@ export default async function ResultsPage() {
           )}
           <p style={{ color: 'var(--text-body)', margin: '0.5rem 0 0' }}>
             <a href="/results/run-order" style={{ color: 'var(--gold-light)' }}>See who&rsquo;s up next in the live run order →</a>
+            {' · '}
+            <a href="/schedule" style={{ color: 'var(--gold-light)' }}>Live schedule →</a>
           </p>
           {(WINNERS_PLAYLIST_URL || LIVESTREAM_URL) && (
             <p style={{ color: 'var(--text-body)', margin: '0.5rem 0 0' }}>
@@ -126,7 +134,7 @@ export default async function ResultsPage() {
           )}
         </header>
 
-        {!resultsPublished || !standings ? (
+        {!standings ? (
           <section style={{ border: '1px solid var(--navy-border)', background: 'var(--navy)', padding: '2.5rem 1.5rem', textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🏆</div>
             <p style={{ color: '#fff', fontWeight: 700, margin: '0 0 0.5rem' }}>
@@ -138,10 +146,15 @@ export default async function ResultsPage() {
             </p>
           </section>
         ) : (
-          competition.divisions.map((d) => {
+          shown.map((d) => {
             const code = d.code;
-            const ds = standings[code];
-            const multiRound = ds.rounds.length > 1;
+            const full = standings[code];
+            if (!full) return null;
+            // Released rounds only; the overall order waits for the last round's release.
+            const rounds = full.rounds.filter((_, i) => isPublished(vis, code, i + 1));
+            const finalOut = full.rounds.length <= 1 || isPublished(vis, code, full.rounds.length);
+            const ds = { ...full, rounds, final: finalOut ? full.final : [] };
+            const multiRound = full.rounds.length > 1;
             return (
               <section key={code} aria-labelledby={`div-${code}`} style={{ marginBottom: '2.5rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.25rem 0.75rem', marginBottom: '0.35rem' }}>
@@ -174,8 +187,8 @@ export default async function ResultsPage() {
                   </p>
                 ) : (
                   <>
-                    {multiRound && <h3 style={subHeading}>Final standings</h3>}
-                    <StandingsList rows={ds.final} label={`${d.name} standings`} />
+                    {multiRound && finalOut && <h3 style={subHeading}>Final standings</h3>}
+                    {finalOut && <StandingsList rows={ds.final} label={`${d.name} standings`} />}
                     {ds.format === 'bracket' && (
                       <p style={{ margin: '0.6rem 0 0', fontSize: '0.8rem' }}>
                         <a href={`/results/bracket?division=${encodeURIComponent(code)}`} style={{ color: 'var(--gold-light)', fontWeight: 700 }}>

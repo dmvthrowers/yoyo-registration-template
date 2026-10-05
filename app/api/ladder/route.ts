@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken, type StaffIdentity } from '@/lib/auth/staff';
-import { getEventFlagBoolean } from '@/lib/event-flags';
+import { isPublished, publishedDivisions } from '@/lib/results-visibility';
 import { runOrderDisplayName, type DisplayNameParts } from '@/lib/display-name';
 import { DIVISION_CODES, divisionByCode, type DivisionDef, type LadderScoring } from '@/contest.config';
 import { compareLadder, isTeamDivision, ladderNext, ladderResult, type LadderAttempt, type LadderResult } from '@/lib/divisions-core';
@@ -101,7 +101,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const base = { division, tricks: sc.tricks, attemptsPerTrick: sc.attemptsPerTrick, rankBy: sc.rankBy ?? 'rung' };
 
   if (!viewerIsStaff) {
-    const published = await getEventFlagBoolean('results_published', process.env.RESULTS_PUBLISHED === 'true');
+    const published = isPublished(await publishedDivisions(createAdminClient()), division);
     if (!published) {
       return NextResponse.json(
         { ...base, published: false, entries: [] },

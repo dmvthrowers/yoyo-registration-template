@@ -5,6 +5,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/run-order', label: 'Run Order' },
     { href: '/admin/walk-up', label: 'Walk-Up' },
     { href: '/admin/results', label: 'Results' },
+    { href: '/admin/schedule', label: 'Schedule' },
+    { href: '/admin/brackets', label: 'Brackets' },
     { href: '/api/admin/export-csv', label: 'Export CSV ↓' },
   ];
 

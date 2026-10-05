@@ -159,10 +159,36 @@ and redeploy.
 Switch Stripe to live mode as in section 3 of [`STRIPE_PAYMENTS.md`](STRIPE_PAYMENTS.md): live
 keys and a live webhook endpoint, in Vercel's Production environment. Redeploy and announce.
 
+## Running the day
+
+Set the day up in `contest.config.ts → dayOf` before the contest:
+
+- `schedule`: each block's id, title, planned `start` ("HH:MM"), `minutes`, and the `division`
+  (and `round`) it judges. Mark lunch and awards `fixed: true` so they never move.
+- `sideEvents`: quick crowd challenges such as longest sleeper (`kind: 'timer'`) or most loops in
+  60 seconds (`kind: 'counter'`, `timeLimitSeconds: 60`). Use `[]` for none.
+
+On the day:
+
+- **`/admin/schedule`** (admins, DJs, audio techs, judges): press **Start** as each block begins.
+  For a division, press **Close judging** when the last competitor finishes, then **Publish
+  results** once scores are checked. That division's results go public on `/results` right
+  away. Later blocks move with the real times.
+- **`/schedule`** is the public view, with who's on stage and on deck from the run order. Put
+  it on a lobby screen or link it from your contest website.
+- **`/staff/side-events`** gives the side table a stopwatch or tap counter. Save each try under
+  first name + last initial. **Hide** a mistaken try; it stays in the log.
+- **`/side-events`** is the public leaderboard.
+- **Stream overlays** (OBS browser sources, transparent background): `/overlay/schedule`,
+  `/overlay/side-event?code=SLEEPER` and `/overlay/battle?division=CODE`. Add `?bg=1` (or
+  `&bg=1`) to preview on a solid background.
+- The dashboard's `results_published` flag still publishes everything at once.
+
 ## After the contest
 
-- Judges score at `/judge` on the day. Once results are final, turn on `results_published` in the dashboard (or set
-  `RESULTS_PUBLISHED=true`) so `/results` goes public.
+- Judges score at `/judge` on the day. Publish each division from `/admin/schedule` as it
+  finishes, or turn on `results_published` in the dashboard (or set `RESULTS_PUBLISHED=true`)
+  to make all of `/results` public at once.
 - Add video links to `contest.videos` in `contest.config.ts`.
 - Send the feedback surveys from the dashboard's Surveys tab. List your vendors in `VENDORS` at
   the top of `lib/surveys.ts` first.
