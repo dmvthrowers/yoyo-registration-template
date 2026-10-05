@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { Division } from '@/lib/pricing';
 import { calculateFeePreview, displayPrice, formatCents, PRICES_TBD } from '@/lib/pricing';
+import { cleanStyles, selectionIssues, type DivisionStyles } from '@/lib/divisions-core';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import { contest, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear } from '@/contest.config';
+import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef } from '@/contest.config';
 
 type FormValues = {
   first_name: string;
@@ -25,7 +26,7 @@ type FormValues = {
   parent_email: string;
   parent_consented: boolean;
   divisions: Division[];
-  x_substyles: Array<'2A' | '3A' | '4A' | '5A'>;
+  division_styles: DivisionStyles;
   comp_code: string;
   liability_waiver_accepted: boolean;
   photo_video_consent: boolean;
@@ -51,6 +52,57 @@ type FormValues = {
 };
 
 const EARLY_BIRD_CUTOFF = new Date(contest.deadlines.earlyBird);
+const EARLY_BIRD_SAVINGS = formatCents(competition.pricing.earlyBirdDiscountCents);
+/** Does any division perform to uploaded music? Hides the music steps when none does. */
+const ANY_MUSIC = competition.divisions.some(d => d.music);
+
+/** Optional setup fields, labelled from competition.gear. A "" label hides the field. */
+const GEAR_FIELDS = ([
+  { key: 'yoyo', label: competition.gear.yoyo, placeholder: 'Brand and model' },
+  { key: 'string', label: competition.gear.string, placeholder: 'Type or brand' },
+  { key: 'counterweight', label: competition.gear.counterweight, placeholder: 'Type or brand' },
+] as const).filter(f => f.label !== '');
+
+const divisionName = (code: string) => divisionByCode(code)?.name ?? code;
+
+/** Sum of the member divisions' list prices */
+const memberCents = (codes: string[]) => codes.reduce((s, c) => s + (divisionByCode(c)?.priceCents ?? 0), 0);
+
+/** The combos that apply to a selection, in the same order lib/divisions-core.ts applies them. */
+function appliedCombos(selected: string[]) {
+  let remaining = [...new Set(selected)];
+  const out: typeof competition.combos = [];
+  for (const k of competition.combos) {
+    if (k.divisions.length > 0 && k.divisions.every(d => remaining.includes(d))) {
+      out.push(k);
+      remaining = remaining.filter(d => !k.divisions.includes(d));
+    }
+  }
+  return out;
+}
+
+/** Divisions that can't be entered together with `code`, in either direction. */
+function conflictsOf(code: string): string[] {
+  const own = divisionByCode(code)?.cannotCombineWith ?? [];
+  const reverse = competition.divisions.filter(d => d.cannotCombineWith?.includes(code)).map(d => d.code);
+  return [...new Set([...own, ...reverse])];
+}
+
+/** "2 min"-style facts line for a division card, built from its config. */
+function divisionFacts(d: DivisionDef): string {
+  const facts: string[] = [];
+  facts.push(d.music ? 'Performed to music' : 'No music');
+  if (d.scoring.format === 'freestyle') facts.push(`Scored out of ${d.scoring.techCap + 4 * d.scoring.evalCap}`);
+  else facts.push('Manual score');
+  if (d.styles) {
+    const { min, max } = d.styles;
+    const n = min === max ? `${min}` : min === 0 ? `up to ${max}` : `${min}–${max}`;
+    facts.push(`Pick ${n} style${max === 1 && min === max ? '' : 's'}`);
+  }
+  const conflicts = conflictsOf(d.code);
+  if (conflicts.length) facts.push(`Can't combine with ${conflicts.map(divisionName).join(', ')}`);
+  return facts.join(' · ');
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -76,7 +128,7 @@ export default function RegisterPage() {
     mode: 'onChange',
     defaultValues: {
       divisions: [],
-      x_substyles: [],
+      division_styles: {},
       liability_waiver_accepted: false,
       photo_video_consent: false,
       code_of_conduct_accepted: false,
@@ -87,12 +139,12 @@ export default function RegisterPage() {
   });
 
   const watchedDivisions = watch('divisions') as Division[];
-  const watchedXSubstyles = watch('x_substyles') as Array<'2A' | '3A' | '4A' | '5A'>;
+  const watchedStyles = (watch('division_styles') ?? {}) as DivisionStyles;
   const watchedAge = parseInt(watch('age_on_event') || '0', 10);
   const watchedCompCode = watch('comp_code');
   const isMinor = watchedAge > 0 && watchedAge < 18;
-  const showXSubstyle = watchedDivisions.includes('X');
-  const maxXSubstyles = watchedDivisions.includes('1A') ? 1 : 2;
+  const styledSelected = competition.divisions.filter(d => d.styles && watchedDivisions.includes(d.code));
+  const combosApplied = appliedCombos(watchedDivisions);
 
   // Competitors under 18 are private by default — a parent can ask us to
   // enable public listing after registration if they want it.
@@ -116,33 +168,37 @@ export default function RegisterPage() {
     let next: Division[];
     if (current.includes(div)) {
       next = current.filter(d => d !== div);
-    } else if (div === 'SBJ') {
-      // SBJ cannot be combined with pro divisions.
-      next = ['SBJ'];
     } else {
-      // Picking 1A/X removes SBJ automatically.
-      next = [...current.filter(d => d !== 'SBJ'), div];
+      // Picking a division drops any selected one it can't be combined with
+      // (competition.divisions[].cannotCombineWith, checked in both directions).
+      const conflicts = conflictsOf(div);
+      next = [...current.filter(d => !conflicts.includes(d)), div];
     }
+    // Keep config order so the summary lists divisions consistently.
+    next = competition.divisions.map(d => d.code).filter(c => next.includes(c));
 
     setValue('divisions', next, { shouldValidate: true });
-    if (!next.includes('X')) {
-      setValue('x_substyles', [], { shouldValidate: true });
-    }
+    // Drop styles picked for divisions that are no longer selected.
+    setValue('division_styles', cleanStyles(next, watchedStyles), { shouldValidate: true });
     setCodeApplied(false);
     setValidatedCode('');
     setCompDiscountPercent(0);
     setCodeStatus('idle');
   };
 
-  const handleXSubstyleToggle = (substyle: '2A' | '3A' | '4A' | '5A') => {
-    const current = watchedXSubstyles ?? [];
-    let next = current;
-    if (current.includes(substyle)) {
-      next = current.filter(s => s !== substyle);
-    } else if (current.length < maxXSubstyles) {
-      next = [...current, substyle];
+  const handleStyleToggle = (division: DivisionDef, style: string) => {
+    if (!division.styles) return;
+    const current = watchedStyles[division.code] ?? [];
+    let picked = current;
+    if (division.styles.max === 1) {
+      // Radio behavior: one style at a time.
+      picked = [style];
+    } else if (current.includes(style)) {
+      picked = current.filter(s => s !== style);
+    } else if (current.length < division.styles.max) {
+      picked = [...current, style];
     }
-    setValue('x_substyles', next, { shouldValidate: true });
+    setValue('division_styles', { ...watchedStyles, [division.code]: picked }, { shouldValidate: true });
   };
 
   const handleValidateCode = useCallback(async () => {
@@ -181,6 +237,12 @@ export default function RegisterPage() {
       setServerError('Please scroll through the full liability release before agreeing.');
       return;
     }
+    const divisionStyles = cleanStyles(values.divisions, values.division_styles);
+    const issues = selectionIssues(values.divisions, divisionStyles, competition);
+    if (issues.length > 0) {
+      setServerError(issues.map(i => i.message).join('. '));
+      return;
+    }
     setSubmitting(true);
     setServerError('');
 
@@ -188,7 +250,7 @@ export default function RegisterPage() {
       const { instagram, tiktok, youtube, ...rest } = values;
       const payload = {
         ...rest,
-        x_substyles: values.x_substyles ?? [],
+        division_styles: divisionStyles,
         socials: {
           instagram,
           tiktok,
@@ -355,7 +417,7 @@ export default function RegisterPage() {
                 </Field>
               </div>
               <Field label="State *" error={errors.state?.message}>
-                <input {...register('state', { required: 'Required', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder="VA" maxLength={2} />
+                <input {...register('state', { required: 'Required', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder={contest.venue.region} maxLength={2} />
               </Field>
             </div>
           </section>
@@ -363,126 +425,119 @@ export default function RegisterPage() {
           {/* ── SECTION 2: Divisions ── */}
           <section>
             <SectionHeader tag="STEP 2" title="Division Selection" />
-            <p className="text-sm text-text-body mb-4">Select your competition division(s). 1A + X can be combined. Sport / Beginner / Junior (SBJ) cannot be combined with 1A or X.</p>
+            <p className="text-sm text-text-body mb-4">
+              Select your division{competition.divisions.length === 1 ? '' : '(s)'}.
+              {competition.divisions.length > 1 && ' You can enter more than one unless a division says otherwise.'}
+            </p>
 
             {errors.divisions && (
               <p className="text-red text-sm mb-3">{errors.divisions.message}</p>
             )}
 
             <div className="space-y-3">
-              {([
-                {
-                  code: '1A' as Division,
-                  name: '1A — Single String',
-                  price: displayPrice(3000),
-                  desc: 'Classic 1-string freestyle. 2-minute routine, scored out of 100: technical execution (clickers, 60) plus trick presentation, performance quality, musicality, and routine construction (40), minus major deductions.',
-                  format: '2 min · Scored judging',
-                },
-                {
-                  code: 'X' as Division,
-                  name: 'X Division',
-                  price: displayPrice(2500),
-                  desc: 'Non-1A styles: 2A (looping), 3A (two strings), 4A (offstring), or 5A (freehand). Pick one. Scored like 1A (60 technical execution + 40 evaluation), with NYYL style multipliers on clicker scores.',
-                  format: '2 min · Scored judging',
-                },
-                {
-                  code: 'SBJ' as Division,
-                  name: 'Sport / Beginner / Junior',
-                  price: displayPrice(2000),
-                  desc: 'Open to all skill levels and ages. Relaxed format and a great entry point: no negative clicks, no major deductions, and 80 of 100 points come from evaluation, not trick count.',
-                  format: '90 sec · No negative clicks',
-                },
-              ] as const).map(({ code, name, price, desc, format }) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => handleDivisionToggle(code)}
-                  className={`w-full text-left border p-4 transition-colors ${
-                    watchedDivisions.includes(code)
-                      ? 'border-gold bg-navy'
-                      : 'border-navy-border bg-navy-deep hover:border-gold/50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-5 h-5 border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${watchedDivisions.includes(code) ? 'border-gold bg-gold' : 'border-navy-border'}`}>
-                        {watchedDivisions.includes(code) && <span className="text-navy-deep font-black text-xs">✓</span>}
+              {competition.divisions.map((d) => {
+                const on = watchedDivisions.includes(d.code);
+                return (
+                  <button
+                    key={d.code}
+                    type="button"
+                    onClick={() => handleDivisionToggle(d.code)}
+                    aria-pressed={on}
+                    className={`w-full text-left border p-4 transition-colors ${
+                      on
+                        ? 'border-gold bg-navy'
+                        : 'border-navy-border bg-navy-deep hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className={`w-5 h-5 border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${on ? 'border-gold bg-gold' : 'border-navy-border'}`}>
+                          {on && <span className="text-navy-deep font-black text-xs">✓</span>}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-sm">{d.name}</div>
+                          <div className="text-xs text-text-body mt-0.5">{d.description}</div>
+                          <div className="text-xs text-gold/60 mt-1">{divisionFacts(d)}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-white text-sm">{name}</div>
-                        <div className="text-xs text-text-body mt-0.5">{desc}</div>
-                        <div className="text-xs text-gold/60 mt-1">{format}</div>
-                      </div>
+                      <span className="font-display font-bold text-gold text-lg flex-shrink-0">{displayPrice(d.priceCents)}</span>
                     </div>
-                    <span className="font-display font-bold text-gold text-lg flex-shrink-0">{price}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Style pickers for every selected division that has styles */}
+            {styledSelected.map((d) => {
+              const styles = d.styles!;
+              const picked = watchedStyles[d.code] ?? [];
+              const single = styles.max === 1;
+              const range = styles.min === styles.max ? `${styles.min}` : styles.min === 0 ? `up to ${styles.max}` : `${styles.min}–${styles.max}`;
+              const groupId = `styles-${d.code}`;
+              const countOk = picked.length >= styles.min && picked.length <= styles.max;
+              return (
+                <fieldset key={d.code} className="mt-4 p-4 bg-navy border border-gold/30" aria-describedby={`${groupId}-hint`}>
+                  <legend className="sr-only">{d.name} styles</legend>
+                  <div className="block text-xs font-black tracking-caps text-gold mb-3" aria-hidden="true">
+                    {d.name.toUpperCase()} STYLE{single ? '' : 'S'}{styles.min > 0 ? ' *' : ''}
                   </div>
-                </button>
-              ))}
-            </div>
+                  <p id={`${groupId}-hint`} className="text-xs text-text-body mb-3">
+                    {single ? (styles.min > 0 ? 'Choose one style.' : 'Choose a style (optional).') : `Choose ${range} styles.`}
+                  </p>
+                  <div className="space-y-2">
+                    {styles.options.map((o) => {
+                      const checked = picked.includes(o.code);
+                      return (
+                        <label key={o.code} className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type={single ? 'radio' : 'checkbox'}
+                            name={groupId}
+                            value={o.code}
+                            checked={checked}
+                            onChange={() => handleStyleToggle(d, o.code)}
+                            disabled={!single && !checked && picked.length >= styles.max}
+                            className="w-4 h-4 accent-gold mt-0.5 flex-shrink-0"
+                          />
+                          <span>
+                            <span className="text-sm font-semibold text-white">{o.label}</span>
+                            {o.description && <span className="text-xs text-text-body ml-2">{o.description}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {!countOk && picked.length > 0 && (
+                    <p className="text-red text-sm mt-2" role="alert">Choose {range} {d.name} style{styles.max === 1 ? '' : 's'}.</p>
+                  )}
+                </fieldset>
+              );
+            })}
 
-            {/* X substyle */}
-            {showXSubstyle && (
-              <div className="mt-4 p-4 bg-navy border border-gold/30">
-                <label className="block text-xs font-black tracking-caps text-gold mb-3">X DIVISION SUB-STYLES *</label>
-                <p className="text-xs text-text-body mb-3">
-                  {watchedDivisions.includes('1A')
-                    ? '1A + X is limited to one X sub-style (max 2 total styles).'
-                    : 'Choose up to two X sub-styles.'}
-                </p>
-                <div className="space-y-2">
-                  {([
-                    { code: '2A', desc: 'Looping - two looping yo-yos focused on rhythm and control.' },
-                    { code: '3A', desc: 'Two-Handed String - two string-trick yo-yos, one in each hand.' },
-                    { code: '4A', desc: 'Offstring - yo-yo is not attached to the string during play.' },
-                    { code: '5A', desc: 'Freehand - counterweight style with no finger loop.' },
-                  ] as const).map(({ code, desc }) => (
-                    <label key={code} className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={watchedXSubstyles.includes(code)}
-                        onChange={() => handleXSubstyleToggle(code)}
-                        disabled={!watchedXSubstyles.includes(code) && watchedXSubstyles.length >= maxXSubstyles}
-                        className="w-4 h-4 accent-gold mt-0.5"
-                      />
-                      <span>
-                        <span className="text-sm font-semibold text-white">{code}</span>
-                        <span className="text-xs text-text-body ml-2">{desc}</span>
-                      </span>
-                    </label>
-                  ))}
+            {/* Combo notes */}
+            {combosApplied.map((k) => {
+              const names = k.divisions.map(divisionName).join(' + ');
+              const savings = memberCents(k.divisions) - k.priceCents;
+              return (
+                <div key={k.divisions.join('+')} className="mt-3 p-3 border border-gold/40 bg-navy text-xs text-gold font-semibold">
+                  {PRICES_TBD
+                    ? `★ ${names} combo pricing: TBD`
+                    : `★ ${names} combo: ${formatCents(k.priceCents)}${savings > 0 ? ` (saves ${formatCents(savings)} vs. registering separately)` : ''}`}
                 </div>
-                {errors.x_substyles && <p className="text-red text-sm mt-2">{errors.x_substyles.message}</p>}
+              );
+            })}
+
+            {contest.links.rules && (
+              <div className="mt-2">
+                <a
+                  href={`${contest.links.rules}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-gold/60 hover:text-gold"
+                >
+                  → View full division rules &amp; judging criteria ↗
+                </a>
               </div>
             )}
-
-            {/* Combo note */}
-            {watchedDivisions.includes('1A') && watchedDivisions.includes('X') && (
-              <div className="mt-3 p-3 border border-gold/40 bg-navy text-xs text-gold font-semibold">
-                {PRICES_TBD
-                  ? '★ 1A + X Division combo pricing: TBD'
-                  : '★ 1A + X Division combo: $50 (saves $5 vs. registering separately)'}
-              </div>
-            )}
-
-            <div className="mt-2">
-              <a
-                href={`${contest.links.rules}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-gold/60 hover:text-gold"
-              >
-                → View full division rules &amp; judging criteria ↗
-              </a>
-              {' · '}
-              <a
-                href="https://yoyocontest.com/freestyle-rules-for-nyyl-events/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-gold/60 hover:text-gold"
-              >
-                Source: NYYL freestyle rules ↗
-              </a>
-            </div>
 
             {/* Comp code */}
             <div className="mt-5">
@@ -597,17 +652,15 @@ export default function RegisterPage() {
                     </Field>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                    <Field label="Yo-Yo">
-                      <input {...register('yoyo')} className={inputCls(false)} placeholder="Edge Beyond" />
-                    </Field>
-                    <Field label="String">
-                      <input {...register('string')} className={inputCls(false)} placeholder="Poly 100%" />
-                    </Field>
-                    <Field label="Counterweight">
-                      <input {...register('counterweight')} className={inputCls(false)} placeholder="Dice CW" />
-                    </Field>
-                  </div>
+                  {GEAR_FIELDS.length > 0 && (
+                    <div className={`grid grid-cols-1 ${GEAR_FIELDS.length === 3 ? 'sm:grid-cols-3' : GEAR_FIELDS.length === 2 ? 'sm:grid-cols-2' : ''} gap-4 mt-4`}>
+                      {GEAR_FIELDS.map(({ key, label, placeholder }) => (
+                        <Field key={key} label={label}>
+                          <input {...register(key)} className={inputCls(false)} placeholder={placeholder} />
+                        </Field>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                     <Field label="Instagram">
@@ -623,7 +676,7 @@ export default function RegisterPage() {
 
                   <div className="mt-4">
                     <Field label="Bio" hint="Optional short intro" error={errors.bio?.message}>
-                      <textarea {...register('bio')} className={`${inputCls(!!errors.bio)} resize-none`} rows={3} placeholder="Yo-yo player from..." />
+                      <textarea {...register('bio')} className={`${inputCls(!!errors.bio)} resize-none`} rows={3} placeholder="Where you're from, how long you've played…" />
                     </Field>
                   </div>
                 </>
@@ -733,7 +786,7 @@ export default function RegisterPage() {
                     if (reachedBottom) setLiabilityScrolled(true);
                   }}
                 >
-                  <p><strong className="text-white">Assumption of Risk:</strong> I understand that participation in a yo-yo contest includes physical movement, crowded public spaces, equipment handling, and other event-related risks.</p>
+                  <p><strong className="text-white">Assumption of Risk:</strong> I understand that participation in a {competition.toy.singular} contest includes physical movement, crowded public spaces, equipment handling, and other event-related risks.</p>
                   <p><strong className="text-white">Release:</strong> I release and hold harmless {contest.organizer.name}, event staff, volunteers, sponsors, and {contest.venue.name} from claims, liabilities, damages, or expenses arising out of participation in {contest.shortName}, except where prohibited by law.</p>
                   <p><strong className="text-white">Personal Responsibility:</strong> I am responsible for my own safety, property, and conduct while at the event and will follow venue and event rules.</p>
                   <p><strong className="text-white">Medical:</strong> I authorize emergency care if needed and understand all costs are my responsibility.</p>
@@ -792,7 +845,7 @@ export default function RegisterPage() {
               {submitting ? 'SUBMITTING...' : 'SUBMIT REGISTRATION →'}
             </button>
             <p className="text-xs text-text-body mt-3 text-center">
-              Payment and music upload are handled in this registration portal after you submit.
+              {ANY_MUSIC ? 'Payment and music upload are' : 'Payment is'} handled in this registration portal after you submit.
             </p>
             <p className="text-xs text-text-body mt-2 text-center">
               Review our{' '}
@@ -813,23 +866,33 @@ export default function RegisterPage() {
               <>
                 <div className="space-y-2 mb-4">
                   {watchedDivisions.map(d => (
-                    <div key={d} className="flex justify-between text-sm">
-                      <span className="text-text-body">{d === 'SBJ' ? 'Sport/Beginner/Junior' : d}</span>
-                      <span className="text-white font-semibold">{displayPrice({ '1A': 3000, 'X': 2500, 'SBJ': 2000 }[d] ?? 0)}</span>
+                    <div key={d} className="flex justify-between gap-3 text-sm">
+                      <span className="text-text-body">
+                        {divisionName(d)}
+                        {(watchedStyles[d]?.length ?? 0) > 0 && (
+                          <span className="block text-xs text-text-muted">
+                            {watchedStyles[d].map(s => divisionByCode(d)?.styles?.options.find(o => o.code === s)?.label ?? s).join(', ')}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-white font-semibold flex-shrink-0">{displayPrice(divisionByCode(d)?.priceCents ?? 0)}</span>
                     </div>
                   ))}
                 </div>
 
-                {feePreview.combo_applied && !PRICES_TBD && (
-                  <div className="flex justify-between text-sm text-green-400 mb-2">
-                    <span>1A + X combo discount</span>
-                    <span>−$5.00</span>
-                  </div>
-                )}
-                {feePreview.early_bird_applied && !PRICES_TBD && (
+                {!PRICES_TBD && combosApplied.map(k => {
+                  const savings = memberCents(k.divisions) - k.priceCents;
+                  return savings !== 0 && (
+                    <div key={k.divisions.join('+')} className="flex justify-between gap-3 text-sm text-green-400 mb-2">
+                      <span>{k.divisions.map(divisionName).join(' + ')} combo {savings > 0 ? 'discount' : 'price'}</span>
+                      <span className="flex-shrink-0">{savings > 0 ? `−${formatCents(savings)}` : `+${formatCents(-savings)}`}</span>
+                    </div>
+                  );
+                })}
+                {feePreview.early_bird_applied && !PRICES_TBD && competition.pricing.earlyBirdDiscountCents > 0 && (
                   <div className="flex justify-between text-sm text-green-400 mb-2">
                     <span>Early bird discount</span>
-                    <span>−$5.00</span>
+                    <span>−{EARLY_BIRD_SAVINGS}</span>
                   </div>
                 )}
                 {feePreview.comp_discount_percent > 0 && (
@@ -846,8 +909,8 @@ export default function RegisterPage() {
                   </span>
                 </div>
 
-                {isEarlyBirdWindow && !feePreview.early_bird_applied && feePreview.comp_discount_percent === 0 && !feePreview.is_comp && (
-                  <p className="text-xs text-gold/70 mt-3">★ Early bird ends {monthDay(contest.deadlines.earlyBird.slice(0, 10))} — register now and save $5</p>
+                {isEarlyBirdWindow && competition.pricing.earlyBirdDiscountCents > 0 && !feePreview.early_bird_applied && feePreview.comp_discount_percent === 0 && !feePreview.is_comp && (
+                  <p className="text-xs text-gold/70 mt-3">★ Early bird ends {monthDay(contest.deadlines.earlyBird.slice(0, 10))} — register now and save {EARLY_BIRD_SAVINGS}</p>
                 )}
               </>
             )}
@@ -858,23 +921,23 @@ export default function RegisterPage() {
               <p className="text-xs text-text-body">Day-of payment options may be available at check-in. See the registration desk for details.</p>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-navy-border">
+            {ANY_MUSIC && <div className="mt-4 pt-4 border-t border-navy-border">
               <div className="text-xs font-black tracking-caps text-gold mb-2">MUSIC DEADLINE</div>
               <p className="text-xs text-text-body">Upload your music in this registration app after payment. <strong className="text-white">Deadline: {deadlineLabel(contest.deadlines.musicUpload)}.</strong></p>
               <p className="text-xs text-text-body mt-2">Music must be appropriate for all audiences — no explicit language, sexual content, or glorification of violence. <strong className="text-white">Inappropriate music results in disqualification.</strong> Full rules are on the upload page.</p>
-            </div>
+            </div>}
 
             <div className="mt-4 pt-4 border-t border-navy-border">
               <div className="text-xs font-black tracking-caps text-gold mb-3">WHAT HAPPENS NEXT</div>
               <ol className="space-y-2.5">
                 {[
-                  { n: '1', label: 'Submit this form', sub: 'You\'re in the queue' },
-                  { n: '2', label: 'Complete Stripe checkout', sub: 'Secure online payment in portal' },
-                  { n: '3', label: 'Upload your music', sub: `In-app upload · due ${shortMonthDay(contest.deadlines.musicUpload.slice(0, 10))}` },
-                  { n: '4', label: `Show up ${shortMonthDay()}`, sub: `${contest.venue.name}, ${venueCity}` },
-                ].map(({ n, label, sub }) => (
-                  <li key={n} className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 bg-gold text-navy-deep text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{n}</span>
+                  { label: 'Submit this form', sub: 'You\'re in the queue' },
+                  { label: 'Complete Stripe checkout', sub: 'Secure online payment in portal' },
+                  ...(ANY_MUSIC ? [{ label: 'Upload your music', sub: `In-app upload · due ${shortMonthDay(contest.deadlines.musicUpload.slice(0, 10))}` }] : []),
+                  { label: `Show up ${shortMonthDay()}`, sub: `${contest.venue.name}, ${venueCity}` },
+                ].map(({ label, sub }, i) => (
+                  <li key={label} className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 bg-gold text-navy-deep text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                     <div>
                       <div className="text-xs font-semibold text-white">{label}</div>
                       <div className="text-xs text-text-body">{sub}</div>

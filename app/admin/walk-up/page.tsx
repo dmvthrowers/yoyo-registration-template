@@ -1,10 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { calculateFeePreview, displayPrice, type Division as PricingDivision } from '@/lib/pricing';
-import { contest, shortMonthDay } from '@/contest.config';
+import { calculateFeePreview, displayPrice, formatCents, type Division } from '@/lib/pricing';
+import { cleanStyles, selectionIssues, type DivisionStyles } from '@/lib/divisions-core';
+import { contest, competition, shortMonthDay, type DivisionDef } from '@/contest.config';
 
-type Division = '1A' | 'X' | 'SBJ';
+const WALK_UP_SURCHARGE = formatCents(competition.pricing.walkUpSurchargeCents);
+
+/** Divisions that can't be entered together with `code`, in either direction. */
+function conflictsOf(code: string): string[] {
+  const d = competition.divisions.find((x) => x.code === code);
+  const reverse = competition.divisions.filter((x) => x.cannotCombineWith?.includes(code)).map((x) => x.code);
+  return [...new Set([...(d?.cannotCombineWith ?? []), ...reverse])];
+}
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DC','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 
 interface FormState {
@@ -17,7 +25,7 @@ interface FormState {
   city: string;
   state: string;
   divisions: Division[];
-  x_substyle: string;
+  division_styles: DivisionStyles;
   parent_name: string;
   parent_email: string;
   parent_consented: boolean;
@@ -29,7 +37,7 @@ interface FormState {
 const BLANK: FormState = {
   first_name: '', last_name: '', preferred_bracket_name: '',
   age_on_event: '', email: '', phone: '', city: '', state: contest.venue.region,
-  divisions: [], x_substyle: '',
+  divisions: [], division_styles: {},
   parent_name: '', parent_email: '', parent_consented: false,
   liability_waiver_accepted: false, code_of_conduct_accepted: false,
   paid_at_table: false,
@@ -39,7 +47,7 @@ const BLANK: FormState = {
 // screen can't drift from the real fees. Shows "TBD" while PRICES_TBD is on.
 function estimateFeeCents(divisions: Division[]): number {
   if (divisions.length === 0) return 0;
-  return calculateFeePreview(divisions as PricingDivision[], 0, new Date(), 'walk_up', new Date(0)).fee_cents;
+  return calculateFeePreview(divisions, 0, new Date(), 'walk_up', new Date(0)).fee_cents;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -71,11 +79,29 @@ export default function WalkUpPage() {
   const estimatedFeeCents = estimateFeeCents(form.divisions);
   const isMinor = parseInt(form.age_on_event, 10) < 18;
 
+  const issues = selectionIssues(form.divisions, cleanStyles(form.divisions, form.division_styles), competition);
+
   function toggle(div: Division) {
-    setForm((f) => ({
-      ...f,
-      divisions: f.divisions.includes(div) ? f.divisions.filter((d) => d !== div) : [...f.divisions, div],
-    }));
+    setForm((f) => {
+      const picked = f.divisions.includes(div)
+        ? f.divisions.filter((d) => d !== div)
+        : [...f.divisions.filter((d) => !conflictsOf(div).includes(d)), div];
+      const divisions = competition.divisions.map((d) => d.code).filter((c) => picked.includes(c));
+      return { ...f, divisions, division_styles: cleanStyles(divisions, f.division_styles) };
+    });
+  }
+
+  function toggleStyle(d: DivisionDef, style: string) {
+    if (!d.styles) return;
+    const max = d.styles.max;
+    setForm((f) => {
+      const cur = f.division_styles[d.code] ?? [];
+      let next = cur;
+      if (max === 1) next = [style];
+      else if (cur.includes(style)) next = cur.filter((s) => s !== style);
+      else if (cur.length < max) next = [...cur, style];
+      return { ...f, division_styles: { ...f.division_styles, [d.code]: next } };
+    });
   }
 
   function set(field: keyof FormState, value: unknown) {
@@ -97,7 +123,7 @@ export default function WalkUpPage() {
       city: form.city,
       state: form.state,
       divisions: form.divisions,
-      x_substyle: form.x_substyle || undefined,
+      division_styles: cleanStyles(form.divisions, form.division_styles),
       parent_name: form.parent_name || undefined,
       parent_email: form.parent_email || undefined,
       parent_consented: form.parent_consented,
@@ -133,7 +159,7 @@ export default function WalkUpPage() {
         Walk-Up Registration
       </h1>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 2rem' }}>
-        For day-of registrants. +$10 surcharge applied automatically.
+        For day-of registrants. {competition.pricing.walkUpSurchargeCents > 0 ? `+${WALK_UP_SURCHARGE} surcharge applied automatically.` : ''}
       </p>
 
       {lastResult && (
@@ -193,12 +219,14 @@ export default function WalkUpPage() {
         {/* Divisions */}
         <Field label="DIVISIONS *">
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.1rem' }}>
-            {(['1A', 'X', 'SBJ'] as Division[]).map((div) => {
-              const on = form.divisions.includes(div);
+            {competition.divisions.map((d) => {
+              const on = form.divisions.includes(d.code);
               return (
                 <button
-                  key={div} type="button"
-                  onClick={() => toggle(div)}
+                  key={d.code} type="button"
+                  onClick={() => toggle(d.code)}
+                  aria-pressed={on}
+                  title={d.description}
                   style={{
                     background: on ? 'var(--gold)' : 'transparent',
                     color: on ? 'var(--navy-deep)' : 'var(--text-body)',
@@ -208,30 +236,50 @@ export default function WalkUpPage() {
                     fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', letterSpacing: '0.05em',
                   }}
                 >
-                  {div} — {displayPrice(calculateFeePreview([div as PricingDivision], 0, new Date(), 'online', new Date(0)).fee_cents)}
+                  {d.name} — {displayPrice(d.priceCents)}
                 </button>
               );
             })}
           </div>
-          {form.divisions.includes('X') && (
-            <select
-              value={form.x_substyle}
-              onChange={(e) => set('x_substyle', e.target.value)}
-              style={{ ...inputStyle, marginTop: '0.5rem' }}
-            >
-              <option value="">X sub-style…</option>
-              <option value="2A">2A - Looping</option>
-              <option value="3A">3A - Two-Handed String</option>
-              <option value="4A">4A - Offstring</option>
-              <option value="5A">5A - Freehand</option>
-            </select>
+          {competition.divisions.filter((d) => d.styles && form.divisions.includes(d.code)).map((d) => {
+            const styles = d.styles!;
+            const picked = form.division_styles[d.code] ?? [];
+            const single = styles.max === 1;
+            const range = styles.min === styles.max ? `${styles.min}` : `${styles.min}–${styles.max}`;
+            return (
+              <fieldset key={d.code} style={{ border: '1px solid var(--navy-border)', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
+                <legend style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', padding: '0 0.3rem' }}>
+                  {d.name.toUpperCase()} — {single ? 'PICK ONE' : `PICK ${range}`}{styles.min === 0 ? ' (OPTIONAL)' : ''}
+                </legend>
+                <div style={{ display: 'flex', gap: '0.4rem 1rem', flexWrap: 'wrap' }}>
+                  {styles.options.map((o) => {
+                    const checked = picked.includes(o.code);
+                    return (
+                      <label key={o.code} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-body)' }}>
+                        <input
+                          type={single ? 'radio' : 'checkbox'}
+                          name={`walkup-styles-${d.code}`}
+                          checked={checked}
+                          disabled={!single && !checked && picked.length >= styles.max}
+                          onChange={() => toggleStyle(d, o.code)}
+                        />
+                        {o.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            );
+          })}
+          {form.divisions.length > 0 && issues.length > 0 && (
+            <p style={{ color: '#ff6b6b', fontSize: '0.75rem', margin: '0.4rem 0 0' }}>{issues.map((i) => i.message).join('. ')}</p>
           )}
         </Field>
 
         {/* Fee preview */}
         {form.divisions.length > 0 && (
           <div style={{ background: '#0d1428', border: '1px solid var(--navy-border)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estimated fee (incl. +$10 walk-up)</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estimated fee{competition.pricing.walkUpSurchargeCents > 0 ? ` (incl. +${WALK_UP_SURCHARGE} walk-up)` : ''}</span>
             <span style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.5rem', fontWeight: 700 }}>
               {displayPrice(estimatedFeeCents)}
             </span>
@@ -283,17 +331,17 @@ export default function WalkUpPage() {
 
         <button
           type="submit"
-          disabled={submitting || form.divisions.length === 0}
+          disabled={submitting || form.divisions.length === 0 || issues.length > 0}
           style={{
-            background: submitting || form.divisions.length === 0 ? 'var(--navy-border)' : 'var(--gold)',
-            color: submitting || form.divisions.length === 0 ? 'var(--text-muted)' : 'var(--navy-deep)',
+            background: submitting || form.divisions.length === 0 || issues.length > 0 ? 'var(--navy-border)' : 'var(--gold)',
+            color: submitting || form.divisions.length === 0 || issues.length > 0 ? 'var(--text-muted)' : 'var(--navy-deep)',
             border: 'none',
             padding: '0.9rem',
             fontWeight: 800,
             fontSize: '0.9rem',
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            cursor: submitting || form.divisions.length === 0 ? 'not-allowed' : 'pointer',
+            cursor: submitting || form.divisions.length === 0 || issues.length > 0 ? 'not-allowed' : 'pointer',
           }}
         >
           {submitting ? 'Registering…' : `Register Walk-Up${estimatedFeeCents > 0 ? ` — ${displayPrice(estimatedFeeCents)}` : ''}`}

@@ -4,6 +4,14 @@ import { FormEvent, useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { createBrowserClient } from '@/lib/supabase/client';
+import { competition } from '@/contest.config';
+
+/** Optional setup fields, labelled from competition.gear. A "" label hides the field. */
+const GEAR_FIELDS = ([
+  { key: 'yoyo', label: competition.gear.yoyo, placeholder: 'Brand and model' },
+  { key: 'string', label: competition.gear.string, placeholder: 'Type or brand' },
+  { key: 'counterweight', label: competition.gear.counterweight, placeholder: 'Type or brand' },
+] as const).filter(f => f.label !== '');
 
 type SpectatorProfile = {
   id: string;
@@ -410,15 +418,11 @@ export default function SpectatorPortalPage() {
                 <Field label="Club">
                   <input aria-label="Club" title="Club" value={editable.club} onChange={(e) => setEditable({ ...editable, club: e.target.value })} className="input" />
                 </Field>
-                <Field label="Yo-Yo">
-                  <input aria-label="Yo-Yo" title="Yo-Yo" value={editable.yoyo} onChange={(e) => setEditable({ ...editable, yoyo: e.target.value })} className="input" />
-                </Field>
-                <Field label="String">
-                  <input aria-label="String" title="String" value={editable.string} onChange={(e) => setEditable({ ...editable, string: e.target.value })} className="input" />
-                </Field>
-                <Field label="Counterweight">
-                  <input aria-label="Counterweight" title="Counterweight" value={editable.counterweight} onChange={(e) => setEditable({ ...editable, counterweight: e.target.value })} className="input" />
-                </Field>
+                {GEAR_FIELDS.map(({ key, label, placeholder }) => (
+                  <Field key={key} label={label}>
+                    <input aria-label={label} title={label} placeholder={placeholder} value={editable[key]} onChange={(e) => setEditable({ ...editable, [key]: e.target.value })} className="input" />
+                  </Field>
+                ))}
                 <Field label="Photo URL">
                   <input aria-label="Photo URL" title="Photo URL" value={editable.photo_url} onChange={(e) => setEditable({ ...editable, photo_url: e.target.value })} className="input" />
                 </Field>

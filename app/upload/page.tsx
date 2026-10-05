@@ -147,7 +147,7 @@ function UploadContent() {
             <li>Music addressing inappropriate themes (violence, rape, self-harm, sexual content)</li>
             <li>Music glorifying — including but not limited to — violence, rape, suicide, killing, murder, genocide, or war</li>
             <li>Music that explicitly implies sexual activity (heavy breathing, ecstatic noises or screams)</li>
-            <li>Music that discriminates against anyone — yo-yo is an inclusive sport, and discrimination of any kind is not tolerated at {contest.shortName}</li>
+            <li>Music that discriminates against anyone — this is an inclusive community, and discrimination of any kind is not tolerated at {contest.shortName}</li>
           </ul>
           <p style={{ color: 'var(--text-body)', fontSize: '0.85rem', margin: 0 }}>
             If you have any doubt about your selection, email{' '}

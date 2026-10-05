@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('contest_registrations')
-    .select('id, first_name, last_name, email, divisions, fee_cents, music_upload_token, music_uploaded_at, paid')
+    .select('id, first_name, last_name, email, divisions, division_styles, fee_cents, music_upload_token, music_uploaded_at, paid')
     .eq('id', id)
     .single();
 
@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     last_name: data.last_name,
     email: data.email,
     divisions: data.divisions,
+    division_styles: data.division_styles ?? {},
     fee_cents: data.fee_cents,
     paid: data.paid,
     music_upload_url: canUploadMusic ? `${BASE_URL}/upload?token=${data.music_upload_token}` : null,

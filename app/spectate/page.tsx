@@ -6,7 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import { contest, venueCity, longDate } from '@/contest.config';
+import { contest, competition, venueCity, longDate } from '@/contest.config';
+
+/** Optional setup fields, labelled from competition.gear. A "" label hides the field. */
+const GEAR_FIELDS = ([
+  { key: 'yoyo', label: competition.gear.yoyo, placeholder: 'Brand and model' },
+  { key: 'string', label: competition.gear.string, placeholder: 'Type or brand' },
+  { key: 'counterweight', label: competition.gear.counterweight, placeholder: 'Type or brand' },
+] as const).filter(f => f.label !== '');
 
 type FormValues = {
   first_name: string;
@@ -145,10 +152,10 @@ export default function SpectatePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <Field label="Nickname / Screenname" hint="Shown instead of your full name if you go public">
-                <input {...register('nickname')} className={inputCls(false)} placeholder="AKtheStringSlinger" />
+                <input {...register('nickname')} className={inputCls(false)} placeholder="AK" />
               </Field>
               <Field label="State *" error={errors.state?.message}>
-                <input {...register('state', { required: 'Required', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder="VA" maxLength={2} />
+                <input {...register('state', { required: 'Required', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder={contest.venue.region} maxLength={2} />
               </Field>
             </div>
             <div className="mt-4">
@@ -183,7 +190,7 @@ export default function SpectatePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <Field label="Team">
-                <input {...register('team')} className={inputCls(false)} placeholder="Team YoYoFactory" />
+                <input {...register('team')} className={inputCls(false)} placeholder="Team name" />
               </Field>
               <Field label="Club">
                 <input {...register('club')} className={inputCls(false)} placeholder={`${contest.organizer.name}`} />
@@ -197,17 +204,15 @@ export default function SpectatePage() {
             </div>
 
             <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Yo-Yo">
-                  <input {...register('yoyo')} className={inputCls(false)} placeholder="Duncan Freehand" />
-                </Field>
-                <Field label="String">
-                  <input {...register('string')} className={inputCls(false)} placeholder="100% Poly" />
-                </Field>
-                <Field label="Counterweight">
-                  <input {...register('counterweight')} className={inputCls(false)} placeholder="—" />
-                </Field>
-              </div>
+              {GEAR_FIELDS.length > 0 && (
+                <div className={`grid grid-cols-1 ${GEAR_FIELDS.length === 3 ? 'sm:grid-cols-3' : GEAR_FIELDS.length === 2 ? 'sm:grid-cols-2' : ''} gap-4`}>
+                  {GEAR_FIELDS.map(({ key, label, placeholder }) => (
+                    <Field key={key} label={label}>
+                      <input {...register(key)} className={inputCls(false)} placeholder={placeholder} />
+                    </Field>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field label="Instagram">
                   <input {...register('instagram')} className={inputCls(false)} placeholder="@handle" />

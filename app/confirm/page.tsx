@@ -5,7 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { formatCents } from '@/lib/pricing';
-import { contest, venueLine, longDate, shortMonthDay } from '@/contest.config';
+import { contest, divisionByCode, venueLine, longDate, shortMonthDay } from '@/contest.config';
+
+/** A division's display name, plus picked style labels if the API sends them: "Name (Style A, Style B)". */
+function divisionLabel(code: string, styles: Record<string, string[]> | undefined): string {
+  const d = divisionByCode(code);
+  const picked = (styles?.[code] ?? []).map((s) => d?.styles?.options.find((o) => o.code === s)?.label ?? s);
+  return `${d?.name ?? code}${picked.length ? ` (${picked.join(', ')})` : ''}`;
+}
 
 interface ConfirmData {
   id: string;
@@ -13,6 +20,8 @@ interface ConfirmData {
   last_name: string;
   email: string;
   divisions: string[];
+  /** Optional: style codes per division, if /api/confirm includes them */
+  division_styles?: Record<string, string[]>;
   fee_cents: number;
   music_upload_url: string | null;
   music_deadline: string;
@@ -94,7 +103,7 @@ function ConfirmContent() {
     return () => { cancelled = true; };
   }, [awaitingStripe, id]);
 
-  const musicNeedsUpload = data && data.divisions.some(d => ['1A', '2A', '3A', '4A', '5A'].includes(d));
+  const musicNeedsUpload = Boolean(data?.divisions.some(d => divisionByCode(d)?.music));
   const canUploadMusic = Boolean(data?.music_upload_url);
   const deadlineLabel = data?.music_deadline
     ? new Date(data.music_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -132,9 +141,9 @@ function ConfirmContent() {
               <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {[
                   { done: true,  label: 'Registered',       sub: `Confirmation #${data.id.slice(0, 8).toUpperCase()}` },
-                  { done: data.paid || data.fee_cents === 0, label: data.fee_cents === 0 ? 'Payment — comp pass (FREE)' : `Pay entry fee ($${formatCents(data.fee_cents)})`, sub: data.paid ? 'Received' : data.fee_cents === 0 ? 'No payment needed' : 'Complete secure Stripe checkout in portal' },
-                  { done: false, label: 'Upload your music', sub: `Deadline: ${deadlineLabel} · upload in portal` },
-                  { done: false, label: `See you ${shortMonthDay()}`,   sub: `${venueLine} · doors open 10am` },
+                  { done: data.paid || data.fee_cents === 0, label: data.fee_cents === 0 ? 'Payment — comp pass (FREE)' : `Pay entry fee (${formatCents(data.fee_cents)})`, sub: data.paid ? 'Received' : data.fee_cents === 0 ? 'No payment needed' : 'Complete secure Stripe checkout in portal' },
+                  ...(musicNeedsUpload ? [{ done: false, label: 'Upload your music', sub: `Deadline: ${deadlineLabel} · upload in portal` }] : []),
+                  { done: false, label: `See you ${shortMonthDay()}`,   sub: [venueLine, contest.doorsNote].filter(Boolean).join(' · ') },
                 ].map(({ done, label, sub }, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                     <span style={{
@@ -306,7 +315,7 @@ function ConfirmContent() {
                 <dt style={{ fontWeight: 700, color: '#fff' }}>Venue</dt>
                 <dd style={{ margin: 0 }}>{venueLine}</dd>
                 <dt style={{ fontWeight: 700, color: '#fff' }}>Divisions</dt>
-                <dd style={{ margin: 0 }}>{data.divisions.join(', ')}</dd>
+                <dd style={{ margin: 0 }}>{data.divisions.map((d) => divisionLabel(d, data.division_styles)).join(', ')}</dd>
               </dl>
               <p style={{ color: 'var(--text-body)', fontSize: '0.85rem', marginTop: '1.5rem' }}>
                 Questions? Email{' '}

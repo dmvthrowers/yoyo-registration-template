@@ -15,7 +15,7 @@ export const contest = {
   /** The next edition's short name, used in post-event surveys ("help us plan SYO-28") */
   nextShortName: 'SYO-28',
   /** One line under the name. "" to hide. */
-  tagline: 'Three divisions, NYYL rules, free to watch.',
+  tagline: 'All ages, all levels. Free to watch.',
 
   /** Contest day as YYYY-MM-DD, in the venue's time zone */
   date: '2027-03-13',
