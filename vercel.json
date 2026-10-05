@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "*": false,
+      "**": false
+    }
+  },
+  "crons": [
+    { "path": "/api/cron/drain-email", "schedule": "5 0 * * *" },
+    { "path": "/api/cron/reconcile-payments", "schedule": "20 0 * * *" }
+  ]
+}

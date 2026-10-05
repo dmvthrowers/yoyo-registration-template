@@ -1,0 +1,28 @@
+.github/*
+!.github/workflows/
+!.github/dependabot.yml
+
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# env — never commit real secrets
+.env*.local
+.env.production
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# vercel
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
+
+# rendered auth email templates (npm run auth-emails)
+supabase/email-templates/dist/
