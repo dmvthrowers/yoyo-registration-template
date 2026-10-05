@@ -59,10 +59,11 @@ function Counter({ def, onValue }: { def: SideEventDef; onValue: (n: number | nu
   const [state, dispatch] = useReducer(
     (s: CounterState, a: CounterAction) => counterStep(s, a, limit), undefined, () => counterInit(limit),
   );
-  const [, force] = useState(0);
+  // Clock reading from the last tick; render reads this instead of the clock itself.
+  const [nowMs, setNowMs] = useState(0);
   useEffect(() => {
     if (state.phase !== 'running') return;
-    const id = setInterval(() => { dispatch({ type: 'tick', now: performance.now() }); force((n) => n + 1); }, 200);
+    const id = setInterval(() => { const now = performance.now(); dispatch({ type: 'tick', now }); setNowMs(now); }, 200);
     return () => clearInterval(id);
   }, [state.phase]);
   useEffect(() => {
@@ -74,7 +75,7 @@ function Counter({ def, onValue }: { def: SideEventDef; onValue: (n: number | nu
       {limit && (
         <div style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.12em', color: state.phase === 'done' ? 'var(--red)' : 'var(--gold)' }}>
           {state.phase === 'ready' && `${limit} SECONDS · PRESS START`}
-          {state.phase === 'running' && `${secondsLeft(state, performance.now())}s LEFT`}
+          {state.phase === 'running' && `${nowMs ? secondsLeft(state, nowMs) : limit}s LEFT`}
           {state.phase === 'done' && 'TIME!'}
         </div>
       )}

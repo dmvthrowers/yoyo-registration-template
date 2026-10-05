@@ -46,7 +46,7 @@ region). Only `main` deploys; preview deployments are disabled in `vercel.json`.
 | `app/api/` | ~47 route handlers (grouped in the table below) |
 | `lib/` | Shared server logic: errors, auth, Stripe, payments, email, rate limits, pricing, validation |
 | `components/` | `BudgetManager`, `DirectoryClient`, `Footer`, `NavBar`, `RunOrderBoard`, `RunOrderManager`, `SurveyContacts`, `SurveyForm`, `SurveyResults`, `VolunteerManager` |
-| `middleware.ts` | Redirects legacy `/admin*` pages to `/admin-dashboard`, blocks bot user agents on API GETs, sets `X-Robots-Tag: noindex` on APIs |
+| `proxy.ts` | Redirects legacy `/admin*` pages to `/admin-dashboard`, blocks bot user agents on API GETs, sets `X-Robots-Tag: noindex` on APIs |
 | `supabase/migrations/` | 41 migration files, replayed from scratch in CI. `supabase/divisions.sql` (generated) loads your divisions; `supabase/seed-demo.sql` loads fake data |
 | `docs/` | `SETUP.md` (new contest checklist), `STRIPE_PAYMENTS.md`, this guide |
 | `contest.config.ts` | Name, date, venue, deadlines, links, logos — the one file to edit per contest |
@@ -62,7 +62,7 @@ region). Only `main` deploys; preview deployments are disabled in `vercel.json`.
   `/spectate`, `/spectators`, `/volunteer`.
 - Personal or day-of (noindex): `/confirm`, `/upload`, `/player`, `/portal`, `/spectators/portal`,
   `/staff`, `/judge`, `/dj`, `/admin-dashboard`.
-- `/admin/*` is the older admin UI; `middleware.ts` sends it to `/admin-dashboard`.
+- `/admin/*` is the older admin UI; `proxy.ts` sends it to `/admin-dashboard`.
 - `/feedback` redirects to `/survey/spectator` (short link for QR codes). `/survey/[type]` is
   unlisted and noindex.
 

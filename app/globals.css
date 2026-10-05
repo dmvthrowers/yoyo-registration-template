@@ -1,12 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;600;700&family=Barlow+Condensed:wght@700;800&display=swap');
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* Tailwind v4 changed the default border color from gray-200 to currentColor.
+   Restore the v3 default so bare `border` utilities render as before. */
+@theme {
+  --default-border-color: var(--color-gray-200);
+}
 
 /*
  * Contest design tokens (navy + gold). Change these to rebrand.
  * Canonical font stack: Playfair Display (display) · DM Sans (body) · Barlow Condensed (labels/nav)
  */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;600;700&family=Barlow+Condensed:wght@700;800&display=swap');
 
 /* ── Color tokens ────────────────────────────────────── */
 :root {

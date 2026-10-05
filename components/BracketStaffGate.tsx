@@ -27,13 +27,15 @@ export default function BracketStaffGate({ title, roles, children, landmark = tr
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const deny = `This account is not authorized for ${title.toLowerCase()}.`;
+  // A string key, so a new roles array each render doesn't re-run the check.
+  const rolesKey = roles.join(',');
 
   const check = useCallback(async (accessToken: string | null) => {
     setToken(accessToken);
     if (!accessToken) { setStaff(null); return; }
     const res = await fetch('/api/staff/me', { headers: { Authorization: `Bearer ${accessToken}` } }).catch(() => null);
     const me = res?.ok ? (await res.json()) as StaffMe : null;
-    if (!me || !me.is_active || !roles.includes(me.role)) {
+    if (!me || !me.is_active || !rolesKey.split(',').includes(me.role)) {
       setAuthError(deny);
       await supabase.auth.signOut();
       setToken(null);
@@ -42,8 +44,7 @@ export default function BracketStaffGate({ title, roles, children, landmark = tr
     }
     setStaff(me);
     setEmail(me.email);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deny, roles.join(',')]);
+  }, [deny, rolesKey]);
 
   useEffect(() => {
     let active = true;
