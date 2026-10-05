@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { contest, longDate, shortMonthDay, venueLine } from '@/contest.config';
+import { contest, dayOf, longDate, shortMonthDay, venueLine } from '@/contest.config';
 
 const SITE_HOME = contest.links.home || '/';
 
@@ -36,6 +36,8 @@ const MORE_LINKS = withHref([
   { label: 'Podium Results', href: contest.links.results },
   { label: 'Full Leaderboard', href: '/results' },
   { label: 'Run Order', href: '/results/run-order' },
+  { label: 'Live Schedule', href: dayOf.schedule.length ? '/schedule' : '' },
+  { label: 'Side Events', href: dayOf.sideEvents.length ? '/side-events' : '' },
   { label: 'Budget',    href: '/budget' },
 ]);
 
