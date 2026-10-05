@@ -42,15 +42,18 @@ Then:
     **mixed skill toy** blocks to copy.
   - After changing divisions, run `npm run divisions`. It checks the block and rewrites
     `supabase/divisions.sql`, which you apply in step 3.
-- **Judging formats**, per division:
-  - `freestyle`: an NYYL-style sheet. A clicker tally is normalized per judge to `techCap`,
-    with an optional style multiplier, plus four 0–`evalCap` evaluation categories, minus
-    optional stop/discard/detach deductions.
-  - `manual`: a judge types in one score from 0 to `max` (their own total, a paper sheet's
-    result, seconds spun), and several judges are averaged. Use it for kendama, a 100-point
-    sheet, or "longest spin in seconds".
-  - There's no built-in trick-ladder or battle-bracket screen. Run those on paper and enter
-    the result as a manual score, e.g. the highest rung reached.
+- **Judging formats**, per division. [`docs/FORMATS.md`](FORMATS.md) has the details.
+  - `freestyle`: an NYYL-style clicker sheet with eval categories and deductions.
+  - `panel`: judges score your criteria, e.g. Artistic Performance, doubles or juggling acts.
+  - `manual`: one number per judge, with optional best-of-N attempts. It can be lower-is-better,
+    for speed runs, endurance or longest spin.
+  - `ladder`: a trick ladder, with a fixed list of tricks and N tries each.
+  - `bracket`: single-elimination battles. Judges vote on their phones and an admin confirms.
+  - `showcase`: on stage, not judged.
+- **Entries and rounds**:
+  - `entry: { type: 'team', … }` makes a doubles, group or act division. Each member registers,
+    and the captain shares a join code.
+  - `rounds` adds prelims → finals with the top N advancing.
 - **Logos**: replace `public/logo-32.png`, `logo-180.png` and `logo-512.png` (square PNGs).
 - **Colors**: `app/globals.css` and `tailwind.config.js` (navy + gold by default).
 

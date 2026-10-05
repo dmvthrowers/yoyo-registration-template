@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
-import { contest, DIVISION_CODES } from '@/contest.config';
+import { contest, DIVISION_CODES, divisionByCode } from '@/contest.config';
+import { roundsOf } from '@/lib/divisions-core';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -42,6 +43,8 @@ export default function DJPage() {
   const [token, setToken] = useState<string | null>(null);
 
   const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
+  const [round, setRound] = useState(1);
+  const rounds = roundsOf(divisionByCode(division));
   const [data, setData] = useState<RunOrderResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -98,10 +101,10 @@ export default function DJPage() {
     return await res.json() as StaffMe;
   }, []);
 
-  const fetchRunOrder = useCallback(async (div: Division, accessToken: string) => {
+  const fetchRunOrder = useCallback(async (div: Division, rnd: number, accessToken: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/run-order?division=${div}&include_music=1`, {
+      const res = await fetch(`/api/run-order?division=${encodeURIComponent(div)}&round=${rnd}&include_music=1`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (res.ok) {
@@ -166,12 +169,12 @@ export default function DJPage() {
 
   useEffect(() => {
     if (!staff || !token) return;
-    fetchRunOrder(division, token);
-    pollingRef.current = setInterval(() => fetchRunOrder(division, token), 15000);
+    fetchRunOrder(division, round, token);
+    pollingRef.current = setInterval(() => fetchRunOrder(division, round, token), 15000);
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [staff, token, division, fetchRunOrder]);
+  }, [staff, token, division, round, fetchRunOrder]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -295,8 +298,10 @@ export default function DJPage() {
                   key={div}
                   onClick={() => {
                     setDivision(div);
+                    setRound(1);
                     setData(null);
                   }}
+                  aria-pressed={division === div}
                   style={{
                     background: division === div ? 'var(--gold)' : 'transparent',
                     color: division === div ? 'var(--navy-deep)' : 'var(--text-body)',
@@ -367,6 +372,26 @@ export default function DJPage() {
           </section>
         ) : (
         <>
+        {rounds.length > 1 && (
+          <div role="group" aria-label="Round" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            {rounds.map((r, i) => (
+              <button
+                key={r.name}
+                type="button"
+                aria-pressed={round === i + 1}
+                onClick={() => { setRound(i + 1); setData(null); }}
+                style={{
+                  background: 'transparent',
+                  color: round === i + 1 ? 'var(--gold)' : 'var(--text-muted)',
+                  border: `1px solid ${round === i + 1 ? 'var(--gold)' : 'var(--navy-border)'}`,
+                  padding: '0.3rem 0.8rem', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer',
+                }}
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+        )}
         <section style={{ marginBottom: '2.5rem' }}>
           <div style={{ fontSize: '0.6rem', letterSpacing: '0.18em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.75rem' }}>
             NOW PLAYING

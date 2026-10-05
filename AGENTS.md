@@ -18,7 +18,9 @@ changes with production care, not prototype care.
 - `contest.config.ts` → `competition` — toy wording, divisions, styles, combos, prices and
   judging format per division. `lib/divisions-core.ts` holds the pure rules (fees, selection
   checks, scoring math, the SQL generator) and is unit-tested. `presets/competitions.ts` has
-  kendama / diabolo / spintop / mixed examples.
+  yoyoFull (every format) / kendama / juggling / diabolo / spintop / mixed examples.
+- `docs/FORMATS.md` — the formats (freestyle, panel, manual, ladder, bracket, showcase), team
+  entries, rounds, and the API contract for each. Read it before touching judging or results.
 - `lib/surveys.ts` — survey questions.
 - `docs/SETUP.md` — the human setup checklist. Keep it accurate when you change setup steps.
 - `docs/REPO_GUIDE.md` — architecture and file map. `docs/STRIPE_PAYMENTS.md` — read before

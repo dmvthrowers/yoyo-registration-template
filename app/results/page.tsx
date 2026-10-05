@@ -2,41 +2,89 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getEventFlagBoolean } from '@/lib/event-flags';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import { DIVISIONS, fetchStandings, type Division, type Standing } from '@/lib/standings';
-import { contest, competition, monthDay, bannerLine, type DivisionDef } from '@/contest.config';
+import { fetchStandings, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
+import { contest, competition, monthDay, bannerLine } from '@/contest.config';
+import { formatSummary } from '@/lib/divisions-core';
 import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/lib/contest-videos';
 
 // Public results are gated with an admin-toggleable flag and env fallback.
 
-async function getStandings(): Promise<Record<Division, Standing[]>> {
+async function getStandings(): Promise<Record<Division, DivisionStandings>> {
   return fetchStandings(createAdminClient());
 }
 
 // Refresh at most once per minute once published.
 export const revalidate = 60;
 
-/** One plain-language line describing how a division is scored, from its config. */
-function scoringSummary(d: DivisionDef): string {
-  const sc = d.scoring;
-  if (sc.format === 'manual') return `one score out of ${sc.max} per judge.`;
-  const total = sc.techCap + 4 * sc.evalCap;
-  const parts = [
-    `out of ${total}: ${sc.techCap} technical execution (clicker tally, each judge's top tally normalized to ${sc.techCap}) + ${4 * sc.evalCap} evaluation`,
-  ];
-  if (sc.deductions) parts.push(`minus deductions (stop −${sc.deductions.stop}, discard −${sc.deductions.discard}, detach −${sc.deductions.detach})`);
-  if (!sc.negativeClicks) parts.push('no negative clicks');
-  const mults = d.styles?.options.filter((o) => (o.multiplier ?? 1) !== 1) ?? [];
-  if (mults.length) parts.push(`style multipliers ${mults.map((o) => `${o.code} ×${o.multiplier}`).join(', ')}`);
-  return parts.join('; ') + '.';
-}
-
 const PLACE_COLORS = ['var(--gold)', '#c7c7d1', '#cd7f32']; // 1st gold · 2nd silver · 3rd bronze
+
+const subHeading = { fontSize: '0.65rem', letterSpacing: '0.12em', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', margin: '0 0 0.5rem' } as const;
+
+/** One ranked list: place, name, location, the formatted value and an optional detail line. */
+function StandingsList({ rows, label }: { rows: StandingRow[]; label: string }) {
+  if (rows.length === 0) {
+    return (
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, paddingLeft: '1rem' }}>
+        No results yet.
+      </p>
+    );
+  }
+  return (
+    <ol aria-label={label} style={{ listStyle: 'none', margin: 0, padding: 0, border: '1px solid var(--navy-border)' }}>
+      {rows.map((c, i) => {
+        const top = c.place === 1;
+        const placeColor = c.place <= 3 ? PLACE_COLORS[c.place - 1] : 'var(--text-muted)';
+        return (
+          <li
+            key={c.registration_id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              padding: '0.85rem 1rem',
+              borderBottom: i < rows.length - 1 ? '1px solid var(--navy-border)' : 'none',
+              background: top ? '#1a1400' : i % 2 === 0 ? 'var(--navy)' : 'transparent',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
+              <span
+                aria-label={`Place ${c.place}`}
+                style={{ width: '1.75rem', flexShrink: 0, textAlign: 'center', fontSize: '0.95rem', fontWeight: 800, color: placeColor }}
+              >
+                {c.place}
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: top ? 'var(--gold)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', overflowWrap: 'anywhere' }}>
+                  {c.display_name}
+                </div>
+                {(c.city || c.state) && (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                    {[c.city, c.state].filter(Boolean).join(', ')}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ flexShrink: 0, textAlign: 'right' }}>
+              <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.05rem', color: top ? 'var(--gold)' : '#fff', whiteSpace: 'nowrap' }}>
+                {c.value_label}
+              </div>
+              {c.detail && (
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap' }}>{c.detail}</div>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export default async function ResultsPage() {
   const resultsPublished = await getEventFlagBoolean('results_published', process.env.RESULTS_PUBLISHED === 'true');
   const standings = resultsPublished ? await getStandings() : null;
   const total = standings
-    ? Object.values(standings).reduce((s, arr) => s + arr.length, 0)
+    ? Object.values(standings).reduce((n, d) => n + d.final.length, 0)
     : 0;
 
   return (
@@ -55,7 +103,7 @@ export default async function ResultsPage() {
               ? 'Final standings will be posted here after the contest.'
               : total === 0
                 ? 'Results are being finalized — check back shortly.'
-                : 'Final standings, averaged across all judges.'}
+                : 'Final standings for every division.'}
           </p>
           {resultsPublished && (
             <p style={{ color: 'var(--text-body)', margin: '0.5rem 0 0' }}>
@@ -90,17 +138,21 @@ export default async function ResultsPage() {
             </p>
           </section>
         ) : (
-          DIVISIONS.map(({ code, label }) => {
-            const comps = standings[code];
+          competition.divisions.map((d) => {
+            const code = d.code;
+            const ds = standings[code];
+            const multiRound = ds.rounds.length > 1;
             return (
-              <section key={code} style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <h2 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.2rem', margin: 0 }}>
-                    {label}
+              <section key={code} aria-labelledby={`div-${code}`} style={{ marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.25rem 0.75rem', marginBottom: '0.35rem' }}>
+                  <h2 id={`div-${code}`} style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.2rem', margin: 0 }}>
+                    {d.name}
                   </h2>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {comps.length} placed
-                  </span>
+                  {ds.format !== 'showcase' && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {ds.final.length} placed
+                    </span>
+                  )}
                   {DIVISION_PLAYLIST_URLS[code] && (
                     <a
                       href={DIVISION_PLAYLIST_URLS[code]}
@@ -112,56 +164,36 @@ export default async function ResultsPage() {
                     </a>
                   )}
                 </div>
+                {ds.format !== 'showcase' && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0 0 1rem' }}>{formatSummary(d)}</p>
+                )}
 
-                {comps.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, paddingLeft: '1rem' }}>
-                    No results for this division.
+                {ds.format === 'showcase' ? (
+                  <p style={{ color: 'var(--text-body)', fontSize: '0.85rem', margin: '0.5rem 0 0', paddingLeft: '1rem' }}>
+                    Showcase — not judged.
                   </p>
                 ) : (
-                  <div style={{ border: '1px solid var(--navy-border)' }}>
-                    {comps.map((c, i) => {
-                      const placeColor = i < 3 ? PLACE_COLORS[i] : 'var(--text-muted)';
-                      return (
-                        <div
-                          key={c.registration_id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.85rem 1rem',
-                            borderBottom: i < comps.length - 1 ? '1px solid var(--navy-border)' : 'none',
-                            background: i === 0 ? '#1a1400' : i % 2 === 0 ? 'var(--navy)' : 'transparent',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
-                            <span style={{
-                              width: '1.75rem', flexShrink: 0, textAlign: 'center',
-                              fontSize: '0.95rem', fontWeight: 800, color: placeColor,
-                            }}>
-                              {i + 1}
-                            </span>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: i === 0 ? 'var(--gold)' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {c.display_name}
-                              </div>
-                              {(c.city || c.state) && (
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                  {[c.city, c.state].filter(Boolean).join(', ')}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <span style={{
-                            fontFamily: 'monospace', fontWeight: 800,
-                            fontSize: '1.05rem', color: i === 0 ? 'var(--gold)' : '#fff',
-                            flexShrink: 0, paddingLeft: '1rem',
-                          }}>
-                            {c.avg_total.toFixed(1)}
-                          </span>
+                  <>
+                    {multiRound && <h3 style={subHeading}>Final standings</h3>}
+                    <StandingsList rows={ds.final} label={`${d.name} standings`} />
+                    {ds.format === 'bracket' && (
+                      <p style={{ margin: '0.6rem 0 0', fontSize: '0.8rem' }}>
+                        <a href={`/results/bracket?division=${encodeURIComponent(code)}`} style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                          View bracket →
+                        </a>
+                      </p>
+                    )}
+                    {multiRound && ds.rounds.map((r) => (
+                      <details key={r.name} style={{ marginTop: '0.9rem' }}>
+                        <summary style={{ ...subHeading, cursor: 'pointer', margin: 0, padding: '0.25rem 0' }}>
+                          {r.name} ({r.rows.length})
+                        </summary>
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <StandingsList rows={r.rows} label={`${d.name} ${r.name}`} />
                         </div>
-                      );
-                    })}
-                  </div>
+                      </details>
+                    ))}
+                  </>
                 )}
               </section>
             );
@@ -170,11 +202,11 @@ export default async function ResultsPage() {
 
         <footer style={{ borderTop: '1px solid var(--navy-border)', paddingTop: '1.5rem', marginTop: '1rem' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
-            How scoring works: each judge scores every routine and the judges&rsquo; scores are averaged.
+            How each division is judged:
           </p>
           <ul style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.4rem 0 0', paddingLeft: '1.1rem' }}>
             {competition.divisions.map((d) => (
-              <li key={d.code}>{d.name}: {scoringSummary(d)}</li>
+              <li key={d.code}>{d.name}: {formatSummary(d)}.</li>
             ))}
           </ul>
           {contest.links.rules && (

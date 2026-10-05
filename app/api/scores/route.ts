@@ -6,7 +6,7 @@ import { getEventFlagBoolean } from '@/lib/event-flags';
 import { z } from 'zod';
 import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import {
-  effectiveStyle, freestyleBreakdown, manualBreakdown, styleMultiplier,
+  betterOf, compareScores, effectiveStyle, freestyleBreakdown, manualBest, manualBreakdown, panelTotal, roundsOf, styleMultiplier,
   type FreestyleSheet, type ScoreBreakdown,
 } from '@/lib/divisions-core';
 
@@ -15,7 +15,9 @@ type Division = string;
 /**
  * Scoring rules per division come from contest.config.ts → competition.divisions:
  *  - freestyle: clicker tally normalized per judge (×style multiplier) + 4 eval categories − deductions
- *  - manual: one 0–max score per judge
+ *  - panel: one 0–max score per criterion; the total is their sum
+ *  - manual: one number per judge (best of N attempts), higher or lower is better
+ * Ladder, bracket and showcase divisions are not scored here (see /api/ladder, /api/bracket).
  * The math lives in lib/divisions-core.ts and mirrors the contest_results view.
  */
 const sheetNumber = z.number().min(0).max(99).optional().default(0);
@@ -33,16 +35,40 @@ const scoreSubmitSchema = z.object({
   stop_count:            z.number().int().min(0).optional().default(0),
   discard_count:         z.number().int().min(0).optional().default(0),
   detach_count:          z.number().int().min(0).optional().default(0),
-  /** Manual format: the judge's one score. */
-  manual_score:          z.number().min(0).max(9999).optional(),
+  /** Round number (1 = first round). Divisions without rounds only have round 1. */
+  round:                 z.number().int().min(1).max(5).optional().default(1),
+  /** Manual format: the judge's one score, or leave it out and send manual_attempts. */
+  manual_score:          z.number().min(0).max(99999).optional(),
+  /** Manual format with attempts: each attempt's number (null = not taken). The best counts. */
+  manual_attempts:       z.array(z.number().min(0).max(99999).nullable()).max(10).optional(),
+  /** Panel format: criterion key → score */
+  panel_scores:          z.record(z.string().max(31), z.number().min(0).max(1000)).optional(),
   notes:                 z.string().trim().max(500).optional(),
 }).superRefine((data, ctx) => {
   const d = divisionByCode(data.division);
   if (!d) return;
   const sc = d.scoring;
+  const issue = (message: string, path: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: [path] });
+  if (data.round > roundsOf(d).length) issue(`${d.name} has ${roundsOf(d).length} round(s)`, 'round');
+  if (sc.format === 'ladder' || sc.format === 'bracket' || sc.format === 'showcase') {
+    issue(`${d.name} isn't scored on a score sheet`, 'division');
+    return;
+  }
   if (sc.format === 'manual') {
-    if (data.manual_score === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} needs a score`, path: ['manual_score'] });
-    else if (data.manual_score > sc.max) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${d.name} is scored out of ${sc.max}`, path: ['manual_score'] });
+    const attempts = data.manual_attempts ?? [];
+    if (attempts.length > (sc.attempts ?? 1)) issue(`${d.name} allows ${sc.attempts ?? 1} attempt(s)`, 'manual_attempts');
+    const best = attempts.length ? manualBest(attempts, sc) : data.manual_score ?? null;
+    if (best === null) issue(`${d.name} needs a score`, 'manual_score');
+    else if (best > sc.max || [...attempts, data.manual_score].some((v) => typeof v === 'number' && v > sc.max)) issue(`${d.name} is scored out of ${sc.max}`, 'manual_score');
+    return;
+  }
+  if (sc.format === 'panel') {
+    const scores = data.panel_scores ?? {};
+    for (const c of sc.criteria) {
+      if (scores[c.key] === undefined) issue(`Score ${c.label}`, 'panel_scores');
+      else if (scores[c.key] > c.max) issue(`${c.label} is scored out of ${c.max}`, 'panel_scores');
+    }
+    for (const k of Object.keys(scores)) if (!sc.criteria.some((c) => c.key === k)) issue(`Unknown criterion: ${k}`, 'panel_scores');
     return;
   }
   if (!sc.negativeClicks && data.tech_execution_raw < 0) {
@@ -62,6 +88,7 @@ interface ScoreRow extends FreestyleSheet {
   /** Styles the competitor registered for this division */
   registered_styles: string[];
   manual_score: number | null;
+  panel_scores: Record<string, number> | null;
 }
 
 const multiplierOf = (r: ScoreRow) =>
@@ -70,8 +97,11 @@ const multiplierOf = (r: ScoreRow) =>
 function computeScoreBreakdown(r: ScoreRow, maxRawForJudge: number | null): ScoreBreakdown {
   const d = divisionByCode(r.division);
   if (!d) return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: 0 };
-  if (d.scoring.format === 'manual') return manualBreakdown(r.manual_score ?? 0, d.scoring);
-  return freestyleBreakdown(r, d.scoring, multiplierOf(r), maxRawForJudge);
+  const sc = d.scoring;
+  if (sc.format === 'manual') return manualBreakdown(r.manual_score ?? 0, sc);
+  if (sc.format === 'panel') return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: panelTotal(r.panel_scores ?? {}, sc) };
+  if (sc.format !== 'freestyle') return { tech_execution_normalized: 0, total_eval: 0, deduction_points: 0, final_score: 0 };
+  return freestyleBreakdown(r, sc, multiplierOf(r), maxRawForJudge);
 }
 
 /** Highest positive raw Tech Execution (after style multipliers) in this judge's rows, or null. */
@@ -89,6 +119,7 @@ function toRow(s: Record<string, unknown>, division: Division, reg: RegJoin): Sc
     style_code: (s.style_code as string | null) ?? null,
     registered_styles: stylesFor(reg, division),
     manual_score: s.manual_score === null || s.manual_score === undefined ? null : Number(s.manual_score),
+    panel_scores: (s.panel_scores as Record<string, number> | null) ?? null,
     tech_execution_raw: Number(s.tech_execution_raw),
     trick_presentation: Number(s.trick_presentation),
     performance_quality: Number(s.performance_quality),
@@ -109,6 +140,7 @@ function toRow(s: Record<string, unknown>, division: Division, reg: RegJoin): Sc
 export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const division = req.nextUrl.searchParams.get('division');
   const mine = req.nextUrl.searchParams.get('mine') === '1';
+  const round = Math.max(1, Number(req.nextUrl.searchParams.get('round') ?? 1) || 1);
 
   if (!division || !DIVISION_CODES.includes(division)) {
     return apiError('bad_request', `division must be one of: ${DIVISION_CODES.join(', ')}`, requestId);
@@ -159,6 +191,9 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       detach_count,
       style_code,
       manual_score,
+      manual_attempts,
+      panel_scores,
+      round,
       notes,
       created_at,
       contest_registrations (
@@ -170,7 +205,8 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
         division_styles
       )
     `)
-    .eq('division', division);
+    .eq('division', division)
+    .eq('round', round);
 
   if (mine && judgeIdentity) {
     query.eq('judge_user_id', judgeIdentity.authUserId);
@@ -209,13 +245,16 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
         style_code: s.style_code,
         registered_styles: s.registered_styles,
         manual_score: s.manual_score,
+        manual_attempts: (raw.manual_attempts as (number | null)[] | null) ?? null,
+        panel_scores: s.panel_scores,
+        round,
         ...breakdown,
         notes: raw.notes ?? null,
         created_at: raw.created_at,
       };
     });
     return NextResponse.json(
-      { division, judge: judgeIdentity?.displayName, scores: result },
+      { division, round, judge: judgeIdentity?.displayName, scores: result },
       { headers: { 'x-request-id': requestId, 'Cache-Control': 'private, no-store' } }
     );
   }
@@ -276,10 +315,10 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       judge_count: entry.judge_count,
       avg_final_score: Math.round((entry.final_score_sum / entry.judge_count) * 100) / 100,
     }))
-    .sort((a, b) => b.avg_final_score - a.avg_final_score);
+    .sort((a, b) => compareScores(betterOf(divisionByCode(div)?.scoring))(a.avg_final_score, b.avg_final_score));
 
   return NextResponse.json(
-    { division, standings },
+    { division, round, standings },
     { headers: { 'x-request-id': requestId, 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=45' } }
   );
 });
@@ -309,10 +348,11 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('forbidden', 'Judge access required', requestId);
   }
 
-  const { registration_id, division, notes } = parsed.data;
-  const isManual = divisionByCode(division)?.scoring.format === 'manual';
-  // A manual score keeps the freestyle columns at zero.
-  const sheet = isManual
+  const { registration_id, division, notes, round } = parsed.data;
+  const sc = divisionByCode(division)!.scoring;
+  const isManual = sc.format === 'manual';
+  // Manual and panel scores keep the freestyle columns at zero.
+  const sheet = sc.format !== 'freestyle'
     ? { tech_execution_raw: 0, trick_presentation: 0, performance_quality: 0, musicality: 0, routine_construction: 0, stop_count: 0, discard_count: 0, detach_count: 0 }
     : {
         tech_execution_raw: parsed.data.tech_execution_raw, trick_presentation: parsed.data.trick_presentation,
@@ -320,7 +360,11 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         routine_construction: parsed.data.routine_construction, stop_count: parsed.data.stop_count,
         discard_count: parsed.data.discard_count, detach_count: parsed.data.detach_count,
       };
-  const manual_score = isManual ? parsed.data.manual_score ?? 0 : null;
+  const manual_attempts = isManual && parsed.data.manual_attempts?.length ? parsed.data.manual_attempts : null;
+  const manual_score = isManual
+    ? (manual_attempts ? manualBest(manual_attempts, sc) : parsed.data.manual_score ?? null) ?? 0
+    : null;
+  const panel_scores = sc.format === 'panel' ? parsed.data.panel_scores ?? {} : null;
 
   const supabase = createAdminClient();
 
@@ -357,11 +401,14 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         judge_name: identity.displayName,
         judge_display_name: identity.displayName,
         ...sheet,
+        round,
         style_code,
         manual_score,
+        manual_attempts,
+        panel_scores,
         notes: notes ?? null,
       },
-      { onConflict: 'registration_id,division,judge_user_id' }
+      { onConflict: 'registration_id,division,round,judge_user_id' }
     )
     .select('id, judge_display_name')
     .single();
@@ -375,8 +422,9 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   // division, so re-fetch all of this judge's scores here to get an up-to-date baseline.
   const { data: judgeScores, error: judgeScoresError } = await supabase
     .from('contest_scores')
-    .select('registration_id, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count, style_code, manual_score, contest_registrations ( division_styles )')
+    .select('registration_id, tech_execution_raw, trick_presentation, performance_quality, musicality, routine_construction, stop_count, discard_count, detach_count, style_code, manual_score, panel_scores, contest_registrations ( division_styles )')
     .eq('division', division)
+    .eq('round', round)
     .eq('judge_user_id', identity.authUserId);
 
   if (judgeScoresError) {
@@ -386,7 +434,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 
   const judgeRows = (judgeScores ?? []).map((r) =>
     toRow(r, division, (Array.isArray(r.contest_registrations) ? r.contest_registrations[0] : r.contest_registrations) as RegJoin));
-  const thisRow: ScoreRow = { division, style_code, registered_styles: registeredStyles, manual_score, ...sheet };
+  const thisRow: ScoreRow = { division, style_code, registered_styles: registeredStyles, manual_score, panel_scores, ...sheet };
   const breakdown = computeScoreBreakdown(thisRow, maxPositiveRaw(judgeRows));
 
   return NextResponse.json(
@@ -396,8 +444,11 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       registration_id,
       division,
       ...sheet,
+      round,
       style_code,
       manual_score,
+      manual_attempts,
+      panel_scores,
       ...breakdown,
     },
     { status: 200, headers: { 'x-request-id': requestId } }

@@ -15,8 +15,10 @@ export function calculateFee(
   compDiscountPercent: number,
   registrationDate: Date,
   source: RegistrationSource,
+  /** Team divisions where this registrant joins an existing team (per-team pricing makes them $0) */
+  joining: Division[] = [],
 ): FeeResult {
-  return computeFee(divisions, competition, compDiscountPercent, registrationDate, source, new Date(contest.deadlines.earlyBird));
+  return computeFee(divisions, competition, compDiscountPercent, registrationDate, source, new Date(contest.deadlines.earlyBird), joining);
 }
 
 /** Client-side preview with an explicit early-bird cutoff. */
@@ -26,8 +28,9 @@ export function calculateFeePreview(
   registrationDate: Date,
   source: RegistrationSource,
   earlyBirdCutoff: Date,
+  joining: Division[] = [],
 ): FeeResult {
-  return computeFee(divisions, competition, compDiscountPercent, registrationDate, source, earlyBirdCutoff);
+  return computeFee(divisions, competition, compDiscountPercent, registrationDate, source, earlyBirdCutoff, joining);
 }
 
 /** Dollar string for display: 3000 → "$30.00" */

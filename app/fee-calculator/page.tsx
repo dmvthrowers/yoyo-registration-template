@@ -5,6 +5,8 @@ import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import type { Division } from '@/lib/pricing';
 import { calculateFeePreview, displayPrice, formatCents, PRICES_TBD } from '@/lib/pricing';
+import { entryOf, formatSummary, freeTeamJoins } from '@/lib/divisions-core';
+import { entrySummary, teamPricingNote } from '@/lib/team-entries';
 import { contest, competition, divisionByCode, longDate, deadlineLabel, type DivisionDef } from '@/contest.config';
 
 // ------------------------------------------------------------------
@@ -51,6 +53,13 @@ function badgeFor(d: DivisionDef): string {
   return d.music ? 'Performed to music' : 'No music';
 }
 
+/** "Pair", "Act"… for a team division. */
+function teamLabel(d: DivisionDef | undefined): string {
+  const e = entryOf(d);
+  return e.type === 'team' ? e.label : 'Team';
+}
+const perTeamPriced = (d: DivisionDef | undefined) => { const e = entryOf(d); return e.type === 'team' && e.pricing === 'team'; };
+
 function daysUntil(date: Date) {
   return Math.max(0, Math.floor((date.getTime() - Date.now()) / 86_400_000));
 }
@@ -65,6 +74,13 @@ export default function FeeCalculatorPage() {
   const [compDiscountPercent, setCompDiscountPercent] = useState(0);
   const [codeError, setCodeError] = useState('');
   const [codeLoading, setCodeLoading] = useState(false);
+  /** Per-team-priced divisions where they'd join someone else's team (the captain pays) */
+  const [joiningSet, setJoiningSet] = useState<Set<Division>>(new Set());
+  const toggleJoining = (id: Division) => setJoiningSet(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const earlyBirdDays = daysUntil(EARLY_BIRD_CUTOFF);
   const isEarlyBird = earlyBirdDays > 0;
@@ -91,13 +107,17 @@ export default function FeeCalculatorPage() {
     [selected],
   );
 
+  const joiningCodes = useMemo(() => selectedCodes.filter(c => joiningSet.has(c)), [selectedCodes, joiningSet]);
+  const freeJoins = freeTeamJoins(competition, joiningCodes);
+
   const result = useMemo(() => calculateFeePreview(
     selectedCodes,
     compDiscountPercent,
     new Date(),
     'online',
     EARLY_BIRD_CUTOFF,
-  ), [selectedCodes, compDiscountPercent]);
+    joiningCodes,
+  ), [selectedCodes, compDiscountPercent, joiningCodes]);
 
   const applyCode = async () => {
     if (!compCode.trim()) return;
@@ -129,7 +149,8 @@ export default function FeeCalculatorPage() {
   // Line items for breakdown
   const lineItems: Array<{ label: string; cents: number; strike?: boolean; green?: boolean }> = [];
 
-  const { combos: combosApplied, rest: uncombined } = appliedCombos(selectedCodes);
+  // Free team joins drop out before combos, the same way lib/divisions-core.ts prices them.
+  const { combos: combosApplied, rest: uncombined } = appliedCombos(selectedCodes.filter(c => !freeJoins.includes(c)));
 
   if (selectedCodes.length > 0) {
     // Each combo: its member prices struck through, then the combo line.
@@ -141,6 +162,9 @@ export default function FeeCalculatorPage() {
     }
     for (const code of uncombined) {
       lineItems.push({ label: divisionName(code), cents: divisionByCode(code)?.priceCents ?? 0 });
+    }
+    for (const code of freeJoins) {
+      lineItems.push({ label: `${divisionName(code)} (joining a ${teamLabel(divisionByCode(code)).toLowerCase()})`, cents: 0, green: true });
     }
 
     if (result.early_bird_applied && !compApplied) {
@@ -257,9 +281,11 @@ export default function FeeCalculatorPage() {
                   {competition.divisions.map(div => {
                     const isOn = selected.has(div.code);
                     const conflicts = conflictsOf(div.code);
+                    const entry = entrySummary(div);
+                    const priceNote = teamPricingNote(div);
                     return (
+                      <div key={div.code}>
                       <button
-                        key={div.code}
                         type="button"
                         onClick={() => toggle(div.code)}
                         aria-pressed={isOn}
@@ -290,6 +316,12 @@ export default function FeeCalculatorPage() {
                             <div style={{ fontSize: '0.83rem', color: 'var(--text-body)', lineHeight: 1.5 }}>
                               {div.description}
                             </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--gold)', opacity: 0.75, lineHeight: 1.5, marginTop: 4 }}>
+                              {[formatSummary(div), entry].filter(Boolean).join(' · ')}
+                            </div>
+                            {priceNote && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{priceNote}</div>
+                            )}
                             {conflicts.length > 0 && (
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 4 }}>
                                 Can&apos;t be combined with {conflicts.map(divisionName).join(', ')}.
@@ -319,6 +351,11 @@ export default function FeeCalculatorPage() {
                             paddingTop: 2,
                           }}>
                             {fmt(div.priceCents)}
+                            {perTeamPriced(div) && (
+                              <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.65rem', fontWeight: 600, textAlign: 'right' as const }}>
+                                per {teamLabel(div).toLowerCase()}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -339,6 +376,25 @@ export default function FeeCalculatorPage() {
                           </div>
                         )}
                       </button>
+                      {isOn && perTeamPriced(div) && (
+                        <label style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                          background: 'var(--navy-deep)', border: '1px solid var(--navy-border)', borderTop: 'none',
+                          padding: '10px 20px', fontSize: '0.83rem', color: 'var(--text-body)',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={joiningSet.has(div.code)}
+                            onChange={() => toggleJoining(div.code)}
+                            style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--gold)' }}
+                          />
+                          <span>
+                            <strong style={{ color: '#fff' }}>I&apos;m joining a {teamLabel(div).toLowerCase()}</strong>
+                            {' '}— the teammate who starts it pays, so your {div.name} line is {formatCents(0)}.
+                          </span>
+                        </label>
+                      )}
+                      </div>
                     );
                   })}
                 </div>

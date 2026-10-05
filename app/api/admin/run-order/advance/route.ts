@@ -3,20 +3,23 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireRunOrderEditorRequest } from '@/lib/auth/admin-request';
 import { z } from 'zod';
-import { DIVISION_CODES } from '@/contest.config';
+import { DIVISION_CODES, divisionByCode } from '@/contest.config';
+import { roundsOf } from '@/lib/divisions-core';
 
 const advanceSchema = z.object({
   division: z.string().trim().refine((d) => DIVISION_CODES.includes(d), 'Unknown division'),
-});
+  /** 1-based round (default 1) */
+  round: z.number().int().min(1).max(5).optional(),
+}).refine((b) => (b.round ?? 1) <= roundsOf(divisionByCode(b.division)).length, { message: 'That division has no such round', path: ['round'] });
 
 /**
  * POST /api/admin/run-order/advance
  *
- * Advances the run order for a division:
+ * Advances the run order for one round of a division:
  * - Marks the current 'performing' competitor as 'done'
  * - Promotes the lowest-position 'upcoming' competitor to 'performing'
  *
- * Body: { division: "<code>" }
+ * Body: { division: "<code>", round?: 1 }
  *
  * Returns the new state (who is now performing, who is next).
  */
@@ -35,13 +38,15 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   const { division } = parsed.data;
+  const round = parsed.data.round ?? 1;
   const supabase = createAdminClient();
 
-  // Fetch full run order for this division
+  // Fetch the full run order for this division + round
   const { data: runOrder, error: roError } = await supabase
     .from('contest_run_order')
     .select('id, position, status, registration_id')
     .eq('division', division)
+    .eq('round', round)
     .order('position', { ascending: true });
 
   if (roError || !runOrder) {
@@ -49,7 +54,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   if (runOrder.length === 0) {
-    return apiError('not_found', 'No run order set for this division', requestId);
+    return apiError('not_found', 'No run order set for this division and round', requestId);
   }
 
   const performing = runOrder.find((r) => r.status === 'performing');
@@ -57,7 +62,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 
   if (!performing && upcoming.length === 0) {
     return NextResponse.json(
-      { division, message: 'All performers are done', now_performing: null, next_up: null },
+      { division, round, message: 'All performers are done', now_performing: null, next_up: null },
       { headers: { 'x-request-id': requestId } }
     );
   }
@@ -72,7 +77,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 
     const nextUp = upcoming[1] ?? null;
     return NextResponse.json(
-      { division, now_performing: first.registration_id, next_up: nextUp?.registration_id ?? null },
+      { division, round, now_performing: first.registration_id, next_up: nextUp?.registration_id ?? null },
       { headers: { 'x-request-id': requestId } }
     );
   }
@@ -100,6 +105,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   return NextResponse.json(
     {
       division,
+      round,
       prev_performer: performing?.registration_id ?? null,
       now_performing: nowPerformingId,
       next_up: nextUp?.registration_id ?? null,
@@ -112,10 +118,10 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 /**
  * DELETE /api/admin/run-order/advance
  *
- * Resets the run order for a division: all rows back to 'upcoming'.
+ * Resets the run order for one round of a division: all rows back to 'upcoming'.
  * Use before starting or to restart a division.
  *
- * Body: { division: "<code>" }
+ * Body: { division: "<code>", round?: 1 }
  */
 export const DELETE = withErrorHandling(async (requestId, req: NextRequest) => {
   const auth = await requireRunOrderEditorRequest(req, requestId);
@@ -132,19 +138,21 @@ export const DELETE = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   const { division } = parsed.data;
+  const round = parsed.data.round ?? 1;
   const supabase = createAdminClient();
 
   const { error } = await supabase
     .from('contest_run_order')
     .update({ status: 'upcoming' })
-    .eq('division', division);
+    .eq('division', division)
+    .eq('round', round);
 
   if (error) {
     return apiError('upstream_error', 'Failed to reset run order', requestId);
   }
 
   return NextResponse.json(
-    { ok: true, division, message: 'Run order reset to upcoming' },
+    { ok: true, division, round, message: 'Run order reset to upcoming' },
     { headers: { 'x-request-id': requestId } }
   );
 });

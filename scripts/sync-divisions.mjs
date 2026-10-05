@@ -9,10 +9,16 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { competition } from '../contest.config.ts';
+import { competition, dayOf, DIVISION_CODES } from '../contest.config.ts';
 import { divisionsSql } from '../lib/divisions-core.ts';
+import { scheduleIssues } from '../lib/schedule-core.ts';
 
 const file = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'divisions.sql');
+const sched = scheduleIssues(dayOf.schedule, DIVISION_CODES, dayOf.sideEvents);
+if (sched.length) {
+  console.error(`contest.config.ts dayOf block:\n- ${sched.join('\n- ')}`);
+  process.exit(1);
+}
 const sql = divisionsSql(competition);
 
 if (process.argv.includes('--check')) {

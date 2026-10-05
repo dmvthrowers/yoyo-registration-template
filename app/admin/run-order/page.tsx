@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-import { DIVISION_CODES } from '@/contest.config';
+import { DIVISION_CODES, divisionByCode } from '@/contest.config';
+import { roundsOf } from '@/lib/divisions-core';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -53,6 +54,8 @@ const PREF_COLORS: Record<string, string> = {
 
 export default function AdminRunOrderPage() {
   const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
+  const [round, setRound] = useState(1);
+  const rounds = roundsOf(divisionByCode(division));
   const [data, setData] = useState<AdminRunOrderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,10 +66,10 @@ export default function AdminRunOrderPage() {
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [uploadStatus, setUploadStatus] = useState<Record<string, 'uploading' | 'done' | 'error'>>({});
 
-  const fetchData = useCallback(async (div: Division) => {
+  const fetchData = useCallback(async (div: Division, rnd: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/run-order?division=${div}`);
+      const res = await fetch(`/api/admin/run-order?division=${encodeURIComponent(div)}&round=${rnd}`);
       if (res.ok) {
         const json: AdminRunOrderData = await res.json();
         setData(json);
@@ -76,7 +79,7 @@ export default function AdminRunOrderPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(division); }, [division, fetchData]);
+  useEffect(() => { fetchData(division, round); }, [division, round, fetchData]);
 
   function moveUp(idx: number) {
     if (idx === 0) return;
@@ -136,12 +139,12 @@ export default function AdminRunOrderPage() {
       const res = await fetch('/api/admin/run-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ division, registration_ids: orderedIds }),
+        body: JSON.stringify({ division, round, registration_ids: orderedIds }),
       });
       const json = await res.json();
       if (res.ok) {
         setSaveMsg({ ok: true, text: `Saved ${json.count} competitors.` });
-        fetchData(division);
+        fetchData(division, round);
       } else {
         setSaveMsg({ ok: false, text: json.error?.message ?? 'Save failed.' });
       }
@@ -158,12 +161,12 @@ export default function AdminRunOrderPage() {
       const res = await fetch('/api/admin/run-order/advance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ division }),
+        body: JSON.stringify({ division, round }),
       });
       const json = await res.json();
       if (res.ok) {
         setAdvanceMsg(json.division_complete ? 'Division complete!' : `Now performing: ${json.now_performing ?? '—'}`);
-        fetchData(division);
+        fetchData(division, round);
       } else {
         setAdvanceMsg(json.error?.message ?? 'Advance failed.');
       }
@@ -178,9 +181,9 @@ export default function AdminRunOrderPage() {
     await fetch('/api/admin/run-order/advance', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ division }),
+      body: JSON.stringify({ division, round }),
     });
-    fetchData(division);
+    fetchData(division, round);
   }
 
   async function handleMusicUpload(registration_id: string, file: File) {
@@ -200,7 +203,7 @@ export default function AdminRunOrderPage() {
       });
       if (!up.ok) { setUploadStatus((s) => ({ ...s, [registration_id]: 'error' })); return; }
       setUploadStatus((s) => ({ ...s, [registration_id]: 'done' }));
-      fetchData(division);
+      fetchData(division, round);
     } catch {
       setUploadStatus((s) => ({ ...s, [registration_id]: 'error' }));
     }
@@ -222,7 +225,8 @@ export default function AdminRunOrderPage() {
           {DIVISIONS.map((div) => (
             <button
               key={div}
-              onClick={() => { setDivision(div); setData(null); setSaveMsg(null); setAdvanceMsg(null); }}
+              onClick={() => { setDivision(div); setRound(1); setData(null); setSaveMsg(null); setAdvanceMsg(null); }}
+              aria-pressed={division === div}
               style={{
                 background: division === div ? 'var(--gold)' : 'transparent',
                 color: division === div ? 'var(--navy-deep)' : 'var(--text-body)',
@@ -237,6 +241,27 @@ export default function AdminRunOrderPage() {
           ))}
         </nav>
       </div>
+
+      {rounds.length > 1 && (
+        <div role="group" aria-label="Round" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          {rounds.map((r, i) => (
+            <button
+              key={r.name}
+              type="button"
+              aria-pressed={round === i + 1}
+              onClick={() => { setRound(i + 1); setData(null); setSaveMsg(null); setAdvanceMsg(null); }}
+              style={{
+                background: 'transparent',
+                color: round === i + 1 ? 'var(--gold)' : 'var(--text-muted)',
+                border: `1px solid ${round === i + 1 ? 'var(--gold)' : 'var(--navy-border)'}`,
+                padding: '0.3rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', cursor: 'pointer',
+              }}
+            >
+              {i + 1}. {r.name}{r.advance ? ` · top ${r.advance}` : ''}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && <p style={{ color: 'var(--text-muted)' }}>Loading…</p>}
 

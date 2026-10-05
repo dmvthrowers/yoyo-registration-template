@@ -51,12 +51,18 @@ interface Contestant {
   is_public: boolean;
   admin_notes: string | null;
   registration_source: string;
+  /** Teams they're on (from /api/ops/dashboard) */
+  teams?: { division: string; name: string; role: 'captain' | 'member' }[];
 }
 
-/** "1A, X: 2A, 3A" — divisions with any registered styles. */
-function divisionsLabel(c: Pick<Contestant, 'divisions' | 'division_styles'>): string {
+/** "1A · X: 2A, 3A · DBL [Loop Twins, captain]" — divisions with styles and team names. */
+function divisionsLabel(c: Pick<Contestant, 'divisions' | 'division_styles' | 'teams'>): string {
   return c.divisions
-    .map((d) => (c.division_styles?.[d]?.length ? `${d}: ${c.division_styles[d].join(', ')}` : d))
+    .map((d) => {
+      const base = c.division_styles?.[d]?.length ? `${d}: ${c.division_styles[d].join(', ')}` : d;
+      const t = c.teams?.find((x) => x.division === d);
+      return t ? `${base} [${t.name}${t.role === 'captain' ? ', captain' : ''}]` : base;
+    })
     .join(' · ');
 }
 

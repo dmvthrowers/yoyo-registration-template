@@ -5,7 +5,8 @@ import { requireAdminRequest } from '@/lib/auth/admin-request';
 import { logAudit } from '@/lib/audit';
 import { sendSurveyInviteBatch, type SurveyInviteRecipient } from '@/lib/email';
 import { fetchStandings, winnersFrom, type Winner } from '@/lib/standings';
-import { contest } from '@/contest.config';
+import { contest, divisionByCode } from '@/contest.config';
+import { isTeamDivision } from '@/lib/divisions-core';
 
 // Resend batch sends ~100 emails per request; give a few hundred room to finish.
 export const maxDuration = 60;
@@ -48,6 +49,32 @@ async function loadWinners(): Promise<Winner[]> {
   return winnersFrom(await fetchStandings(createAdminClient()));
 }
 
+/**
+ * Registration ids that get the winner survey: each podium entry, plus every member of a
+ * podium team (standings list the team under its captain's registration).
+ */
+async function winnerRegistrationIds(winners: Winner[]): Promise<Set<string>> {
+  const ids = new Set(winners.map((w) => w.registration_id));
+  const teamWinners = winners.filter((w) => isTeamDivision(divisionByCode(w.division)));
+  if (teamWinners.length === 0) return ids;
+  const supabase = createAdminClient();
+  const { data: teams, error } = await supabase
+    .from('contest_teams')
+    .select('id, division, captain_registration_id')
+    .in('captain_registration_id', [...new Set(teamWinners.map((w) => w.registration_id))]);
+  if (error) throw new Error(error.message);
+  const keys = new Set(teamWinners.map((w) => `${w.division}:${w.registration_id}`));
+  const teamIds = (teams ?? []).filter((t) => keys.has(`${t.division}:${t.captain_registration_id}`)).map((t) => t.id);
+  if (teamIds.length === 0) return ids;
+  const { data: members, error: mErr } = await supabase
+    .from('contest_team_members')
+    .select('registration_id')
+    .in('team_id', teamIds);
+  if (mErr) throw new Error(mErr.message);
+  for (const m of members ?? []) ids.add(m.registration_id);
+  return ids;
+}
+
 async function loadRecipients(audience: Audience, winners: Winner[]): Promise<SurveyInviteRecipient[]> {
   const supabase = createAdminClient();
   const list: SurveyInviteRecipient[] = [];
@@ -55,7 +82,7 @@ async function loadRecipients(audience: Audience, winners: Winner[]): Promise<Su
   if (audience === 'competitor' || audience === 'winner') {
     // Winners get the winner survey (competitor questions + prizes) instead
     // of the general competitor survey — never both.
-    const winnerIds = new Set(winners.map((w) => w.registration_id));
+    const winnerIds = await winnerRegistrationIds(winners);
     const { data, error } = await supabase
       .from('contest_registrations')
       .select('id, first_name, email, parent_email, age_on_event');

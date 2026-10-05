@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { calculateFeePreview, displayPrice, formatCents, type Division } from '@/lib/pricing';
-import { cleanStyles, selectionIssues, type DivisionStyles } from '@/lib/divisions-core';
+import { cleanStyles, selectionIssues, entryOf, type DivisionStyles } from '@/lib/divisions-core';
+import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice, type TeamSummary } from '@/lib/team-entries';
 import { contest, competition, shortMonthDay, type DivisionDef } from '@/contest.config';
 
 const WALK_UP_SURCHARGE = formatCents(competition.pricing.walkUpSurchargeCents);
@@ -15,6 +16,12 @@ function conflictsOf(code: string): string[] {
 }
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DC','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 
+/** Start a team or join one, per selected team division */
+interface TeamDraft { mode: 'create' | 'join'; name: string; code: string }
+
+const teamLabel = (d: DivisionDef) => { const e = entryOf(d); return e.type === 'team' ? e.label : 'Team'; };
+const isTeam = (d: DivisionDef) => entryOf(d).type === 'team';
+
 interface FormState {
   first_name: string;
   last_name: string;
@@ -26,6 +33,7 @@ interface FormState {
   state: string;
   divisions: Division[];
   division_styles: DivisionStyles;
+  teams: Record<string, TeamDraft>;
   parent_name: string;
   parent_email: string;
   parent_consented: boolean;
@@ -37,7 +45,7 @@ interface FormState {
 const BLANK: FormState = {
   first_name: '', last_name: '', preferred_bracket_name: '',
   age_on_event: '', email: '', phone: '', city: '', state: contest.venue.region,
-  divisions: [], division_styles: {},
+  divisions: [], division_styles: {}, teams: {},
   parent_name: '', parent_email: '', parent_consented: false,
   liability_waiver_accepted: false, code_of_conduct_accepted: false,
   paid_at_table: false,
@@ -45,9 +53,27 @@ const BLANK: FormState = {
 
 // Estimates come from lib/pricing (same source the walk-up API charges from), so this
 // screen can't drift from the real fees. Shows "TBD" while PRICES_TBD is on.
-function estimateFeeCents(divisions: Division[]): number {
+function estimateFeeCents(divisions: Division[], joining: Division[]): number {
   if (divisions.length === 0) return 0;
-  return calculateFeePreview(divisions, 0, new Date(), 'walk_up', new Date(0)).fee_cents;
+  return calculateFeePreview(divisions, 0, new Date(), 'walk_up', new Date(0), joining).fee_cents;
+}
+
+/** The selected team divisions' drafts → the API's `teams`, plus any problems. */
+function teamsPayload(form: FormState): { teams: Record<string, TeamChoice>; problems: string[] } {
+  const teams: Record<string, TeamChoice> = {};
+  const problems: string[] = [];
+  for (const d of competition.divisions.filter((x) => isTeam(x) && form.divisions.includes(x.code))) {
+    const t = form.teams[d.code] ?? { mode: 'create', name: '', code: '' };
+    if (t.mode === 'create') {
+      if (t.name.trim()) teams[d.code] = { create: { name: t.name.trim() } };
+      else problems.push(`${d.name}: enter a ${teamLabel(d).toLowerCase()} name`);
+    } else {
+      const code = normalizeJoinCode(t.code);
+      if (JOIN_CODE_RE.test(code)) teams[d.code] = { join: { code } };
+      else problems.push(`${d.name}: enter the join code`);
+    }
+  }
+  return { teams, problems };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -76,10 +102,20 @@ export default function WalkUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; data?: unknown; error?: string } | null>(null);
 
-  const estimatedFeeCents = estimateFeeCents(form.divisions);
+  const teamPicked = competition.divisions.filter((d) => isTeam(d) && form.divisions.includes(d.code));
+  const joining = teamPicked.filter((d) => form.teams[d.code]?.mode === 'join').map((d) => d.code);
+  const estimatedFeeCents = estimateFeeCents(form.divisions, joining);
   const isMinor = parseInt(form.age_on_event, 10) < 18;
 
-  const issues = selectionIssues(form.divisions, cleanStyles(form.divisions, form.division_styles), competition);
+  const teamCheck = teamsPayload(form);
+  const issues = [
+    ...selectionIssues(form.divisions, cleanStyles(form.divisions, form.division_styles), competition),
+    ...teamCheck.problems.map((message) => ({ message })),
+  ];
+
+  function setTeam(code: string, patch: Partial<TeamDraft>) {
+    setForm((f) => ({ ...f, teams: { ...f.teams, [code]: { ...(f.teams[code] ?? { mode: 'create', name: '', code: '' }), ...patch } } }));
+  }
 
   function toggle(div: Division) {
     setForm((f) => {
@@ -124,6 +160,7 @@ export default function WalkUpPage() {
       state: form.state,
       divisions: form.divisions,
       division_styles: cleanStyles(form.divisions, form.division_styles),
+      teams: teamCheck.teams,
       parent_name: form.parent_name || undefined,
       parent_email: form.parent_email || undefined,
       parent_consented: form.parent_consented,
@@ -151,7 +188,7 @@ export default function WalkUpPage() {
     setSubmitting(false);
   }
 
-  const lastResult = result?.ok ? (result.data as { id: string; fee_cents: number; paid: boolean; payment_note: string }) : null;
+  const lastResult = result?.ok ? (result.data as { id: string; fee_cents: number; paid: boolean; payment_note: string; teams?: TeamSummary[] }) : null;
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -175,6 +212,14 @@ export default function WalkUpPage() {
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontFamily: 'monospace' }}>
             Note: {lastResult.payment_note}
           </div>
+          {(lastResult.teams ?? []).map((t) => (
+            <div key={t.division} style={{ fontSize: '0.85rem', color: '#fff', marginTop: '0.4rem' }}>
+              {competition.divisions.find((d) => d.code === t.division)?.name ?? t.division}: <strong>{t.name}</strong> ({t.role})
+              {t.role === 'captain' && (
+                <> · join code <code style={{ fontFamily: 'monospace', color: 'var(--gold)', fontSize: '1.05rem', letterSpacing: '0.12em' }}>{t.join_code}</code> for teammates</>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -268,6 +313,43 @@ export default function WalkUpPage() {
                     );
                   })}
                 </div>
+              </fieldset>
+            );
+          })}
+          {teamPicked.map((d) => {
+            const t = form.teams[d.code] ?? { mode: 'create' as const, name: '', code: '' };
+            const label = teamLabel(d);
+            return (
+              <fieldset key={`team-${d.code}`} style={{ border: '1px solid var(--navy-border)', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
+                <legend style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', padding: '0 0.3rem' }}>
+                  {d.name.toUpperCase()} — {label.toUpperCase()}
+                </legend>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                  {[entrySummary(d), teamPricingNote(d)].filter(Boolean).join('. ')}
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem 1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                  {(['create', 'join'] as const).map((m) => (
+                    <label key={m} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-body)' }}>
+                      <input type="radio" name={`walkup-team-${d.code}`} checked={t.mode === m} onChange={() => setTeam(d.code, { mode: m })} />
+                      {m === 'create' ? `Start a new ${label.toLowerCase()}` : 'Join with a code'}
+                    </label>
+                  ))}
+                </div>
+                {t.mode === 'create' ? (
+                  <input
+                    aria-label={`${d.name} ${label.toLowerCase()} name`}
+                    value={t.name} maxLength={TEAM_NAME_MAX}
+                    onChange={(e) => setTeam(d.code, { name: e.target.value })}
+                    placeholder={`${label} name`} style={inputStyle}
+                  />
+                ) : (
+                  <input
+                    aria-label={`${d.name} join code`}
+                    value={t.code} maxLength={12}
+                    onChange={(e) => setTeam(d.code, { code: e.target.value.toUpperCase() })}
+                    placeholder="ABC123" style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.12em' }}
+                  />
+                )}
               </fieldset>
             );
           })}

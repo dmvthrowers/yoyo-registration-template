@@ -3,6 +3,8 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { getEventFlagBoolean } from '@/lib/event-flags';
+import { fetchAllTeamMemberships, type TeamSummary } from '@/lib/team-entries';
+import { competition } from '@/contest.config';
 
 async function requireAdmin(req: NextRequest, requestId: string) {
   const token = getBearerToken(req);
@@ -40,7 +42,14 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('upstream_error', 'Failed to load spectators', requestId);
   }
 
-  const registrations = registrationsRes.data ?? [];
+  // Team names per registrant, merged in below. Best-effort: the dashboard still loads without it.
+  let teamsByRegistration: Record<string, TeamSummary[]> = {};
+  try {
+    teamsByRegistration = await fetchAllTeamMemberships(supabase, competition);
+  } catch (e) {
+    console.error('[ops/dashboard] teams query failed:', e);
+  }
+  const registrations = (registrationsRes.data ?? []).map((r) => ({ ...r, teams: teamsByRegistration[r.id] ?? [] }));
   const spectators = spectatorsRes.data ?? [];
 
   const stats = {

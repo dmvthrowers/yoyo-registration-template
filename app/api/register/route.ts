@@ -10,8 +10,9 @@ import { logAudit } from '@/lib/audit';
 import { sendConfirmationEmail } from '@/lib/email';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getEventFlagBoolean } from '@/lib/event-flags';
+import { joiningDivisions, resolveTeamJoins, writeTeams, type TeamSummary } from '@/lib/team-entries';
 import type { Division, RegistrationSource } from '@/lib/pricing';
-import { contest } from '@/contest.config';
+import { contest, competition } from '@/contest.config';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
 
@@ -56,7 +57,12 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
 
   const supabase = createAdminClient();
 
-  // 5. Comp code validation
+  // 5. Team join codes: each must exist, be for that division and have room. Checked before
+  // the comp code is claimed so a bad code costs nothing. (The insert trigger re-checks room.)
+  const teamJoins = await resolveTeamJoins(supabase, data.teams, competition);
+  if (!teamJoins.ok) return apiError('unprocessable', teamJoins.message, requestId);
+
+  // 5b. Comp code validation
   let compDiscountPercent = 0;
   let compCodeRedeemed = false;
   if (data.comp_code) {
@@ -78,9 +84,9 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     compCodeRedeemed = true;
   }
 
-  // 6. Calculate fee
+  // 6. Calculate fee (joining a per-team-priced team is $0; the captain pays)
   const source: RegistrationSource = 'online';
-  const feeResult = calculateFee(data.divisions as Division[], compDiscountPercent, now, source);
+  const feeResult = calculateFee(data.divisions as Division[], compDiscountPercent, now, source, joiningDivisions(data.teams));
   const divisionStyles = cleanStyles(data.divisions, data.division_styles);
 
   // 7. Generate music upload token (expires at the music deadline)
@@ -153,12 +159,39 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('upstream_error', 'Failed to save registration. Please try again.', requestId);
   }
 
+  // 8b. Teams: create the ones they start (they're captain), join the ones they have codes for.
+  // If any fails (name taken, team filled up meanwhile), undo the registration: deleting it
+  // cascades to any team rows written here, and the comp code use is released as above.
+  const rollbackRegistration = async (id: string) => {
+    const { error } = await supabase.from('contest_registrations').delete().eq('id', id);
+    if (error) console.error('[register] rollback delete failed:', error);
+    if (compCodeRedeemed && data.comp_code) {
+      await supabase.rpc('release_comp_code', { p_code: data.comp_code });
+    }
+  };
+  let teams: TeamSummary[] = [];
+  try {
+    const written = await writeTeams(supabase, reg.id, data.teams, teamJoins.joins, competition);
+    if (!written.ok) {
+      await rollbackRegistration(reg.id);
+      return apiError('conflict', written.message, requestId);
+    }
+    teams = written.teams;
+  } catch (e) {
+    console.error('[register] team error:', e);
+    await rollbackRegistration(reg.id);
+    return apiError('upstream_error', 'Failed to save your team. Please try again.', requestId);
+  }
+
   // 9. Audit (the comp code use was already claimed in step 5)
   const compCodeValid = compCodeRedeemed;
   await logAudit('created', {
     registrationId: reg.id,
     actor: 'system',
-    details: { source, fee_cents: feeResult.fee_cents, divisions: data.divisions, comp_code: compCodeValid ? data.comp_code : null },
+    details: {
+      source, fee_cents: feeResult.fee_cents, divisions: data.divisions, comp_code: compCodeValid ? data.comp_code : null,
+      ...(teams.length ? { teams: teams.map((t) => ({ division: t.division, name: t.name, role: t.role })) } : {}),
+    },
   });
 
   // 10. Confirmation email. It goes through the outbox (stored, then sent;
@@ -178,6 +211,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       confirmUrl,
       musicUploadUrl,
       registrationId: reg.id,
+      teams,
     }, { dedupeKey: `confirmation:${reg.id}:${data.email.toLowerCase()}` }),
   ];
 
@@ -195,6 +229,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
         confirmUrl,
         musicUploadUrl,
         registrationId: reg.id,
+        teams,
       }, { dedupeKey: `confirmation:${reg.id}:${parentEmail.toLowerCase()}` })
     );
   }
@@ -216,6 +251,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       music_upload_url: musicUploadUrl,
       music_deadline: musicDeadline.toISOString(),
       confirm_url: confirmUrl,
+      teams,
     },
     { status: 201, headers: { 'x-request-id': requestId } }
   );

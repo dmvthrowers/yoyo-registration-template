@@ -6,16 +6,19 @@
 begin;
 
 insert into public.contest_divisions
-  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, manual_max, has_music, sort_order)
+  (code, name, scoring_format, tech_cap, eval_cap, allow_negative, stop_points, discard_points, detach_points, manual_max, has_music, sort_order,
+   better, entry_type, team_min, team_max, rounds_count, config)
 values
-  ('1A', '1A — Single String', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 1),
-  ('X', 'X Division', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 2),
-  ('SBJ', 'Sport / Beginner / Junior', 'freestyle', 20, 20, false, 0, 0, 0, null, true, 3)
+  ('1A', '1A — Single String', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 1, 'higher', 'solo', null, null, 1, '{"scoring":{"format":"freestyle","techCap":60,"evalCap":10,"negativeClicks":true,"deductions":{"stop":1,"discard":3,"detach":5}},"entry":{"type":"solo"},"rounds":[{"name":"Final"}]}'::jsonb),
+  ('X', 'X Division', 'freestyle', 60, 10, true, 1, 3, 5, null, true, 2, 'higher', 'solo', null, null, 1, '{"scoring":{"format":"freestyle","techCap":60,"evalCap":10,"negativeClicks":true,"deductions":{"stop":1,"discard":3,"detach":5}},"entry":{"type":"solo"},"rounds":[{"name":"Final"}]}'::jsonb),
+  ('SBJ', 'Sport / Beginner / Junior', 'freestyle', 20, 20, false, 0, 0, 0, null, true, 3, 'higher', 'solo', null, null, 1, '{"scoring":{"format":"freestyle","techCap":20,"evalCap":20,"negativeClicks":false,"deductions":null},"entry":{"type":"solo"},"rounds":[{"name":"Final"}]}'::jsonb)
 on conflict (code) do update set
   name = excluded.name, scoring_format = excluded.scoring_format, tech_cap = excluded.tech_cap,
   eval_cap = excluded.eval_cap, allow_negative = excluded.allow_negative, stop_points = excluded.stop_points,
   discard_points = excluded.discard_points, detach_points = excluded.detach_points,
   manual_max = excluded.manual_max, has_music = excluded.has_music, sort_order = excluded.sort_order,
+  better = excluded.better, entry_type = excluded.entry_type, team_min = excluded.team_min,
+  team_max = excluded.team_max, rounds_count = excluded.rounds_count, config = excluded.config,
   updated_at = now();
 
 insert into public.contest_division_styles (division_code, code, label, multiplier, sort_order)

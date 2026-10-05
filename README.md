@@ -22,7 +22,13 @@ copy to open registration.
 - **Stripe Checkout** with webhook reconciliation, duplicate-payment protection and refunds
 - **Music upload** straight to storage, with a deadline, and a DJ page that plays it in run order
 - **Spectator and volunteer RSVPs** with an opt-in public directory
-- **Day-of tools**: run order, judge scoring, staff portal, walk-up registration
+- **Formats for any skill toy contest**: freestyle (NYYL-style), panel-judged (Artistic
+  Performance, doubles, acts), timed or scored events with attempts (speed, endurance, longest
+  spin), trick ladders, battle brackets with judge voting, and not-judged showcases
+- **Doubles, groups and acts**: every member registers themselves; captains share a join code;
+  charge per person or once per team
+- **Rounds**: prelims → finals with the top N advancing
+- **Day-of tools**: run order, judge scoring on phones, battle voting, staff portal, walk-up registration
 - **Results page** that stays private until you publish it
 - **Admin dashboard**: roster, payments, comp codes, budget, volunteers, CSV export
 - **Post-event surveys** for every role, with a results tab and email invites
@@ -78,6 +84,7 @@ CI runs typecheck, lint, tests, build and the migration replay on every pull req
 ## Docs
 
 - [`docs/SETUP.md`](docs/SETUP.md) — set up a new contest
+- [`docs/FORMATS.md`](docs/FORMATS.md) — every judging format, team entries and rounds
 - [`docs/REPO_GUIDE.md`](docs/REPO_GUIDE.md) — how the app works, file by file
 - [`docs/STRIPE_PAYMENTS.md`](docs/STRIPE_PAYMENTS.md) — payments, refunds, reconciliation
 - [`AGENTS.md`](AGENTS.md) — rules for AI coding agents (and a good read for people)

@@ -134,12 +134,89 @@ export interface FreestyleScoring {
 }
 
 /**
- * "manual": a judge types in one score from 0 to max — their own total, a paper sheet's
- * result, seconds spun, tricks landed. With several judges, scores are averaged.
+ * "manual": a judge types in a number from 0 to max — a total from a paper sheet, seconds
+ * spun, catches, a speed time. With several judges, scores are averaged.
  */
 export interface ManualScoring {
   format: 'manual';
   max: number;
+  /** "lower" for speed runs and other timed events. Default "higher". */
+  better?: 'higher' | 'lower';
+  /** Shown next to the number, e.g. "seconds", "catches". Default "points". */
+  unit?: string;
+  /** Best of N attempts (1 = a single score). The best attempt counts. */
+  attempts?: number;
+}
+
+/**
+ * "panel": judges score each of your criteria (0–max each); the total is their sum and judges
+ * are averaged. Use it for Artistic Performance, doubles, juggling acts, best trick.
+ */
+export interface PanelScoring {
+  format: 'panel';
+  criteria: { key: string; label: string; max: number }[];
+}
+
+/**
+ * "ladder": a fixed list of tricks in order. A player gets attemptsPerTrick tries at each and
+ * moves up until they miss one on every try. Rank by highest rung (ties: fewest attempts used),
+ * or by points if tricks carry points.
+ */
+export interface LadderScoring {
+  format: 'ladder';
+  tricks: { name: string; points?: number }[];
+  attemptsPerTrick: number;
+  /** "rung" (default): stop at the first missed trick. "points": try every trick, add up points. */
+  rankBy?: 'rung' | 'points';
+}
+
+/**
+ * "bracket": single-elimination battles. Judges vote each match; an admin confirms the winner.
+ * Byes fill the bracket to a power of two.
+ */
+export interface BracketScoring {
+  format: 'bracket';
+  /** How first-round matchups are made: random draw, or the order entrants registered. */
+  seeding: 'random' | 'registration';
+  thirdPlaceMatch: boolean;
+  /** e.g. "30-second rounds, two rounds each" — shown to players and judges */
+  matchFormat?: string;
+  /**
+   * Who picks each winner. "judges" (default) vote in the app. "audience": a crowd or stream
+   * poll (e.g. a YouTube/Twitch chat poll); an admin enters each poll's vote counts.
+   */
+  decidedBy?: 'judges' | 'audience';
+  /** With no third-place match: rank the two semifinal losers by their vote totals instead of tying. */
+  thirdPlaceByVotes?: boolean;
+  /** Extra battle rules shown to players, e.g. "Music is random", "No repeating a routine". */
+  rules?: string[];
+}
+
+/** "showcase": performances in a run order, not judged (exhibitions, guest acts, kids' showcase). */
+export interface ShowcaseScoring {
+  format: 'showcase';
+}
+
+export type Scoring = FreestyleScoring | ManualScoring | PanelScoring | LadderScoring | BracketScoring | ShowcaseScoring;
+
+/** Solo entries, or teams (doubles, groups, acts) where every member registers themselves. */
+export type EntryDef =
+  | { type: 'solo' }
+  | {
+      type: 'team';
+      /** e.g. "Doubles", "Group", "Act" */
+      label: string;
+      min: number;
+      max: number;
+      /** "person": every member pays priceCents. "team": the captain pays once, members pay $0. */
+      pricing: 'person' | 'team';
+    };
+
+/** A round, e.g. { name: 'Prelims', advance: 8 } then { name: 'Finals' }. */
+export interface RoundDef {
+  name: string;
+  /** How many move on to the next round (leave out on the last round) */
+  advance?: number;
 }
 
 export interface DivisionDef {
@@ -155,7 +232,11 @@ export interface DivisionDef {
   styles?: { options: StyleDef[]; min: number; max: number };
   /** Division codes this one can't be entered together with */
   cannotCombineWith?: string[];
-  scoring: FreestyleScoring | ManualScoring;
+  scoring: Scoring;
+  /** Solo (default) or team entries */
+  entry?: EntryDef;
+  /** Rounds for freestyle, panel and manual divisions. Default: one round. */
+  rounds?: RoundDef[];
 }
 
 /**
@@ -221,6 +302,75 @@ export const competition: {
   combos: [{ divisions: ['1A', 'X'], priceCents: 5000 }],
 
   pricing: { earlyBirdDiscountCents: 500, walkUpSurchargeCents: 1000, pricesTbd: false },
+};
+
+// ---------------------------------------------------------------- day of: schedule & side events
+
+/**
+ * One block on the day's schedule. Items tied to a division (and round) are run from the
+ * admin schedule screen: Start → Close judging → Publish results. Publishing makes that
+ * division's results public, and every later item's estimated time moves with the real ones.
+ */
+export interface ScheduleItem {
+  /** Short, permanent ID, e.g. "1a-prelims" */
+  id: string;
+  title: string;
+  /** Planned start, 24-hour "HH:MM" on contest day in contest.timeZone */
+  start: string;
+  /** Planned length in minutes */
+  minutes: number;
+  /** The division (and round, default 1) this block judges */
+  division?: string;
+  round?: number;
+  kind?: 'event' | 'break' | 'ceremony' | 'side' | 'other';
+  /** Fixed blocks (lunch, awards, venue close) never move later or earlier */
+  fixed?: boolean;
+  note?: string;
+}
+
+/**
+ * Quick crowd events that need no registration or fee: longest sleeper, most loops in 60
+ * seconds, longest kendama juggle. Staff type a name and use a stopwatch or tap counter.
+ */
+export interface SideEventDef {
+  code: string;
+  name: string;
+  description: string;
+  /** "timer": a stopwatch (seconds). "counter": tap +1 per catch, loop or trick. */
+  kind: 'timer' | 'counter';
+  better: 'higher' | 'lower';
+  /** Shown next to the number, e.g. "seconds", "loops" */
+  unit: string;
+  /** Counter only: stop counting after this many seconds (e.g. 60 for "most loops in a minute") */
+  timeLimitSeconds?: number;
+}
+
+export const dayOf: {
+  schedule: ScheduleItem[];
+  /** Let blocks start before their planned time when the day runs ahead (default: no) */
+  allowEarlyStarts: boolean;
+  sideEvents: SideEventDef[];
+} = {
+  allowEarlyStarts: false,
+  schedule: [
+    { id: 'doors', title: 'Doors open & check-in', start: '09:30', minutes: 30, kind: 'other' },
+    { id: 'sbj', title: 'Sport / Beginner / Junior', start: '10:00', minutes: 45, division: 'SBJ' },
+    { id: 'x', title: 'X Division', start: '10:45', minutes: 45, division: 'X' },
+    { id: 'lunch', title: 'Lunch break', start: '11:30', minutes: 60, kind: 'break' },
+    { id: '1a', title: '1A — Single String', start: '12:30', minutes: 75, division: '1A' },
+    { id: 'side', title: 'Side events: longest sleeper & loop challenge', start: '13:45', minutes: 30, kind: 'side' },
+    { id: 'awards', title: 'Awards', start: '15:00', minutes: 30, kind: 'ceremony', fixed: true },
+  ],
+  sideEvents: [
+    {
+      code: 'SLEEPER', name: 'Longest Sleeper', description: 'One throw. The yo-yo that spins longest wins.',
+      kind: 'timer', better: 'higher', unit: 'seconds',
+    },
+    {
+      code: 'LOOPS60', name: 'Loop Challenge', description: 'Most inside loops in 60 seconds.',
+      kind: 'counter', better: 'higher', unit: 'loops', timeLimitSeconds: 60,
+    },
+  ],
 };
 
 /** Look up a division by code */
