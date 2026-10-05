@@ -1,0 +1,149 @@
+# Set Up a New Contest
+
+The whole checklist, in order. Plan on about two hours the first time. You need free accounts on
+GitHub, Vercel, Supabase and Stripe. Resend (email) and Upstash (rate limiting) are optional but
+recommended before you open registration.
+
+Keep Stripe in **test mode** until step 9 says otherwise.
+
+## 1. Make your copy
+
+Click **Use this template → Create a new repository** on GitHub, or use the **Deploy with
+Vercel** button in the README, which copies the repo for you. Then clone your copy:
+
+```bash
+git clone https://github.com/<you>/<your-repo>.git
+cd <your-repo>
+npm install
+```
+
+## 2. Fill in your contest
+
+Edit **`contest.config.ts`**. It's the only file most contests need to change:
+
+- name, short name (`SYO-27`), next year's short name, tagline
+- date, start and end time, time zone (IANA name, e.g. `America/Chicago`)
+- venue, organizer, presenting sponsor (leave `name: ''` for none)
+- deadlines: early bird, online registration close, music upload, comp-code expiry. Write them
+  as ISO timestamps with your venue's UTC offset, e.g. `2027-03-11T23:59:59-06:00`.
+- links to your contest website. Leave one `''` to hide it from the nav and footer. No site yet?
+  [yoyo-contest-template](https://github.com/dmvthrowers/yoyo-contest-template) builds one.
+
+Then:
+
+- **Prices**: `lib/pricing.ts` (`BASE_PRICE`, the combo price, early-bird and walk-up amounts,
+  all in cents). Keep the matching text on `/fee-calculator` and `/` in sync.
+- **Divisions**: the app ships with **1A**, **X** (2A–5A) and **SBJ** (sport-ball/jr). They're
+  wired through the database (`division_code` enum), scoring and pricing, so changing them is a
+  code change. Running those three? You're set.
+- **Logos**: replace `public/logo-32.png`, `logo-180.png` and `logo-512.png` (square PNGs).
+- **Colors**: `app/globals.css` and `tailwind.config.js` (navy + gold by default).
+
+Check it builds: `npm run typecheck && npm test`.
+
+## 3. Create the database (Supabase)
+
+1. Create a new Supabase project just for this contest. Pick the region nearest your
+   competitors, and set `regions` in `vercel.json` to the matching Vercel region.
+2. Apply the migrations with the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started):
+
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>
+   npx supabase db push
+   ```
+
+   No CLI? Paste each file in `supabase/migrations/` into **SQL Editor**, oldest first.
+3. In **SQL Editor**, store two values the scheduled jobs need:
+
+   ```sql
+   select vault.create_secret('<your CRON_SECRET>', 'contest_cron_secret');
+   select vault.create_secret('https://<your-app>.vercel.app', 'contest_app_url');
+   ```
+
+   Generate the secret with `openssl rand -base64 32` and put the same value in `CRON_SECRET`
+   in step 5. Until both are set the jobs do nothing, which is harmless.
+4. **Authentication → Providers → Email**: set **Email OTP Length** to `8` (the spectator
+   portal expects 8 digits; see `CODE_LENGTH` in `app/spectators/portal/page.tsx`) and
+   **Email OTP Expiration** to `300`.
+5. **Authentication → URL Configuration**: set Site URL to your app's URL.
+6. **Authentication → Email Templates**: run `npm run auth-emails`, then paste each file from
+   `supabase/email-templates/dist/` into the matching template. Magic Link is the one that
+   matters; see `supabase/email-templates/README.md`.
+7. Copy **Project Settings → API**: the URL, the `anon` key and the `service_role` key.
+
+**Want fake data to click around with?** Paste `supabase/seed-demo.sql` into SQL Editor. It adds
+six competitors and three spectators, all `@example.com`, and refuses to run once real
+registrations exist. Its header has the two lines that remove the demo rows again.
+
+## 4. Set up Stripe (test mode)
+
+Follow sections 1–2 of [`STRIPE_PAYMENTS.md`](STRIPE_PAYMENTS.md): copy the `sk_test_…` key,
+add the webhook endpoint `https://<your-app>/api/webhooks/stripe`, copy its `whsec_…` secret.
+You can add the webhook after the first deploy, once you know the URL.
+
+## 5. Deploy (Vercel)
+
+Import the repo in Vercel (or use the README's button) and add these environment variables.
+`.env.local.example` explains every one.
+
+| Variable | Required | Where it comes from |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | yes | Supabase → Project Settings → API |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | yes | Stripe → Developers (test mode) |
+| `NEXT_PUBLIC_BASE_URL` | yes | Your app's URL, e.g. `https://register.example.org` |
+| `CRON_SECRET` | yes | The value you stored in Vault in step 3 |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | recommended | Public contact address |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO` | optional | Resend → API Keys, after verifying your domain. Without them, emails queue but aren't sent |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | optional | Vercel → Storage → Upstash Redis. Without them, rate limiting is off |
+| `NEXT_PUBLIC_SENTRY_DSN`, `HEALTHCHECKS_PING_KEY`, `QSTASH_*` | optional | Error reports, job monitoring, email backstop |
+
+Deploy. If you used a custom domain, update `NEXT_PUBLIC_BASE_URL` and `contest_app_url` to match
+and redeploy.
+
+## 6. Make yourself an admin
+
+1. Supabase → **Authentication → Users → Add user**: your email and a strong password.
+2. Copy the new user's ID, then in **SQL Editor**:
+
+   ```sql
+   insert into public.contest_staff_accounts (auth_user_id, role, display_name)
+   values ('<user id>', 'admin', '<your name>');
+   ```
+
+3. Sign in at `/admin-dashboard`. Add judges, DJs and audio techs the same way, with role
+   `judge`, `dj` or `audio_tech`.
+
+## 7. Test everything (still test mode)
+
+- [ ] Register a competitor with a fee due, pay with `4242 4242 4242 4242`, land on `/confirm`
+      as paid. The admin dashboard shows it paid via `stripe`.
+- [ ] Upload a music file from the confirmation email or `/portal`.
+- [ ] Make a 100% comp code in the dashboard, register with it: no Stripe page.
+- [ ] RSVP as a spectator at `/spectate`; sign in at `/spectators/portal` with the emailed code.
+- [ ] Sign up to volunteer at `/volunteer`.
+- [ ] Refund the test payment in Stripe: the registration goes back to unpaid.
+- [ ] Confirmation emails arrive (if Resend is set up). Check spam.
+- [ ] Check the site on a phone.
+
+## 8. Clean up
+
+- Delete the demo rows (the two lines at the top of `supabase/seed-demo.sql`) and your own test
+  registrations (SQL Editor: `delete from public.contest_registrations where email = '<yours>';`).
+- Make sure `online_registration_open` is on and `results_published` is off in the dashboard's
+  event flags.
+
+## 9. Go live
+
+Switch Stripe to live mode as in section 3 of [`STRIPE_PAYMENTS.md`](STRIPE_PAYMENTS.md): live
+keys and a live webhook endpoint, in Vercel's Production environment. Redeploy and announce.
+
+## After the contest
+
+- Judges score at `/judge` on the day. Once results are final, turn on `results_published` in the dashboard (or set
+  `RESULTS_PUBLISHED=true`) so `/results` goes public.
+- Add video links to `contest.videos` in `contest.config.ts`.
+- Send the feedback surveys from the dashboard's Surveys tab. List your vendors in `VENDORS` at
+  the top of `lib/surveys.ts` first.
+- Next year: bump the date, short names and deadlines in `contest.config.ts`. Use a fresh
+  Supabase project, or export and clear the old data.
