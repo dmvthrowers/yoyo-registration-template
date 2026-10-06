@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { Division } from '@/lib/pricing';
 import { calculateFeePreview, displayPrice, formatCents, PRICES_TBD } from '@/lib/pricing';
-import { cleanStyles, selectionIssues, entryOf, formatSummary, freeTeamJoins, type DivisionStyles } from '@/lib/divisions-core';
+import { cleanStyles, selectionIssues, entryOf, formatSummary, freeTeamJoins, styleCap, type DivisionStyles } from '@/lib/divisions-core';
 import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice } from '@/lib/team-entries';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
@@ -248,7 +248,7 @@ export default function RegisterPage() {
       picked = [style];
     } else if (current.includes(style)) {
       picked = current.filter(s => s !== style);
-    } else if (current.length < division.styles.max) {
+    } else if (current.length < styleCap(division.code, watchedDivisions, watchedStyles, competition)) {
       picked = [...current, style];
     }
     setValue('division_styles', { ...watchedStyles, [division.code]: picked }, { shouldValidate: true });
@@ -540,9 +540,11 @@ export default function RegisterPage() {
               const styles = d.styles!;
               const picked = watchedStyles[d.code] ?? [];
               const single = styles.max === 1;
-              const range = styles.min === styles.max ? `${styles.min}` : styles.min === 0 ? `up to ${styles.max}` : `${styles.min}–${styles.max}`;
+              // competition.maxTotalStyles can lower this division's max (e.g. 1A + X allows one X style).
+              const cap = styleCap(d.code, watchedDivisions, watchedStyles, competition);
+              const range = styles.min === cap ? `${styles.min}` : styles.min === 0 ? `up to ${cap}` : `${styles.min}–${cap}`;
               const groupId = `styles-${d.code}`;
-              const countOk = picked.length >= styles.min && picked.length <= styles.max;
+              const countOk = picked.length >= styles.min && picked.length <= cap;
               return (
                 <fieldset key={d.code} className="mt-4 p-4 bg-navy border border-gold/30" aria-describedby={`${groupId}-hint`}>
                   <legend className="sr-only">{d.name} styles</legend>
@@ -550,7 +552,8 @@ export default function RegisterPage() {
                     {d.name.toUpperCase()} STYLE{single ? '' : 'S'}{styles.min > 0 ? ' *' : ''}
                   </div>
                   <p id={`${groupId}-hint`} className="text-xs text-text-body mb-3">
-                    {single ? (styles.min > 0 ? 'Choose one style.' : 'Choose a style (optional).') : `Choose ${range} styles.`}
+                    {single ? (styles.min > 0 ? 'Choose one style.' : 'Choose a style (optional).') : `Choose ${range} style${cap === 1 && styles.min === cap ? '' : 's'}.`}
+                    {!single && cap < styles.max && competition.maxTotalStyles !== undefined && ` You can enter at most ${competition.maxTotalStyles} styles in total, and each other division counts as one.`}
                   </p>
                   <div className="space-y-2">
                     {styles.options.map((o) => {
@@ -563,7 +566,7 @@ export default function RegisterPage() {
                             value={o.code}
                             checked={checked}
                             onChange={() => handleStyleToggle(d, o.code)}
-                            disabled={!single && !checked && picked.length >= styles.max}
+                            disabled={!single && !checked && picked.length >= cap}
                             className="w-4 h-4 accent-gold mt-0.5 flex-shrink-0"
                           />
                           <span>
@@ -575,7 +578,7 @@ export default function RegisterPage() {
                     })}
                   </div>
                   {!countOk && picked.length > 0 && (
-                    <p className="text-red text-sm mt-2" role="alert">Choose {range} {d.name} style{styles.max === 1 ? '' : 's'}.</p>
+                    <p className="text-red text-sm mt-2" role="alert">Choose {range} {d.name} style{cap === 1 ? '' : 's'}.</p>
                   )}
                 </fieldset>
               );

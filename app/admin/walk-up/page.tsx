@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { calculateFeePreview, displayPrice, formatCents, type Division } from '@/lib/pricing';
-import { cleanStyles, selectionIssues, entryOf, type DivisionStyles } from '@/lib/divisions-core';
+import { cleanStyles, selectionIssues, entryOf, styleCap, type DivisionStyles } from '@/lib/divisions-core';
 import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice, type TeamSummary } from '@/lib/team-entries';
 import { contest, competition, shortMonthDay, type DivisionDef } from '@/contest.config';
 
@@ -129,8 +129,8 @@ export default function WalkUpPage() {
 
   function toggleStyle(d: DivisionDef, style: string) {
     if (!d.styles) return;
-    const max = d.styles.max;
     setForm((f) => {
+      const max = d.styles!.max === 1 ? 1 : styleCap(d.code, f.divisions, f.division_styles, competition);
       const cur = f.division_styles[d.code] ?? [];
       let next = cur;
       if (max === 1) next = [style];
@@ -290,7 +290,8 @@ export default function WalkUpPage() {
             const styles = d.styles!;
             const picked = form.division_styles[d.code] ?? [];
             const single = styles.max === 1;
-            const range = styles.min === styles.max ? `${styles.min}` : `${styles.min}–${styles.max}`;
+            const cap = styleCap(d.code, form.divisions, form.division_styles, competition);
+            const range = styles.min === cap ? `${styles.min}` : `${styles.min}–${cap}`;
             return (
               <fieldset key={d.code} style={{ border: '1px solid var(--navy-border)', padding: '0.6rem 0.75rem', marginTop: '0.5rem' }}>
                 <legend style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', padding: '0 0.3rem' }}>
@@ -305,7 +306,7 @@ export default function WalkUpPage() {
                           type={single ? 'radio' : 'checkbox'}
                           name={`walkup-styles-${d.code}`}
                           checked={checked}
-                          disabled={!single && !checked && picked.length >= styles.max}
+                          disabled={!single && !checked && picked.length >= cap}
                           onChange={() => toggleStyle(d, o.code)}
                         />
                         {o.label}

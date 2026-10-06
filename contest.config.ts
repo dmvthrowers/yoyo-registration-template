@@ -259,6 +259,11 @@ export const competition: {
   /** Labels for the three optional "setup" fields on profiles. "" hides a field. */
   gear: { yoyo: string; string: string; counterweight: string };
   divisions: DivisionDef[];
+  /**
+   * Optional cap on styles across everything one person enters. A division with styles counts
+   * the styles picked; a division without styles (e.g. 1A) counts as one. Leave out for no cap.
+   */
+  maxTotalStyles?: number;
   /** Bundle prices: entering every listed division costs priceCents instead of the sum. */
   combos: { divisions: string[]; priceCents: number }[];
   pricing: {
