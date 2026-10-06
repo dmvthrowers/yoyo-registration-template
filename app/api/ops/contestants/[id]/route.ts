@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { logAudit } from '@/lib/audit';
 import { DIVISION_CODES } from '@/contest.config';
 import { cleanStyles } from '@/lib/divisions-core';
+import { can } from '@/lib/roles';
 
 const updateContestantSchema = z.object({
   paid: z.boolean().optional(),
@@ -22,7 +23,7 @@ async function requireAdmin(req: NextRequest, requestId: string) {
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'registrations.edit')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

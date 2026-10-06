@@ -3,6 +3,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { z } from 'zod';
+import { can } from '@/lib/roles';
 
 const updateSpectatorSchema = z.object({
   nickname: z.string().trim().max(50).optional().or(z.literal('')),
@@ -17,7 +18,7 @@ async function requireAdmin(req: NextRequest, requestId: string) {
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'registrations.edit')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

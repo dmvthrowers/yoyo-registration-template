@@ -5,6 +5,7 @@ import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { bracketPlacements } from '@/lib/divisions-core';
 import { mainRounds, toMatches } from '@/lib/bracket-store';
 import { bracketDivision, entryNames, loadMatches } from '@/lib/bracket-server';
+import { can } from '@/lib/roles';
 
 /**
  * GET /api/bracket?division=<code>
@@ -25,7 +26,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   const token = getBearerToken(req);
   if (token) {
     const identity = await getStaffIdentityFromToken(token);
-    if (identity?.isActive && (identity.role === 'judge' || identity.role === 'admin')) {
+    if (identity?.isActive && can(identity.grants, 'scores.enter')) {
       viewer = { id: identity.authUserId, role: identity.role };
     }
   }

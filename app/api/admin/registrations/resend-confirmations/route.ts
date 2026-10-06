@@ -7,6 +7,7 @@ import type { OutboxEmail } from '@/lib/email';
 import { enqueueEmails } from '@/lib/outbox';
 import { fetchAllTeamMemberships, type TeamSummary } from '@/lib/team-entries';
 import { competition } from '@/contest.config';
+import { can } from '@/lib/roles';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
 
@@ -15,7 +16,7 @@ async function requireAdmin(req: NextRequest, requestId: string) {
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'registrations.edit')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

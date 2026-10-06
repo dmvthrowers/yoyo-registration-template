@@ -5,6 +5,7 @@ import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { runOrderDisplayName, isNameRestricted } from '@/lib/display-name';
 import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import { isTeamDivision, playSlotFor, roundsOf, routineSecondsOf } from '@/lib/divisions-core';
+import { can } from '@/lib/roles';
 
 type Division = string;
 
@@ -49,7 +50,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
     const identity = await getStaffIdentityFromToken(token);
     if (identity && identity.isActive) {
       viewerIsStaff = true;
-      canViewMusic = identity.role === 'dj' || identity.role === 'audio_tech' || identity.role === 'admin';
+      canViewMusic = can(identity.grants, 'music.play');
     }
   }
 

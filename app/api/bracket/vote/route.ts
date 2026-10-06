@@ -4,6 +4,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { bracketDivision } from '@/lib/bracket-server';
+import { can } from '@/lib/roles';
 
 const voteSchema = z.object({
   match_id: z.string().uuid(),
@@ -19,7 +20,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   const token = getBearerToken(req);
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || !['judge', 'admin'].includes(identity.role)) {
+  if (!identity || !identity.isActive || !can(identity.grants, 'brackets.run')) {
     return apiError('forbidden', 'Judge or admin access required', requestId);
   }
 
