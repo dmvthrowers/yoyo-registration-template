@@ -11,6 +11,7 @@ import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPrici
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef } from '@/contest.config';
+import { Field, inputCls } from '@/components/form/Field';
 
 type FormValues = {
   first_name: string;
@@ -371,6 +372,11 @@ export default function RegisterPage() {
     }
   };
 
+  // After the online cutoff the form can't be submitted (the API refuses it), so don't show it.
+  if (Date.now() > new Date(contest.deadlines.onlineRegistration).getTime()) {
+    return <RegistrationClosed />;
+  }
+
   return (
     <>
       <NavBar activePage="register" />
@@ -436,10 +442,10 @@ export default function RegisterPage() {
             <SectionHeader tag="STEP 1" title="Player Information" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="First Name *" error={errors.first_name?.message}>
-                <input {...register('first_name', { required: 'Required' })} className={inputCls(!!errors.first_name)} placeholder="Sam" />
+                <input {...register('first_name', { required: 'Enter your first name.' })} className={inputCls(!!errors.first_name)} placeholder="Sam" />
               </Field>
               <Field label="Last Name *" error={errors.last_name?.message}>
-                <input {...register('last_name', { required: 'Required' })} className={inputCls(!!errors.last_name)} placeholder="Rivera" />
+                <input {...register('last_name', { required: 'Enter your last name.' })} className={inputCls(!!errors.last_name)} placeholder="Rivera" />
               </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
@@ -454,9 +460,9 @@ export default function RegisterPage() {
               <Field label={`Age on ${longDate()} *`} error={errors.age_on_event?.message}>
                 <input
                   {...register('age_on_event', {
-                    required: 'Required',
-                    min: { value: 1, message: 'Must be at least 1' },
-                    max: { value: 120, message: 'Invalid age' },
+                    required: 'Enter your age.',
+                    min: { value: 1, message: 'Enter an age of 1 or more.' },
+                    max: { value: 120, message: 'Enter an age between 1 and 120.' },
                   })}
                   type="number" min={1} max={120}
                   className={inputCls(!!errors.age_on_event)}
@@ -464,12 +470,12 @@ export default function RegisterPage() {
                 />
               </Field>
               <Field label="Email *" error={errors.email?.message}>
-                <input {...register('email', { required: 'Required', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })} type="email" className={inputCls(!!errors.email)} placeholder="you@example.com" />
+                <input {...register('email', { required: 'Enter your email so we can send your confirmation.', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email, like name@example.com.' } })} type="email" className={inputCls(!!errors.email)} placeholder="you@example.com" />
               </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <Field label="Phone *" error={errors.phone?.message}>
-                <input {...register('phone', { required: 'Required' })} type="tel" className={inputCls(!!errors.phone)} placeholder="(555) 555-5555" />
+                <input {...register('phone', { required: 'Enter a phone number we can reach you at.' })} type="tel" className={inputCls(!!errors.phone)} placeholder="(555) 555-5555" />
               </Field>
               <Field label="Club Affiliation" hint="Optional">
                 <input {...register('club_affiliation')} className={inputCls(false)} placeholder={`${contest.organizer.name}`} />
@@ -478,11 +484,11 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <div className="col-span-2">
                 <Field label="City *" error={errors.city?.message}>
-                  <input {...register('city', { required: 'Required' })} className={inputCls(!!errors.city)} placeholder={contest.venue.city} />
+                  <input {...register('city', { required: 'Enter your city.' })} className={inputCls(!!errors.city)} placeholder={contest.venue.city} />
                 </Field>
               </div>
               <Field label="State *" error={errors.state?.message}>
-                <input {...register('state', { required: 'Required', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder={contest.venue.region} maxLength={2} />
+                <input {...register('state', { required: 'Fill in this field.', maxLength: { value: 2, message: '2-letter code' } })} className={inputCls(!!errors.state)} placeholder={contest.venue.region} maxLength={2} />
               </Field>
             </div>
           </section>
@@ -496,7 +502,7 @@ export default function RegisterPage() {
             </p>
 
             {errors.divisions && (
-              <p className="text-red text-sm mb-3">{errors.divisions.message}</p>
+              <p className="text-error text-sm mb-3">{errors.divisions.message}</p>
             )}
 
             <div className="space-y-3">
@@ -578,7 +584,7 @@ export default function RegisterPage() {
                     })}
                   </div>
                   {!countOk && picked.length > 0 && (
-                    <p className="text-red text-sm mt-2" role="alert">Choose {range} {d.name} style{cap === 1 ? '' : 's'}.</p>
+                    <p className="text-error text-sm mt-2" role="alert">Choose {range} {d.name} style{cap === 1 ? '' : 's'}.</p>
                   )}
                 </fieldset>
               );
@@ -650,7 +656,7 @@ export default function RegisterPage() {
                   ✓ Valid — {compDiscountPercent === 100 ? 'entry fee waived' : `${compDiscountPercent}% off applied`}
                 </p>
               )}
-              {codeStatus === 'invalid' && <p className="text-red text-xs mt-1">✗ Invalid or expired code</p>}
+              {codeStatus === 'invalid' && <p className="text-error text-xs mt-1">That code is not valid or has expired. Check it and try again.</p>}
             </div>
           </section>
 
@@ -661,10 +667,10 @@ export default function RegisterPage() {
               <p className="text-sm text-text-body mb-4">This competitor is under 18. A parent or guardian must provide their information and consent below.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Parent / Guardian Name *" error={errors.parent_name?.message}>
-                  <input {...register('parent_name', { required: isMinor ? 'Required for minors' : false })} className={inputCls(!!errors.parent_name)} />
+                  <input {...register('parent_name', { required: isMinor ? 'Enter a parent or guardian email. It is required for competitors under 18.' : false })} className={inputCls(!!errors.parent_name)} />
                 </Field>
                 <Field label="Parent / Guardian Email *" error={errors.parent_email?.message}>
-                  <input {...register('parent_email', { required: isMinor ? 'Required for minors' : false, pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })} type="email" className={inputCls(!!errors.parent_email)} />
+                  <input {...register('parent_email', { required: isMinor ? 'Enter a parent or guardian email. It is required for competitors under 18.' : false, pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email, like name@example.com.' } })} type="email" className={inputCls(!!errors.parent_email)} />
                 </Field>
               </div>
               <label className="flex gap-3 items-start mt-4 cursor-pointer">
@@ -675,7 +681,7 @@ export default function RegisterPage() {
                 />
                 <span className="text-sm text-text-body">I am the parent or legal guardian of this competitor and I consent to their participation in {contest.shortName}, including the liability waiver and photo/video consent on their behalf.</span>
               </label>
-              {errors.parent_consented && <p className="text-red text-xs mt-1">{errors.parent_consented.message}</p>}
+              {errors.parent_consented && <p className="text-error text-xs mt-1">{errors.parent_consented.message}</p>}
             </section>
           )}
 
@@ -787,13 +793,13 @@ export default function RegisterPage() {
                 <div className="mt-3">
                   <Field label="Scheduling Notes" hint="Up to 300 characters">
                     <textarea
-                      {...register('scheduling_notes', { maxLength: { value: 300, message: 'Max 300 characters' } })}
+                      {...register('scheduling_notes', { maxLength: { value: 300, message: 'Keep this under 300 characters.' } })}
                       className={`${inputCls(!!errors.scheduling_notes)} resize-none`}
                       rows={2}
                       placeholder={watch('performance_time_pref') === 'conflict' ? 'e.g. I need to be done by 2pm for a prior commitment' : 'Any notes for the organizers'}
                     />
                   </Field>
-                  {errors.scheduling_notes && <p className="text-red text-xs mt-1">{errors.scheduling_notes.message}</p>}
+                  {errors.scheduling_notes && <p className="text-error text-xs mt-1">{errors.scheduling_notes.message}</p>}
                 </div>
               )}
             </div>
@@ -841,7 +847,7 @@ export default function RegisterPage() {
               <div className="border-t border-navy-border p-4">
                 <label className="flex gap-3 items-start cursor-pointer">
                   <input
-                    {...register('code_of_conduct_accepted', { required: 'Required' })}
+                    {...register('code_of_conduct_accepted', { required: 'Check this box to accept the code of conduct.' })}
                     type="checkbox"
                     className="mt-0.5 w-4 h-4 accent-gold flex-shrink-0"
                   />
@@ -849,7 +855,7 @@ export default function RegisterPage() {
                     I agree to the {contest.shortName} Code of Conduct. I understand that violations may result in removal from the venue and a ban from future {contest.organizer.name} events. <strong className="text-white">This applies to all attendees regardless of status, sponsorship, or affiliation.</strong>
                   </span>
                 </label>
-                {errors.code_of_conduct_accepted && <p className="text-red text-xs mt-1">{errors.code_of_conduct_accepted.message}</p>}
+                {errors.code_of_conduct_accepted && <p className="text-error text-xs mt-1">{errors.code_of_conduct_accepted.message}</p>}
               </div>
             </div>
 
@@ -880,7 +886,7 @@ export default function RegisterPage() {
               <div className="p-4">
                 <label className="flex gap-3 items-start cursor-pointer">
                   <input
-                    {...register('liability_waiver_accepted', { required: 'Required' })}
+                    {...register('liability_waiver_accepted', { required: 'Check this box to accept the waiver.' })}
                     type="checkbox"
                     disabled={!liabilityScrolled}
                     className="mt-0.5 w-4 h-4 accent-gold flex-shrink-0"
@@ -895,12 +901,12 @@ export default function RegisterPage() {
                 )}
               </div>
             </div>
-            {errors.liability_waiver_accepted && <p className="text-red text-xs mb-3">{errors.liability_waiver_accepted.message}</p>}
+            {errors.liability_waiver_accepted && <p className="text-error text-xs mb-3">{errors.liability_waiver_accepted.message}</p>}
 
             {/* Photo/video */}
             <label className="flex gap-3 items-start cursor-pointer">
               <input
-                {...register('photo_video_consent', { required: 'Required' })}
+                {...register('photo_video_consent', { required: 'Check this box to agree to the photo and video release.' })}
                 type="checkbox"
                 className="mt-0.5 w-4 h-4 accent-gold flex-shrink-0"
               />
@@ -908,7 +914,7 @@ export default function RegisterPage() {
                 <strong className="text-white">Photo / Video Consent (Required):</strong> I consent to being photographed and recorded at {contest.shortName}, including livestream broadcast, and for use in {contest.organizer.name} promotional and archival materials.
               </span>
             </label>
-            {errors.photo_video_consent && <p className="text-red text-xs mt-1">{errors.photo_video_consent.message}</p>}
+            {errors.photo_video_consent && <p className="text-error text-xs mt-1">{errors.photo_video_consent.message}</p>}
           </section>
 
           {/* Server error */}
@@ -1203,24 +1209,26 @@ function SectionHeader({ tag, title }: { tag: string; title: string }) {
   );
 }
 
-function Field({ label, hint, error, children }: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
+function RegistrationClosed() {
   return (
-    <div>
-      <label className="block text-xs font-black tracking-caps text-gold mb-1.5">
-        {label}
-        {hint && <span className="text-gold/60 font-normal normal-case tracking-normal ml-1">— {hint}</span>}
-      </label>
-      {children}
-      {error && <p className="text-red text-xs mt-1">{error}</p>}
-    </div>
+    <>
+      <NavBar activePage="register" />
+      <main id="main-content" className="max-w-3xl mx-auto px-4 py-16">
+        <span className="inline-block bg-gold text-navy-deep text-xs font-black tracking-widest px-3 py-1 mb-3">{contest.shortName}</span>
+        <h1 className="font-display font-black text-4xl text-gold mb-4">Registration Is Closed</h1>
+        <p className="text-text-body leading-relaxed mb-3">
+          Thank you to every competitor who registered and took the stage at {contest.name} on {longDate()}.
+        </p>
+        <p className="text-text-body leading-relaxed mb-8">
+          See how the day went, or come throw with us at a free {contest.organizer.name} meetup. Questions? Email{' '}
+          <a className="text-gold underline" href={`mailto:${contest.contactEmail}`}>{contest.contactEmail}</a>.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a href="/results" className="inline-block bg-gold text-navy-deep text-xs font-black tracking-caps px-5 py-3 hover:bg-gold-light transition-colors">SEE THE RESULTS →</a>
+          <a href={contest.organizer.url} className="inline-block border border-gold text-gold text-xs font-black tracking-caps px-5 py-3 hover:bg-gold hover:text-navy-deep transition-colors">VISIT {contest.organizer.name.toUpperCase()} →</a>
+        </div>
+      </main>
+      <Footer />
+    </>
   );
-}
-
-function inputCls(hasError: boolean) {
-  return `w-full bg-navy-deep border ${hasError ? 'border-red' : 'border-navy-border'} px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold transition-colors`;
 }

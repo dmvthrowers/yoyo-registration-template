@@ -63,3 +63,10 @@ DATABASE_URL=postgres://... scripts/check-migrations.sh   # empty Postgres 15+
 
 CI needs placeholder `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to build
 (see `.github/workflows/ci.yml`).
+
+## Relationship to the live app
+
+This template is derived from [VA-States](https://github.com/dmvthrowers/VA-States), the live
+Virginia State Yo-Yo Contest registration app. **Fixes land in VA-States first**, then are ported
+here (shared pieces: `components/form/Field.tsx`, the SEO routes, the accessibility fixes). The two
+have drifted in other places (migrations, `db-backup.yml`, `DAY_OF.md`), so port by hand.
