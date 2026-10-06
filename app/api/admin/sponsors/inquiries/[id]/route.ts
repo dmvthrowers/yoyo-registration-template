@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { can } from '@/lib/roles';
 import { sponsorAuth } from '@/lib/sponsors-server';
 import { inquiryToSponsor } from '@/lib/sponsor-inquiry';
-import { contest } from '@/contest.config';
+import { loadSponsorSettings } from '@/lib/sponsor-settings-server';
 
 const body = z.object({ action: z.enum(['convert', 'dismiss']) }).strict();
 
@@ -54,7 +54,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest, ctx: {
   if (claimErr) return apiError('upstream_error', 'Could not convert the inquiry', requestId);
   if (!claimed?.length) return apiError('conflict', 'That inquiry was already handled.', requestId);
 
-  const { data: sponsor, error: sponsorErr } = await db.from('contest_sponsors').insert(inquiryToSponsor(inq, contest.sponsors)).select('id').single();
+  const { data: sponsor, error: sponsorErr } = await db.from('contest_sponsors').insert(inquiryToSponsor(inq, (await loadSponsorSettings()).settings)).select('id').single();
   if (sponsorErr || !sponsor) {
     // Put it back so it can be tried again; nothing was created.
     await db.from('contest_sponsor_inquiries').update({ status: 'new', handled_by: null, handled_at: null }).eq('id', id);

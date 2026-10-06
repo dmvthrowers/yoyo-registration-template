@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { Field, inputCls } from '@/components/form/Field';
 import { contest } from '@/contest.config';
+import type { TierDef } from '@/lib/sponsor-settings';
 
 type V = Record<string, string>;
 const EMPTY: V = {
@@ -25,14 +26,19 @@ function YesNo({ name, value, onChange }: { name: string; value: string; onChang
   );
 }
 
-interface TierState { id: string; label: string; amount: string; slots?: number; left?: number; full: boolean }
+interface TierState extends TierDef { left?: number; full: boolean }
+interface FormState { enabled: boolean; intro: string; otherChoices: { id: string; label: string }[]; contactMethods: string[]; paymentMethods: string[]; heardFrom: string[] }
 
 export default function SponsorPage() {
-  const cfg = contest.sponsors;
-  const [tiers, setTiers] = useState<TierState[]>(cfg.tiers.map((t) => ({ id: t.id, label: t.label, amount: t.amount, slots: t.slots, full: false })));
-  // Price comes from config; how many are left comes from the server.
+  // Starts from the config defaults; the saved settings (tiers, prices, options, slots left) come from the server.
+  const [cfg, setCfg] = useState<FormState>({ enabled: contest.sponsors.enabled, intro: contest.sponsors.intro, otherChoices: [...contest.sponsors.otherChoices], contactMethods: [...contest.sponsors.contactMethods], paymentMethods: [...contest.sponsors.paymentMethods], heardFrom: [...contest.sponsors.heardFrom] });
+  const [tiers, setTiers] = useState<TierState[]>(contest.sponsors.tiers.map((t) => ({ id: t.id, label: t.label, amount: t.amount, slots: t.slots, perks: t.perks ? [...t.perks] : undefined, full: false })));
   useEffect(() => {
-    fetch('/api/sponsor-inquiry').then((r) => (r.ok ? r.json() : null)).then((j: { tiers?: TierState[] } | null) => { if (j?.tiers) setTiers(j.tiers); }).catch(() => {});
+    fetch('/api/sponsor-inquiry').then((r) => (r.ok ? r.json() : null)).then((j: (FormState & { tiers: TierState[] }) | null) => {
+      if (!j?.tiers) return;
+      setTiers(j.tiers);
+      setCfg({ enabled: j.enabled, intro: j.intro, otherChoices: j.otherChoices, contactMethods: j.contactMethods, paymentMethods: j.paymentMethods, heardFrom: j.heardFrom });
+    }).catch(() => {});
   }, []);
   const [v, setV] = useState<V>(EMPTY);
   const [error, setError] = useState('');
@@ -127,12 +133,15 @@ export default function SponsorPage() {
                   full: t.full,
                   text: `${t.label} (${t.amount})`,
                   note: t.slots === undefined ? '' : t.full ? 'Full' : `${t.left} of ${t.slots} left`,
+                  perks: t.perks ?? [],
                 })),
-                ...cfg.otherChoices.map((c) => ({ id: c.id, full: false, text: c.label, note: '' })),
+                ...cfg.otherChoices.map((c) => ({ id: c.id, full: false, text: c.label, note: '', perks: [] as string[] })),
               ].map((o) => (
                 <label key={o.id} className={`flex items-center gap-2 text-sm ${o.full ? 'text-text-muted' : 'text-white'}`}>
                   <input type="radio" name="tier" value={o.id} checked={v.tier === o.id} disabled={o.full} onChange={() => setVal('tier')(o.id)} required />
-                  <span>{o.text}{o.note && <span className="text-gold-light"> · {o.note}</span>}</span>
+                  <span>{o.text}{o.note && <span className="text-gold-light"> · {o.note}</span>}
+                    {o.perks.length > 0 && <span className="block text-xs text-text-muted">{o.perks.join(' · ')}</span>}
+                  </span>
                 </label>
               ))}
             </div>

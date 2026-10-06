@@ -5,7 +5,7 @@ import { z } from 'zod';
  * from the `contest.sponsors` config so the same form works for any event, and tested without a database.
  */
 export interface SponsorFormConfig {
-  tiers: readonly { id: string; label: string; amount: string; slots?: number }[];
+  tiers: readonly { id: string; label: string; amount: string; slots?: number; perks?: readonly string[] }[];
   otherChoices: readonly { id: string; label: string }[];
   contactMethods: readonly string[];
   paymentMethods: readonly string[];
@@ -155,6 +155,7 @@ export interface TierAvailability {
   id: string;
   label: string;
   amount: string;
+  perks?: readonly string[];
   /** undefined = open tier */
   slots?: number;
   /** undefined for an open tier */
@@ -171,9 +172,9 @@ export function tierAvailability(
   sponsors: readonly { tier: string | null; status: string }[],
 ): TierAvailability[] {
   return tiers.map((t) => {
-    if (t.slots === undefined) return { id: t.id, label: t.label, amount: t.amount, full: false };
+    if (t.slots === undefined) return { id: t.id, label: t.label, amount: t.amount, ...(t.perks ? { perks: t.perks } : {}), full: false };
     const used = sponsors.filter((s) => (s.status === 'committed' || s.status === 'paid') && s.tier?.trim().toLowerCase() === t.label.toLowerCase()).length;
     const left = Math.max(0, t.slots - used);
-    return { id: t.id, label: t.label, amount: t.amount, slots: t.slots, left, full: left === 0 };
+    return { id: t.id, label: t.label, amount: t.amount, ...(t.perks ? { perks: t.perks } : {}), slots: t.slots, left, full: left === 0 };
   });
 }

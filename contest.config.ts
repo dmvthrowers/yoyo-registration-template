@@ -114,6 +114,8 @@ export const contest = {
    * this order and the review screen at /sponsors can match a choice back to a tier. `amount` is shown
    * as written ("$500+"), so it can say "Product or service only". Set `enabled: false` to hide the form.
    * Notices go to SPONSOR_NOTICE_EMAIL, else ADMIN_ALERT_EMAIL, else contactEmail.
+   * These are the defaults: staff can rename, reprice, add and remove tiers and edit the option lists on
+   * /sponsors/form, and the saved copy wins. `perks` is an optional list shown under a tier.
    */
   sponsors: {
     enabled: true,
@@ -128,7 +130,7 @@ export const contest = {
       { id: 'silver', label: 'Silver', amount: '$100+' },
       { id: 'bronze', label: 'Bronze', amount: '$50' },
       { id: 'in_kind', label: 'In-kind / community', amount: 'Product or service' },
-    ] as readonly { id: string; label: string; amount: string; slots?: number }[],
+    ] as readonly { id: string; label: string; amount: string; slots?: number; perks?: readonly string[] }[],
     /** Other things someone can ask for instead of (or before choosing) a tier. [] for none. */
     otherChoices: [
       { id: 'not_sure', label: 'Not sure yet' },

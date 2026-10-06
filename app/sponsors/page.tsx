@@ -103,6 +103,7 @@ function Board({ token }: { token: string }) {
       <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.6rem', margin: '0 0 0.25rem' }}>Sponsors</h1>
       <p style={{ color: 'var(--text-muted)', margin: '0 0 1rem', fontSize: '0.85rem' }}>
         {manage ? 'Track every sponsor from first contact to paid, and what each one is owed.' : 'Your sponsorship: what you committed and what we owe you.'}
+        {manage && <> <a href="/sponsors/form" style={{ color: 'var(--gold-light)' }}>Edit the sponsor form and tiers</a></>}
       </p>
       <p role="status" aria-live="polite" style={{ margin: '0 0 1rem', fontSize: '0.85rem', minHeight: '1.2rem', color: msg ? (msg.ok ? 'var(--gold-light)' : '#ff6b6b') : 'transparent' }}>{msg?.text ?? ''}</p>
 

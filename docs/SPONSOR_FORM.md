@@ -25,7 +25,7 @@ or not sure) and you send an invoice or link after review, so they can pay which
 - Edit `contest.sponsors` in `contest.config.ts`: tiers (label, price text, optional `slots`), other choices, contact
   methods, payment methods, "heard about us" options, and the intro. `enabled: false` hides the form.
 - Set `SPONSOR_NOTICE_EMAIL` (see `docs/SETUP.md`) and the usual Resend variables.
-- Apply migration `0048` (`contest_sponsor_inquiries`).
+- Apply migrations `0048` (`contest_sponsor_inquiries`) and `0049` (`contest_sponsor_form`, the saved settings).
 - Link to `/sponsor` from your site. Nothing else is needed on the site: it is a normal page of this app.
 - Grant the `organizer` role (or `admin`) to whoever reviews inquiries: they need `sponsors.manage`.
 

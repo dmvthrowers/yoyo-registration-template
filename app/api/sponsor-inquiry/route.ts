@@ -2,26 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { contest } from '@/contest.config';
 import { inquiryRow, inquirySchema } from '@/lib/sponsor-inquiry';
 import { loadTierAvailability } from '@/lib/sponsor-availability';
+import { loadSponsorSettings } from '@/lib/sponsor-settings-server';
 import { sendSponsorInquiryNoticeEmail, sendSponsorInquiryReceivedEmail } from '@/lib/email';
 
-/** GET /api/sponsor-inquiry: the tiers with price and how many slots are left (counts only). */
+/** GET /api/sponsor-inquiry: what the form shows (saved settings, else config) with tiers, price and slots left (counts only). */
 export const GET = withErrorHandling(async (requestId) => {
-  const tiers = await loadTierAvailability();
-  return NextResponse.json({ tiers }, { headers: { 'x-request-id': requestId, 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
+  const { settings } = await loadSponsorSettings();
+  const tiers = await loadTierAvailability(settings.tiers);
+  return NextResponse.json({ enabled: settings.enabled, intro: settings.intro, tiers, otherChoices: settings.otherChoices, contactMethods: settings.contactMethods, paymentMethods: settings.paymentMethods, heardFrom: settings.heardFrom }, { headers: { 'x-request-id': requestId, 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
 });
 
 /**
  * POST /api/sponsor-inquiry
  *
  * Public, unauthenticated "Want to sponsor?" form (docs/HUB_ROADMAP.md). No CAPTCHA service and no
- * analytics: a honeypot, a per-IP rate limit and validation against contest.sponsors. The row goes to
+ * analytics: a honeypot, a per-IP rate limit and validation against the saved sponsor form settings. The row goes to
  * contest_sponsor_inquiries (never straight into the sponsor pipeline); staff convert or dismiss it.
  */
 export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
-  if (!contest.sponsors.enabled) return apiError('not_found', 'Sponsor inquiries are not open.', requestId);
+  const { settings } = await loadSponsorSettings();
+  if (!settings.enabled) return apiError('not_found', 'Sponsor inquiries are not open.', requestId);
 
   // Real sponsors send one; a few retries after a typo are fine, a script is not.
   const allowed = await checkRateLimit(getClientIp(req.headers), 'sponsor-inquiry', 5, 60);
@@ -36,7 +38,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('bad_request', 'Invalid JSON body', requestId);
   }
 
-  const parsed = inquirySchema(contest.sponsors).safeParse(body);
+  const parsed = inquirySchema(settings).safeParse(body);
   if (!parsed.success) {
     return apiError('bad_request', parsed.error.issues[0]?.message ?? 'Check the form and try again.', requestId);
   }
@@ -46,7 +48,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   if (d._hp) return NextResponse.json({ ok: true }, { status: 201, headers: { 'x-request-id': requestId } });
 
   // A full tier can't be asked for; the form already disables it, this covers a page that was open a while.
-  const tierState = (await loadTierAvailability()).find((t) => t.id === d.tier);
+  const tierState = (await loadTierAvailability(settings.tiers)).find((t) => t.id === d.tier);
   if (tierState?.full) {
     return apiError('conflict', `${tierState.label} is full. Pick another tier, or choose "Not sure yet" and tell us what you have in mind.`, requestId);
   }
@@ -58,8 +60,8 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   }
 
   // Email is best effort: the inquiry is already saved, and the review screen shows it either way.
-  const tier = contest.sponsors.tiers.find((t) => t.id === d.tier)?.label
-    ?? contest.sponsors.otherChoices.find((c) => c.id === d.tier)?.label
+  const tier = settings.tiers.find((t) => t.id === d.tier)?.label
+    ?? settings.otherChoices.find((c) => c.id === d.tier)?.label
     ?? d.tier;
   const yn = (v: boolean | undefined) => (v === undefined ? 'no answer' : v ? 'yes' : 'no');
   const lines = [
