@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import RunOrderManager from '@/components/RunOrderManager';
+import MusicManager from '@/components/MusicManager';
 import VolunteerManager from '@/components/VolunteerManager';
 import BudgetManager from '@/components/BudgetManager';
 import SurveyResults from '@/components/SurveyResults';
@@ -46,8 +47,9 @@ interface Contestant {
   fee_cents: number;
   paid: boolean;
   paid_at: string | null;
-  music_filename: string | null;
   music_uploaded_at: string | null;
+  /** One track per division (from /api/ops/dashboard) */
+  music?: { division: string; filename: string; is_fallback: boolean }[];
   is_public: boolean;
   admin_notes: string | null;
   registration_source: string;
@@ -137,7 +139,7 @@ export default function AdminDashboardPage() {
 
   const [contestantQuery, setContestantQuery] = useState('');
   const [spectatorQuery, setSpectatorQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'run-order' | 'volunteers' | 'budget' | 'surveys'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'run-order' | 'music' | 'volunteers' | 'budget' | 'surveys'>('overview');
 
   const fetchStaffMe = async (accessToken: string): Promise<StaffMe | null> => {
     const res = await fetch('/api/staff/me', {
@@ -618,7 +620,7 @@ export default function AdminDashboardPage() {
         </header>
 
         <nav className="flex gap-2 mb-6 border-b border-navy-border overflow-x-auto">
-          {(['overview', 'run-order', 'volunteers', 'budget', 'surveys'] as const).map((tab) => (
+          {(['overview', 'run-order', 'music', 'volunteers', 'budget', 'surveys'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -627,7 +629,7 @@ export default function AdminDashboardPage() {
                 activeTab === tab ? 'border-gold text-gold' : 'border-transparent text-text-muted hover:text-text-body'
               }`}
             >
-              {tab === 'overview' ? 'Overview' : tab === 'run-order' ? 'Run Order' : tab === 'volunteers' ? 'Volunteers' : tab === 'budget' ? 'Budget' : 'Surveys'}
+              {tab === 'overview' ? 'Overview' : tab === 'run-order' ? 'Run Order' : tab === 'music' ? 'Music' : tab === 'volunteers' ? 'Volunteers' : tab === 'budget' ? 'Budget' : 'Surveys'}
             </button>
           ))}
         </nav>
@@ -637,6 +639,12 @@ export default function AdminDashboardPage() {
         {activeTab === 'run-order' && token && (
           <section className="border border-navy-border bg-navy p-4">
             <RunOrderManager token={token} />
+          </section>
+        )}
+
+        {activeTab === 'music' && token && (
+          <section className="border border-navy-border bg-navy p-4">
+            <MusicManager token={token} />
           </section>
         )}
 
@@ -1018,13 +1026,11 @@ function ContestantRow({
 }) {
   const [paid, setPaid] = useState(contestant.paid);
   const [isPublic, setIsPublic] = useState(contestant.is_public);
-  const [musicFilename, setMusicFilename] = useState(contestant.music_filename ?? '');
   const [adminNotes, setAdminNotes] = useState(contestant.admin_notes ?? '');
 
   useEffect(() => {
     setPaid(contestant.paid);
     setIsPublic(contestant.is_public);
-    setMusicFilename(contestant.music_filename ?? '');
     setAdminNotes(contestant.admin_notes ?? '');
   }, [contestant]);
 
@@ -1041,13 +1047,18 @@ function ContestantRow({
       <td className="py-2 pr-3">
         <input aria-label="Show contestant publicly" title="Show contestant publicly" type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} className="w-4 h-4 accent-gold" />
       </td>
-      <td className="py-2 pr-3 min-w-[170px]">
-        <input
-          value={musicFilename}
-          onChange={(e) => setMusicFilename(e.target.value)}
-          className="w-full bg-navy-deep border border-navy-border px-2 py-1.5 text-xs text-white focus:outline-none focus:border-gold"
-          placeholder="music filename"
-        />
+      <td className="py-2 pr-3 min-w-[170px] text-xs">
+        {/* Read-only: one track per division. Staff upload or replace them on the run order page. */}
+        {(contestant.music ?? []).length === 0 ? (
+          <span className="text-text-muted">no music</span>
+        ) : (
+          (contestant.music ?? []).map((m) => (
+            <div key={m.division} className={m.is_fallback ? 'text-gold' : 'text-[#7fff7f]'}>
+              <span className="font-bold">{m.division}</span>{' '}
+              {m.is_fallback ? 'LO-FI (no upload)' : m.filename}
+            </div>
+          ))
+        )}
       </td>
       <td className="py-2 pr-3 min-w-[220px]">
         <textarea
@@ -1067,7 +1078,6 @@ function ContestantRow({
           onClick={() => onSave(contestant.id, {
             ...(paid !== contestant.paid ? { paid } : {}),
             is_public: isPublic,
-            music_filename: musicFilename,
             admin_notes: adminNotes,
           })}
           className="bg-gold text-navy-deep font-black tracking-caps px-3 py-2 text-xs disabled:opacity-60"

@@ -167,12 +167,28 @@ integrity triggers need the caps and multipliers too.
 
 ### Music upload
 
-`/upload?token=…` (token minted at registration) → `POST /api/upload {action:'sign'}` checks
-payment, deadline (`contest.deadlines.musicUpload`), that a division uses music, mime (mp3/wav/m4a) and size (128 MB) and returns a
-signed upload URL for bucket `contest-music` → browser PUTs the file → `{action:'confirm'}`
-re-derives the filename server-side, checks the object exists, records it and emails a receipt.
-Known bug: the filename is built from the first music division only, so a player in two divisions
-overwrites their own track.
+One track per division the player entered that uses music (`contest_music`, unique on
+registration + division; a 1A + X player has two slots). `GET /api/upload?token=…` lists the slots.
+`/upload?token=…` (token minted at registration) → `POST /api/upload {action:'sign', division}`
+checks payment, deadline (`contest.deadlines.musicUpload`), the division, mime (mp3/wav/m4a) and
+size (128 MB) and returns a signed upload URL for bucket `contest-music` (file
+`DIVISION_Last_First.ext`) → browser PUTs the file → `{action:'confirm', division}` re-derives the
+filename server-side, checks the object exists, records the track, emails a receipt and writes
+`music_received` / `music_replaced` to the audit log. A slot that already holds the player's own
+track is refused (409) unless the request says `replace: true`, and the page asks first. Staff
+upload through `/api/admin/music-upload` (POST then PATCH) on the run order screens, per division.
+The DJ queue, run order, player page and CSV export all resolve the track per division
+(`lib/music.ts` has the pure helpers). The old single slot (`contest_registrations.music_path` /
+`music_filename`) is no longer read; a later migration can drop it.
+`contest_registrations.music_uploaded_at` is kept current by a trigger ("has a real track").
+
+Empty slots: the admin dashboard's **Music** tab shows slots per division, sends per-division
+reminder emails (`/api/admin/music-reminders`, dry-run by default, once a day per person and set
+of divisions, before the deadline) and assigns a random lo-fi track to every still-empty slot
+(`/api/admin/music-fallback`, dry-run by default, after the deadline unless forced, never
+overwrites a track). The lo-fi pool is the `lofi/` folder of the `contest-music` bucket: put only
+tracks you have the right to play there. A fallback is a `contest_music` row with `source =
+'fallback'`; staff see "LO-FI (no upload)", and a player's own upload replaces it.
 
 ## 5. Config and environments
 
