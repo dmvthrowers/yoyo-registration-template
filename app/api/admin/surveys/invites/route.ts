@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { requireAdminRequest } from '@/lib/auth/admin-request';
+import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { logAudit } from '@/lib/audit';
 import { sendSurveyInviteBatch, type SurveyInviteRecipient } from '@/lib/email';
 import { fetchStandings, winnersFrom, type Winner } from '@/lib/standings';
@@ -163,7 +163,7 @@ function hasResponded(r: SurveyInviteRecipient, responded: Set<string>): boolean
  * Surveys tab. No emails are sent.
  */
 export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
-  const auth = await requireAdminRequest(req, requestId);
+  const auth = await requireCapabilityRequest(req, requestId, 'players.view_private');
   if (auth instanceof NextResponse) return auth;
 
   const winners = await loadWinners();
@@ -199,7 +199,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
  * so a double-click never emails everyone twice.
  */
 export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
-  const auth = await requireAdminRequest(req, requestId);
+  const auth = await requireCapabilityRequest(req, requestId, 'players.view_private');
   if (auth instanceof NextResponse) return auth;
 
   const body = await req.json().catch(() => ({}));

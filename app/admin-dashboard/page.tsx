@@ -10,11 +10,13 @@ import BudgetManager from '@/components/BudgetManager';
 import SurveyResults from '@/components/SurveyResults';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { contest } from '@/contest.config';
+import { holdsAnyRole } from '@/lib/roles';
 
 interface StaffMe {
   auth_user_id: string;
   email: string;
   role: 'judge' | 'dj' | 'audio_tech' | 'admin';
+  grants?: { role: string; event?: string | null }[];
   display_name: string;
   is_active: boolean;
 }
@@ -198,7 +200,7 @@ export default function AdminDashboardPage() {
       }
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || me.role !== 'admin') {
+      if (!me || !me.is_active || !holdsAnyRole(me, ['admin'])) {
         setAuthError('This account is not authorized for admin dashboard access.');
         await supabase.auth.signOut();
         setToken(null);
@@ -224,7 +226,7 @@ export default function AdminDashboardPage() {
       }
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || me.role !== 'admin') {
+      if (!me || !me.is_active || !holdsAnyRole(me, ['admin'])) {
         setAuthError('This account is not authorized for admin dashboard access.');
         await supabase.auth.signOut();
         setToken(null);
@@ -287,7 +289,7 @@ export default function AdminDashboardPage() {
     }
 
     const me = await fetchStaffMe(data.session.access_token);
-    if (!me || !me.is_active || me.role !== 'admin') {
+    if (!me || !me.is_active || !holdsAnyRole(me, ['admin'])) {
       setAuthError('This account is not authorized for admin dashboard access.');
       await supabase.auth.signOut();
       return;

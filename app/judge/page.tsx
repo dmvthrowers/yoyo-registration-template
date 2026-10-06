@@ -9,6 +9,7 @@ import { contest, competition, divisionByCode } from '@/contest.config';
 import {
   betterOf, effectiveStyle, formatSummary, freestyleBreakdown, manualBest, manualBreakdown, panelMax, panelTotal, roundsOf, styleMultiplier, usesRunOrder as usesRunOrderFormat, usesScoreSheet,
 } from '@/lib/divisions-core';
+import { holdsAnyRole } from '@/lib/roles';
 
 /**
  * Score sheet per division comes from contest.config.ts → competition.divisions (docs/FORMATS.md):
@@ -68,6 +69,7 @@ interface StaffMe {
   auth_user_id: string;
   email: string;
   role: 'judge' | 'dj' | 'audio_tech' | 'admin';
+  grants?: { role: string; event?: string | null }[];
   display_name: string;
   is_active: boolean;
 }
@@ -219,7 +221,7 @@ export default function JudgePage() {
       if (!accessToken) return;
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || !JUDGING_ROLES.includes(me.role)) {
+      if (!me || !me.is_active || !holdsAnyRole(me, JUDGING_ROLES)) {
         setAuthError('This account is not authorized for judge access (judge or admin role needed).');
         await supabase.auth.signOut();
         setToken(null);
@@ -239,7 +241,7 @@ export default function JudgePage() {
       }
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || !JUDGING_ROLES.includes(me.role)) {
+      if (!me || !me.is_active || !holdsAnyRole(me, JUDGING_ROLES)) {
         setAuthError('This account is not authorized for judge access (judge or admin role needed).');
         await supabase.auth.signOut();
         setToken(null);
@@ -403,7 +405,7 @@ export default function JudgePage() {
     }
 
     const me = await fetchStaffMe(data.session.access_token);
-    if (!me || !me.is_active || !JUDGING_ROLES.includes(me.role)) {
+    if (!me || !me.is_active || !holdsAnyRole(me, JUDGING_ROLES)) {
       setAuthError('This account is not authorized for judge access (judge or admin role needed).');
       await supabase.auth.signOut();
       return;
@@ -609,7 +611,7 @@ export default function JudgePage() {
               </button>
             </div>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{staff.display_name}</span>
-            {staff.role === 'admin' && (
+            {holdsAnyRole(staff, ['admin']) && (
               <span title="You're signed in as an admin. Scores you submit count as a judge's." style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--navy-deep)', background: 'var(--gold)', padding: '0.15rem 0.45rem' }}>
                 ADMIN · SCORES COUNT
               </span>

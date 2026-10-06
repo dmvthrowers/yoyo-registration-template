@@ -223,12 +223,12 @@ export const PORTALS: readonly PortalDef[] = [
   { id: 'mc', label: 'MC', href: '/mc', needs: ['mc.script'], ready: true },
   { id: 'merch', label: 'Merch', href: '/merch', needs: ['merch.manage'], ready: true },
   { id: 'sponsors', label: 'Sponsors', href: '/sponsors', needs: ['sponsors.manage', 'sponsors.view'], ready: true },
-  { id: 'volunteers', label: 'Volunteers', href: '/volunteers', needs: ['volunteers.manage', 'volunteers.view'], ready: false },
-  { id: 'finance', label: 'Finance', href: '/budget', needs: ['finance.view', 'finance.edit'], ready: true },
+  { id: 'volunteers', label: 'Volunteers', href: '/volunteers', needs: ['volunteers.manage', 'volunteers.view'], ready: true },
+  { id: 'finance', label: 'Finance', href: '/finance', needs: ['finance.view', 'finance.edit'], ready: true },
   { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'], ready: true },
   { id: 'walk-up', label: 'Walk-up registration', href: '/admin/walk-up', needs: ['registrations.edit'], ready: true },
   { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'], ready: true },
-  { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'], ready: false },
+  { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'], ready: true },
 ];
 
 /** The portals this person can open, in menu order. */
@@ -296,6 +296,18 @@ export function wouldRemoveLastAdmin(
 
 /** Roles an admin can hand out by hand: everything except the automatic ones (player, volunteer). */
 export const GRANTABLE_ROLES: Role[] = ROLE_IDS.filter((r) => !('automatic' in ROLES[r] && ROLES[r].automatic));
+
+/**
+ * For screens that gate on a list of role names: true when the account's legacy `role` or any of its
+ * all-event grants is in `roles`. (The server still decides with `can()`; this only picks which page to show.)
+ */
+export function holdsAnyRole(
+  me: { role?: string | null; grants?: readonly { role: string; event?: string | null }[] | null },
+  roles: readonly string[],
+): boolean {
+  if (me.role && roles.includes(me.role)) return true;
+  return (me.grants ?? []).some((g) => !g.event && roles.includes(g.role));
+}
 
 /** Problems with the role table itself (empty = fine). Run by the tests. */
 export function roleIssues(): string[] {
