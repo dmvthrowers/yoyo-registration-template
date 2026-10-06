@@ -68,7 +68,7 @@ Today an account has one role (`contest_staff_accounts.role`: judge, dj, audio_t
 6. **New modules**, each its own PR behind its capability: stream, media (video and pictures), MC, merch, sponsors,
    finance/budget. Many already exist in some form (budget, volunteers, sponsors in the admin dashboard) and just
    need a home and a capability.
-7. **Staff and roles screen** (admin): invite by email, grant and revoke roles per event, see who holds what.
+7. **Staff and roles screen (started, `/admin/staff`):** list staff, add and remove roles (`/api/admin/roles`, needs `staff.manage`, so admin only). Revoking keeps history (`revoked_at`, `revoked_by`) and the last admin can't be removed. An account that has never had a grant row still runs on its legacy role; once it has any row the table alone decides, so revoking a last role doesn't fall back to the old column. New staff accounts get their first grant. Still to do: invite by email, per-event grants in the UI.
 8. **Contract:** once every route uses capabilities, drop the old single `role` column.
 
 ## Free tiers
