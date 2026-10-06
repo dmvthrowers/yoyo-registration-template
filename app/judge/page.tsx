@@ -7,7 +7,7 @@ import RunOrderManager from '@/components/RunOrderManager';
 import LadderSheet from '@/components/LadderSheet';
 import { contest, competition, divisionByCode } from '@/contest.config';
 import {
-  betterOf, effectiveStyle, formatSummary, freestyleBreakdown, manualBest, manualBreakdown, panelMax, panelTotal, roundsOf, styleMultiplier,
+  betterOf, effectiveStyle, formatSummary, freestyleBreakdown, manualBest, manualBreakdown, panelMax, panelTotal, roundsOf, styleMultiplier, usesRunOrder as usesRunOrderFormat, usesScoreSheet,
 } from '@/lib/divisions-core';
 
 /**
@@ -258,8 +258,8 @@ export default function JudgePage() {
 
   // What the selected division needs loaded: ladders and brackets load their own data.
   const format = divisionByCode(division)?.scoring.format;
-  const usesRunOrder = format === 'freestyle' || format === 'panel' || format === 'manual' || format === 'showcase';
-  const usesScores = format === 'freestyle' || format === 'panel' || format === 'manual';
+  const usesRunOrder = usesRunOrderFormat(format);
+  const usesScores = usesScoreSheet(format);
 
   useEffect(() => {
     if (!staff || !token) return;
