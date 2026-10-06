@@ -20,7 +20,7 @@ copy to open registration.
   early bird, walk-up surcharge and comp/discount codes. Presets for yo-yo, kendama, diabolo,
   spinning top and mixed contests
 - **Stripe Checkout** with webhook reconciliation, duplicate-payment protection and refunds
-- **Music upload** straight to storage, one track per division, with a deadline, reminder emails,
+- **Music upload** straight to storage, one track per division and round (and battle music, if you run battles), with a deadline, reminder emails,
   an optional lo-fi fallback for empty slots, and a DJ page that plays it in run order
 - **Spectator and volunteer RSVPs** with an opt-in public directory
 - **Formats for any skill toy contest**: freestyle (NYYL-style), panel-judged (Artistic

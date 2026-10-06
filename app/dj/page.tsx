@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
 import { contest, DIVISION_CODES, divisionByCode } from '@/contest.config';
-import { roundsOf } from '@/lib/divisions-core';
+import { formatRoutineTime, roundsOf } from '@/lib/divisions-core';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -24,6 +24,13 @@ interface Performer {
 
 interface RunOrderResponse {
   division: Division;
+  round?: number;
+  /** Round names; more than one means the division has rounds */
+  rounds?: string[];
+  /** How long a routine runs in this round, when the config says */
+  routine_seconds?: number | null;
+  /** Which of a player's tracks this round plays: 'main', a round's key, or an extra such as 'battle' */
+  music_slot?: string | null;
   source: 'run_order' | 'registration_order';
   performers: Performer[];
 }
@@ -47,6 +54,10 @@ export default function DJPage() {
 
   const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
   const [round, setRound] = useState(1);
+
+  // Routine timer: started when the track starts, so nobody cuts it before the routine ends.
+  const [timerStart, setTimerStart] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(0);
   const rounds = roundsOf(divisionByCode(division));
   const [data, setData] = useState<RunOrderResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,9 +69,13 @@ export default function DJPage() {
   const [trackBusyId, setTrackBusyId] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
 
+  // The track this round plays for each performer ('main', a round's key, or an extra such as 'battle').
+  const musicSlot = data?.music_slot ?? null;
+
   const fetchMusicUrl = useCallback(async (registrationId: string) => {
     if (!token) return null;
-    const res = await fetch(`/api/dj/music-url?registration_id=${registrationId}&division=${encodeURIComponent(division)}`, {
+    const slotParam = musicSlot ? `&slot=${encodeURIComponent(musicSlot)}` : '';
+    const res = await fetch(`/api/dj/music-url?registration_id=${registrationId}&division=${encodeURIComponent(division)}${slotParam}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
@@ -68,7 +83,7 @@ export default function DJPage() {
       throw new Error(body?.error?.message ?? 'Could not load music file.');
     }
     return await res.json() as { filename: string; play_url: string; download_url: string };
-  }, [token, division]);
+  }, [token, division, musicSlot]);
 
   const handlePlay = useCallback(async (registrationId: string) => {
     setTrackBusyId(registrationId);
@@ -178,6 +193,13 @@ export default function DJPage() {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [staff, token, division, round, fetchRunOrder]);
+
+  // Tick once a second while the routine timer runs.
+  useEffect(() => {
+    if (timerStart === null) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [timerStart]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -302,6 +324,7 @@ export default function DJPage() {
                   onClick={() => {
                     setDivision(div);
                     setRound(1);
+                    setTimerStart(null);
                     setData(null);
                   }}
                   aria-pressed={division === div}
@@ -382,7 +405,7 @@ export default function DJPage() {
                 key={r.name}
                 type="button"
                 aria-pressed={round === i + 1}
-                onClick={() => { setRound(i + 1); setData(null); }}
+                onClick={() => { setRound(i + 1); setData(null); setTimerStart(null); }}
                 style={{
                   background: 'transparent',
                   color: round === i + 1 ? 'var(--gold)' : 'var(--text-muted)',
@@ -401,6 +424,47 @@ export default function DJPage() {
           </div>
           {nowPerforming ? (
             <div style={{ background: '#1a1400', border: '2px solid var(--gold)', padding: '1.5rem 2rem' }}>
+              {data?.routine_seconds ? (() => {
+                const total = data.routine_seconds;
+                const elapsed = timerStart === null ? 0 : Math.max(0, Math.floor((nowMs - timerStart) / 1000));
+                const left = total - elapsed;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--navy-border)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--text-muted)' }}>ROUTINE LENGTH</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '1.4rem', color: '#fff', fontWeight: 700 }}>{formatRoutineTime(total)}</div>
+                    </div>
+                    {timerStart !== null && (
+                      <div role="timer" aria-live="off">
+                        <div style={{ fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--text-muted)' }}>
+                          {left > 0 ? 'TIME LEFT' : 'ROUTINE OVER'}
+                        </div>
+                        <div style={{ fontFamily: 'monospace', fontSize: '1.4rem', fontWeight: 700, color: left > 0 ? 'var(--gold)' : '#7fff7f' }}>
+                          {left > 0 ? formatRoutineTime(left) : `+${formatRoutineTime(-left)}`}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                      <button
+                        type="button"
+                        onClick={() => { const t = Date.now(); setNowMs(t); setTimerStart(t); }}
+                        style={{ background: 'var(--gold)', color: 'var(--navy-deep)', border: 'none', padding: '0.4rem 0.9rem', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', cursor: 'pointer' }}
+                      >
+                        {timerStart === null ? 'START TIMER' : 'RESTART'}
+                      </button>
+                      {timerStart !== null && (
+                        <button
+                          type="button"
+                          onClick={() => setTimerStart(null)}
+                          style={{ background: 'transparent', color: 'var(--text-body)', border: '1px solid var(--navy-border)', padding: '0.4rem 0.9rem', fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.05em', cursor: 'pointer' }}
+                        >
+                          CLEAR
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })() : null}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>

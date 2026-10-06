@@ -37,6 +37,7 @@ interface UnscheduledRow {
 
 interface AdminRunOrderData {
   division: Division;
+  music_slot?: string | null;
   ordered: ScheduledRow[];
   unscheduled: UnscheduledRow[];
 }
@@ -189,11 +190,12 @@ export default function AdminRunOrderPage() {
   }
 
   async function handleMusicUpload(registration_id: string, file: File) {
-    // One track per division: this uploads for the division shown. Never replace silently.
+    // Uploads the track this round plays (data.music_slot): the division's routine track, this
+    // round's track, or battle music. Never replace silently.
     const current = regMap.get(registration_id);
     let replace = false;
     if (current?.music_filename && !current.music_fallback) {
-      if (!confirm(`Replace ${current.music_filename} with ${file.name} for ${division}? The old track is removed.`)) return;
+      if (!confirm(`Replace ${current.music_filename} with ${file.name} for ${division}${data?.music_slot && data.music_slot !== 'main' ? ` ${data.music_slot}` : ''}? The old track is removed.`)) return;
       replace = true;
     }
     setUploadStatus((s) => ({ ...s, [registration_id]: 'uploading' }));
@@ -201,7 +203,7 @@ export default function AdminRunOrderPage() {
       const res = await fetch('/api/admin/music-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registration_id, division, filename: file.name, replace }),
+        body: JSON.stringify({ registration_id, division, slot: data?.music_slot ?? undefined, filename: file.name, replace }),
       });
       if (!res.ok) { setUploadStatus((s) => ({ ...s, [registration_id]: 'error' })); return; }
       const { upload_url, filename } = await res.json() as { upload_url: string; filename: string };
@@ -214,7 +216,7 @@ export default function AdminRunOrderPage() {
       const done = await fetch('/api/admin/music-upload', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registration_id, division, filename }),
+        body: JSON.stringify({ registration_id, division, slot: data?.music_slot ?? undefined, filename }),
       });
       if (!done.ok) { setUploadStatus((s) => ({ ...s, [registration_id]: 'error' })); return; }
       setUploadStatus((s) => ({ ...s, [registration_id]: 'done' }));
