@@ -222,7 +222,7 @@ export const PORTALS: readonly PortalDef[] = [
   { id: 'media', label: 'Video & pictures', href: '/media', needs: ['media.upload', 'media.publish'], ready: false },
   { id: 'mc', label: 'MC', href: '/mc', needs: ['mc.script'], ready: false },
   { id: 'merch', label: 'Merch', href: '/merch', needs: ['merch.manage'], ready: false },
-  { id: 'sponsors', label: 'Sponsors', href: '/sponsors', needs: ['sponsors.manage', 'sponsors.view'], ready: false },
+  { id: 'sponsors', label: 'Sponsors', href: '/sponsors', needs: ['sponsors.manage', 'sponsors.view'], ready: true },
   { id: 'volunteers', label: 'Volunteers', href: '/volunteers', needs: ['volunteers.manage', 'volunteers.view'], ready: false },
   { id: 'finance', label: 'Finance', href: '/budget', needs: ['finance.view', 'finance.edit'], ready: true },
   { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'], ready: true },
