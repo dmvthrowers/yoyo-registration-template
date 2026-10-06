@@ -1,25 +1,27 @@
 import type { MetadataRoute } from 'next';
+import { contest } from '@/contest.config';
 
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
+  // Fixed to the contest date: a build-time `new Date()` made every page look changed on every deploy.
+  const lastModified = new Date(contest.date);
 
   const routes = [
     '/',
     '/spectate',
     '/policies',
     '/fee-calculator',
-    '/competitors',
+    '/directory',
     '/results',
     '/schedule',
     '/side-events',
-    '/spectators',
+    '/results/bracket',
   ];
 
   return routes.map((route) => ({
     url: `${SITE_URL}${route}`,
-    lastModified: now,
+    lastModified,
     changeFrequency: route === '/' ? 'daily' : 'weekly',
     priority: route === '/' ? 1 : 0.7,
   }));

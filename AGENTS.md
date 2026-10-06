@@ -22,6 +22,7 @@ changes with production care, not prototype care.
 - `docs/FORMATS.md` — the formats (freestyle, panel, manual, ladder, bracket, showcase), team
   entries, rounds, and the API contract for each. Read it before touching judging or results.
 - `lib/surveys.ts` — survey questions.
+- `docs/HUB_ROADMAP.md` — where this is heading (any toy, any format, multi-day and multi-event) and the stages to get there. Read it before adding anything event- or toy-specific.
 - `docs/ROLES.md` — roles, capabilities and the single-pane portal (`lib/roles.ts`). Check permissions with `can()`, never with `role ===`; admin holds every capability.
 - `docs/SETUP.md` — the human setup checklist. Keep it accurate when you change setup steps.
 - `docs/REPO_GUIDE.md` — architecture and file map. `docs/STRIPE_PAYMENTS.md` — read before
@@ -63,3 +64,10 @@ DATABASE_URL=postgres://... scripts/check-migrations.sh   # empty Postgres 15+
 
 CI needs placeholder `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to build
 (see `.github/workflows/ci.yml`).
+
+## Relationship to the live app
+
+This template is derived from [VA-States](https://github.com/dmvthrowers/VA-States), the live
+Virginia State Yo-Yo Contest registration app. **Fixes land in VA-States first**, then are ported
+here (shared pieces: `components/form/Field.tsx`, the SEO routes, the accessibility fixes). The two
+have drifted in other places (migrations, `db-backup.yml`, `DAY_OF.md`), so port by hand.

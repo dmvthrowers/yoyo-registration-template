@@ -8,6 +8,7 @@ import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import {
   betterOf, compareScores, effectiveStyle, freestyleBreakdown, manualBest, manualBreakdown, panelTotal, roundsOf, styleMultiplier,
   type FreestyleSheet, type ScoreBreakdown,
+  hasScoreSheet,
 } from '@/lib/divisions-core';
 
 type Division = string;
@@ -50,7 +51,7 @@ const scoreSubmitSchema = z.object({
   const sc = d.scoring;
   const issue = (message: string, path: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: [path] });
   if (data.round > roundsOf(d).length) issue(`${d.name} has ${roundsOf(d).length} round(s)`, 'round');
-  if (sc.format === 'ladder' || sc.format === 'bracket' || sc.format === 'showcase') {
+  if (!hasScoreSheet(sc)) {
     issue(`${d.name} isn't scored on a score sheet`, 'division');
     return;
   }

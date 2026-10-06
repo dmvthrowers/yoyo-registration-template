@@ -14,6 +14,18 @@ Need a public contest website too? Pair it with
 **Start here: [`docs/SETUP.md`](docs/SETUP.md)**, the step-by-step checklist from a blank
 copy to open registration.
 
+## Quick start
+
+- **Time:** about 2 hours the first time. **Cost:** free accounts on GitHub, Vercel, Supabase and
+  Stripe (Stripe charges its normal card fees only when you take real payments).
+- **Skills:** you can edit one settings file and paste keys into Vercel.
+1. Click **Use this template**, then **Deploy with Vercel** (the button above).
+2. Edit `contest.config.ts`: name, date, venue, divisions, prices.
+3. Create a Supabase project and run the migrations in `supabase/migrations/`.
+4. Add your Stripe test keys, register with a test card, and check the confirmation email.
+
+`docs/SETUP.md` walks through every step in order.
+
 ## What you get
 
 - **Competitor registration** for any skill toy: your own divisions, styles, combo pricing,
@@ -92,11 +104,7 @@ CI runs typecheck, lint, tests, build and the migration replay on every pull req
 
 ## Security
 
-- Never commit real keys. `.env.local` is gitignored; production values live in Vercel.
-- Staff sign in with Supabase Auth plus a role row. There's no shared admin password.
-- Row level security is on for every table; the browser never gets the service-role key.
-- The Stripe webhook verifies signatures, and prices always come from the database.
-- CSP and security headers are in `next.config.js`.
+See [`SECURITY.md`](SECURITY.md) for what's built in and how to report a problem.
 
 ## License
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Analytics } from '@vercel/analytics/next';
+import AnalyticsScrubbed from '@/components/AnalyticsScrubbed';
 import './globals.css';
 import { contest, presentedLine, whenWhere } from '@/contest.config';
 
@@ -30,6 +30,7 @@ export const metadata: Metadata = {
     description: `Registration, results and run order — ${whenWhere}`,
     images: [contest.logos.large],
   },
+  alternates: { canonical: '/' },
   robots: { index: true, follow: true },
 };
 
@@ -77,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a href="#main-content" className="skip-link">Skip to main content</a>
         {children}
-        <Analytics />
+        <AnalyticsScrubbed />
       </body>
     </html>
   );
