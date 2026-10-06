@@ -9,7 +9,7 @@ import { contest } from '@/contest.config';
  * then /api/staff/me must report an active account with one of `roles`. Renders children
  * with the access token once signed in. Shared by /judge/battles and /admin/brackets.
  */
-type Role = 'judge' | 'dj' | 'audio_tech' | 'admin';
+type Role = string;
 interface StaffMe { auth_user_id: string; email: string; role: Role; display_name: string; is_active: boolean; grants?: { role: string; event?: string | null }[] }
 
 const supabase = createBrowserClient();
