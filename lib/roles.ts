@@ -204,25 +204,31 @@ export interface PortalDef {
   href: string;
   /** Shown when the person holds any of these */
   needs: readonly Capability[];
+  /** False while the screen behind `href` doesn't exist yet; the menu shows it as "coming soon" instead of a dead link */
+  ready: boolean;
 }
 
 export const PORTALS: readonly PortalDef[] = [
-  { id: 'my', label: 'My registration', href: '/player', needs: ['self.registration'] },
-  { id: 'my-music', label: 'My music', href: '/upload', needs: ['self.music'] },
-  { id: 'my-shifts', label: 'My shifts', href: '/volunteer', needs: ['self.shifts'] },
-  { id: 'judge', label: 'Judging', href: '/judge', needs: ['scores.enter', 'scores.review'] },
-  { id: 'day', label: 'Run the day', href: '/admin/schedule', needs: ['schedule.run'] },
-  { id: 'dj', label: 'Music / DJ', href: '/dj', needs: ['music.play', 'music.manage'] },
-  { id: 'stream', label: 'Stream', href: '/stream', needs: ['stream.control', 'stream.tech'] },
-  { id: 'media', label: 'Video & pictures', href: '/media', needs: ['media.upload', 'media.publish'] },
-  { id: 'mc', label: 'MC', href: '/mc', needs: ['mc.script'] },
-  { id: 'merch', label: 'Merch', href: '/merch', needs: ['merch.manage'] },
-  { id: 'sponsors', label: 'Sponsors', href: '/sponsors', needs: ['sponsors.manage', 'sponsors.view'] },
-  { id: 'volunteers', label: 'Volunteers', href: '/volunteers', needs: ['volunteers.manage', 'volunteers.view'] },
-  { id: 'finance', label: 'Finance', href: '/finance', needs: ['finance.view', 'finance.edit'] },
-  { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'] },
-  { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'] },
-  { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'] },
+  { id: 'my', label: 'My registration', href: '/player', needs: ['self.registration'], ready: true },
+  { id: 'my-music', label: 'My music', href: '/upload', needs: ['self.music'], ready: true },
+  { id: 'my-shifts', label: 'My shifts', href: '/volunteer', needs: ['self.shifts'], ready: true },
+  { id: 'judge', label: 'Judging', href: '/judge', needs: ['scores.enter', 'scores.review'], ready: true },
+  { id: 'brackets', label: 'Battle brackets', href: '/admin/brackets', needs: ['brackets.run'], ready: true },
+  { id: 'day', label: 'Run the day', href: '/admin/schedule', needs: ['schedule.run'], ready: true },
+  { id: 'run-order', label: 'Run order', href: '/admin/run-order', needs: ['runorder.edit'], ready: true },
+  { id: 'side-events', label: 'Side events', href: '/staff/side-events', needs: ['schedule.run'], ready: true },
+  { id: 'dj', label: 'Music / DJ', href: '/dj', needs: ['music.play', 'music.manage'], ready: true },
+  { id: 'stream', label: 'Stream', href: '/stream', needs: ['stream.control', 'stream.tech'], ready: false },
+  { id: 'media', label: 'Video & pictures', href: '/media', needs: ['media.upload', 'media.publish'], ready: false },
+  { id: 'mc', label: 'MC', href: '/mc', needs: ['mc.script'], ready: false },
+  { id: 'merch', label: 'Merch', href: '/merch', needs: ['merch.manage'], ready: false },
+  { id: 'sponsors', label: 'Sponsors', href: '/sponsors', needs: ['sponsors.manage', 'sponsors.view'], ready: false },
+  { id: 'volunteers', label: 'Volunteers', href: '/volunteers', needs: ['volunteers.manage', 'volunteers.view'], ready: false },
+  { id: 'finance', label: 'Finance', href: '/budget', needs: ['finance.view', 'finance.edit'], ready: true },
+  { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'], ready: true },
+  { id: 'walk-up', label: 'Walk-up registration', href: '/admin/walk-up', needs: ['registrations.edit'], ready: true },
+  { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'], ready: false },
+  { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'], ready: false },
 ];
 
 /** The portals this person can open, in menu order. */
