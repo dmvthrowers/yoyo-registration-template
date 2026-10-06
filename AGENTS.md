@@ -23,6 +23,7 @@ changes with production care, not prototype care.
   entries, rounds, and the API contract for each. Read it before touching judging or results.
 - `lib/surveys.ts` — survey questions.
 - `docs/HUB_ROADMAP.md` — where this is heading (any toy, any format, multi-day and multi-event) and the stages to get there. Read it before adding anything event- or toy-specific.
+- `docs/ROLES.md` — roles, capabilities and the single-pane portal (`lib/roles.ts`). Check permissions with `can()`, never with `role ===`; admin holds every capability.
 - `docs/SETUP.md` — the human setup checklist. Keep it accurate when you change setup steps.
 - `docs/REPO_GUIDE.md` — architecture and file map. `docs/STRIPE_PAYMENTS.md` — read before
   touching anything that moves money.
