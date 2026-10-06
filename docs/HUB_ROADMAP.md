@@ -152,7 +152,12 @@ Roles and the portal (`docs/ROLES.md`) cut across all stages and ship in their o
 
 ## Suggested next steps
 
-1. Extract the scoring-format interface and registry (no behavior change; makes formats pluggable).
+Two tracks run side by side: the **event/organization model** below, and **roles and the portal** (`docs/ROLES.md`:
+core done, then a grants table, identity with roles, routes on capabilities, the single-pane portal, and the new
+modules for stream, media, MC, merch, sponsors and finance).
+
+1. Extract the scoring-format interface and registry (no behavior change; makes formats pluggable). Started: the
+   capability table is in (`FORMATS` in `lib/divisions-core.ts`); the standings and results screens come next.
 2. Add `event_id` with a default to the tables, plus tests that a one-event deployment behaves as before.
 3. Turn `contest`/`dayOf` into `events` with a default event; build the multi-day schedule.
 4. Per-event routes and results; cross-competition bundles.
