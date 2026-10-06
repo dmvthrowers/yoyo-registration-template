@@ -71,6 +71,12 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('upstream_error', 'Created auth account, but could not save staff record', requestId);
   }
 
+  // Keep the grants table in step with the account's first role. If this fails the legacy role still applies.
+  const { error: grantError } = await supabase
+    .from('contest_role_grants')
+    .insert({ auth_user_id: userData.user.id, role, granted_by: auth.authUserId });
+  if (grantError) console.error('[admin/staff] could not record the first role grant:', grantError.message);
+
   return NextResponse.json(
     {
       ok: true,

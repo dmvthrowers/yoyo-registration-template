@@ -227,7 +227,7 @@ export const PORTALS: readonly PortalDef[] = [
   { id: 'finance', label: 'Finance', href: '/budget', needs: ['finance.view', 'finance.edit'], ready: true },
   { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'], ready: true },
   { id: 'walk-up', label: 'Walk-up registration', href: '/admin/walk-up', needs: ['registrations.edit'], ready: true },
-  { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'], ready: false },
+  { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'], ready: true },
   { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'], ready: false },
 ];
 
@@ -269,6 +269,33 @@ export function grantsFromRows(rows: readonly RoleGrantRow[] | null | undefined)
   }
   return out;
 }
+
+/** One row per (account, grant), for checking a change against the people who hold admin. */
+export interface AdminCheckRow extends RoleGrantRow {
+  auth_user_id: string;
+  is_active: boolean;
+}
+
+/**
+ * True when revoking this grant would leave nobody holding admin for every event. Only active accounts with a
+ * live admin grant that isn't limited to one event count. Revoking anything other than such an admin grant
+ * never blocks.
+ */
+export function wouldRemoveLastAdmin(
+  rows: readonly AdminCheckRow[],
+  revoke: { auth_user_id: string; role: string; event_id?: string | null },
+): boolean {
+  if (revoke.role !== 'admin' || revoke.event_id) return false;
+  const others = new Set<string>();
+  for (const r of rows) {
+    if (r.role !== 'admin' || r.revoked_at || r.event_id || !r.is_active) continue;
+    if (r.auth_user_id !== revoke.auth_user_id) others.add(r.auth_user_id);
+  }
+  return others.size === 0;
+}
+
+/** Roles an admin can hand out by hand: everything except the automatic ones (player, volunteer). */
+export const GRANTABLE_ROLES: Role[] = ROLE_IDS.filter((r) => !('automatic' in ROLES[r] && ROLES[r].automatic));
 
 /** Problems with the role table itself (empty = fine). Run by the tests. */
 export function roleIssues(): string[] {

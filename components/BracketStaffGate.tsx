@@ -10,7 +10,7 @@ import { contest } from '@/contest.config';
  * with the access token once signed in. Shared by /judge/battles and /admin/brackets.
  */
 type Role = 'judge' | 'dj' | 'audio_tech' | 'admin';
-interface StaffMe { auth_user_id: string; email: string; role: Role; display_name: string; is_active: boolean }
+interface StaffMe { auth_user_id: string; email: string; role: Role; display_name: string; is_active: boolean; grants?: { role: string; event?: string | null }[] }
 
 const supabase = createBrowserClient();
 
@@ -35,7 +35,7 @@ export default function BracketStaffGate({ title, roles, children, landmark = tr
     if (!accessToken) { setStaff(null); return; }
     const res = await fetch('/api/staff/me', { headers: { Authorization: `Bearer ${accessToken}` } }).catch(() => null);
     const me = res?.ok ? (await res.json()) as StaffMe : null;
-    if (!me || !me.is_active || !rolesKey.split(',').includes(me.role)) {
+    if (!me || !me.is_active || !(rolesKey.split(',').includes(me.role) || me.grants?.some((g) => !g.event && rolesKey.split(',').includes(g.role)))) {
       setAuthError(deny);
       await supabase.auth.signOut();
       setToken(null);

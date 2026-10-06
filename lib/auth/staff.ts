@@ -47,15 +47,17 @@ export async function getStaffIdentityFromToken(token: string): Promise<StaffIde
 
   if (staffErr || !staff) return null;
 
-  // Grants table (migration 0044). If it can't be read (not applied yet) or has nothing for this person,
-  // the legacy role stands in, so an account never loses access during the move.
+  // Grants table (migration 0044). The legacy role stands in only when the table can't be read (not applied
+  // yet) or this account has never had a grant row, so nobody loses access during the move. Once an account
+  // has any row, the table decides, including revoked rows: revoking someone's last role must not fall
+  // back to the old column and quietly give it back.
   const { data: grantRows, error: grantErr } = await supabase
     .from('contest_role_grants')
     .select('role, event_id, revoked_at')
-    .eq('auth_user_id', authData.user.id)
-    .is('revoked_at', null);
-  const fromTable = grantErr ? [] : grantsFromRows(grantRows);
-  const grants = fromTable.length > 0 ? fromTable : grantsFromLegacyRole(staff.role);
+    .eq('auth_user_id', authData.user.id);
+  const grants = grantErr || !grantRows || grantRows.length === 0
+    ? grantsFromLegacyRole(staff.role)
+    : grantsFromRows(grantRows);
 
   return {
     authUserId: staff.auth_user_id,
