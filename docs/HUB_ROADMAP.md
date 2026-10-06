@@ -119,8 +119,22 @@ layer, with the notice address in config. Inquiries hold contact details, so the
 purge plan (converted ones live on in the pipeline; dismissed ones are deleted after a set time). A deployment
 that already has an old form can import its submissions (CSV) as prospects.
 
-Open: whether to show prices, whether sponsors ever pay online or always by invoice, and whether a sponsor can
-log in to see their own tier (the `sponsor` role already can, once an organizer links the account).
+Shape of the form, from a real sponsor package (kept generic here; each organizer's tiers, prices and dates live in
+config): **tiers** with a name, a minimum cash amount, an optional slot cap and a benefit list; an **in-kind**
+route where product or services are counted at retail value (a per-tier equivalent), also alongside cash; an
+optional **table add-on** with a price, a discounted price for clubs and a total cap; **brand team players** for
+the top tiers; a **logo upload** with accepted formats and a deadline; **shipping** for advance product with a
+cut-off date; contact and brand details. Slot caps are enforced against committed and paid sponsors, and the form
+shows what is left. Converting an inquiry creates the sponsor with that tier's deliverables already listed as a
+checklist (banner logo, shout-outs, posts, table, recap), which `/sponsors` already tracks. Payment stays outside
+the form by default (an invoice link after review); online payment is a later option.
+
+Outreach lists (prospects found by research) belong in the same pipeline as `prospect` rows with their notes,
+admin-only, rather than in documents, so contacting, converting and reporting happen in one place.
+
+Open: whether to show prices and remaining slots on the public form, whether sponsors ever pay online or always by
+invoice, and whether a sponsor can log in to see their own tier (the `sponsor` role already can, once an organizer
+links the account).
 
 ## Forms on our own system (future state)
 
