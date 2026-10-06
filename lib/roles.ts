@@ -239,6 +239,31 @@ export function grantsFromLegacyRole(role: string | null | undefined): RoleGrant
   return isRole(role) ? [{ role }] : [];
 }
 
+/** A row of `contest_role_grants`, as read from the database. */
+export interface RoleGrantRow {
+  role: string;
+  event_id?: string | null;
+  revoked_at?: string | null;
+}
+
+/**
+ * Grants from database rows: revoked rows and roles this code doesn't know are dropped, repeats collapse.
+ * Anything unrecognised gives no power rather than an error.
+ */
+export function grantsFromRows(rows: readonly RoleGrantRow[] | null | undefined): RoleGrant[] {
+  const seen = new Set<string>();
+  const out: RoleGrant[] = [];
+  for (const r of rows ?? []) {
+    if (r.revoked_at || !isRole(r.role)) continue;
+    const event = r.event_id ?? null;
+    const key = `${r.role}|${event ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(event ? { role: r.role, event } : { role: r.role });
+  }
+  return out;
+}
+
 /** Problems with the role table itself (empty = fine). Run by the tests. */
 export function roleIssues(): string[] {
   const out: string[] = [];

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { grantsFromLegacyRole, grantsFromRows, type RoleGrant } from '@/lib/roles';
 
 export type StaffRole = 'judge' | 'dj' | 'audio_tech' | 'admin';
 
@@ -12,7 +13,10 @@ export interface StaffSocials {
 export interface StaffIdentity {
   authUserId: string;
   email: string;
+  /** The account's single legacy role. Old callers still read this; new code should use `grants` with `can()`. */
   role: StaffRole;
+  /** Every role the account holds (live grants, or the legacy role when the grants table has none or isn't readable). */
+  grants: RoleGrant[];
   displayName: string;
   isActive: boolean;
   pronouns: string | null;
@@ -43,10 +47,21 @@ export async function getStaffIdentityFromToken(token: string): Promise<StaffIde
 
   if (staffErr || !staff) return null;
 
+  // Grants table (migration 0044). If it can't be read (not applied yet) or has nothing for this person,
+  // the legacy role stands in, so an account never loses access during the move.
+  const { data: grantRows, error: grantErr } = await supabase
+    .from('contest_role_grants')
+    .select('role, event_id, revoked_at')
+    .eq('auth_user_id', authData.user.id)
+    .is('revoked_at', null);
+  const fromTable = grantErr ? [] : grantsFromRows(grantRows);
+  const grants = fromTable.length > 0 ? fromTable : grantsFromLegacyRole(staff.role);
+
   return {
     authUserId: staff.auth_user_id,
     email: authData.user.email.toLowerCase(),
     role: staff.role as StaffRole,
+    grants,
     displayName: staff.display_name,
     isActive: Boolean(staff.is_active),
     pronouns: staff.pronouns ?? null,
