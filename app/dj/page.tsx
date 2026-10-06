@@ -5,6 +5,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
 import { contest, DIVISION_CODES, divisionByCode } from '@/contest.config';
 import { formatRoutineTime, roundsOf } from '@/lib/divisions-core';
+import { holdsAnyRole } from '@/lib/roles';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -39,6 +40,7 @@ interface StaffMe {
   auth_user_id: string;
   email: string;
   role: 'judge' | 'dj' | 'audio_tech' | 'admin';
+  grants?: { role: string; event?: string | null }[];
   display_name: string;
   is_active: boolean;
 }
@@ -148,7 +150,7 @@ export default function DJPage() {
       if (!accessToken) return;
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || !['dj', 'audio_tech', 'admin'].includes(me.role)) {
+      if (!me || !me.is_active || !holdsAnyRole(me, ['dj', 'audio_tech', 'admin'])) {
         setAuthError('This account is not authorized for DJ/audio access.');
         await supabase.auth.signOut();
         setToken(null);
@@ -168,7 +170,7 @@ export default function DJPage() {
       }
 
       const me = await fetchStaffMe(accessToken);
-      if (!me || !me.is_active || !['dj', 'audio_tech', 'admin'].includes(me.role)) {
+      if (!me || !me.is_active || !holdsAnyRole(me, ['dj', 'audio_tech', 'admin'])) {
         setAuthError('This account is not authorized for DJ/audio access.');
         await supabase.auth.signOut();
         setToken(null);
@@ -216,7 +218,7 @@ export default function DJPage() {
     }
 
     const me = await fetchStaffMe(data.session.access_token);
-    if (!me || !me.is_active || !['dj', 'audio_tech', 'admin'].includes(me.role)) {
+    if (!me || !me.is_active || !holdsAnyRole(me, ['dj', 'audio_tech', 'admin'])) {
       setAuthError('This account is not authorized for DJ/audio access.');
       await supabase.auth.signOut();
       return;
