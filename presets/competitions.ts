@@ -96,7 +96,7 @@ export const yoyoFull: CompetitionConfig = {
   divisions: [
     {
       code: '1A', name: '1A — Single String', description: 'One yo-yo on one string. Prelims, then the top 10 return for finals.',
-      priceCents: 3000, music: true, scoring: nyyl(),
+      priceCents: 3000, music: { perRound: true }, scoring: nyyl(),
       rounds: [{ name: 'Prelims', advance: 10 }, { name: 'Finals' }],
     },
     {
@@ -190,7 +190,7 @@ export const kendama: CompetitionConfig = {
   gear: { yoyo: 'Kendama', string: 'String', counterweight: '' },
   divisions: [
     {
-      code: 'KFREE', name: 'Kendama Freestyle', description: 'A timed freestyle to music, judged as a whole routine.', priceCents: 2500, music: true,
+      code: 'KFREE', name: 'Kendama Freestyle', description: 'A timed freestyle to music, judged as a whole routine.', priceCents: 2500, music: { perRound: true },
       scoring: panel(['difficulty', 'Trick difficulty', 40], ['execution', 'Execution & control', 30], ['flow', 'Flow & variety', 20], ['music', 'Use of music', 10]),
       rounds: [{ name: 'Prelims', advance: 8 }, { name: 'Finals' }],
     },
@@ -203,7 +203,8 @@ export const kendama: CompetitionConfig = {
       },
     },
     {
-      code: 'KBATTLE', name: 'Kendama Battle', description: 'Head-to-head trick battles, judge vote, single elimination.', priceCents: 1000, music: false,
+      code: 'KBATTLE', name: 'Kendama Battle', description: 'Head-to-head trick battles, judge vote, single elimination.', priceCents: 1000,
+      music: { routine: false, extra: [{ key: 'battle', label: 'Battle music' }] },
       scoring: { format: 'bracket', seeding: 'random', thirdPlaceMatch: false, matchFormat: 'trade tricks, best of three' },
     },
     { ...doubles('kendama'), description: 'Two players trade and share tricks in one routine.' },
