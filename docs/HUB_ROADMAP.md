@@ -106,6 +106,22 @@ presets and tests.
 Organizations, per-organization payments (Stripe Connect), role-based staff access across organizations,
 data separation and retention rules, a template gallery. Decide this with real demand, not in advance.
 
+## Sponsor inquiry form (planned)
+
+An organizer should be able to take sponsor inquiries without a third-party form service. Plan: a public
+`/sponsor` page whose tiers and benefits come from config (`contest.sponsors`), so nothing is event-specific in
+code. It writes to a new `contest_sponsor_inquiries` table (service role only), kept apart from
+`contest_sponsors` so an unvetted submission never counts toward pledged money. Staff with `sponsors.manage`
+review inquiries on `/sponsors` and **convert** one into a prospect (message copied into notes) or **dismiss**
+it. Spam control without tracking: a honeypot, a per-IP rate limit and server validation; no CAPTCHA service or
+analytics. The organizer gets a notice email and the sender a plain confirmation, through the existing email
+layer, with the notice address in config. Inquiries hold contact details, so they get an owner in the archive and
+purge plan (converted ones live on in the pipeline; dismissed ones are deleted after a set time). A deployment
+that already has an old form can import its submissions (CSV) as prospects.
+
+Open: whether to show prices, whether sponsors ever pay online or always by invoice, and whether a sponsor can
+log in to see their own tier (the `sponsor` role already can, once an organizer links the account).
+
 ## Principles for new work
 
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
