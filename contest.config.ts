@@ -227,6 +227,30 @@ export interface RoundDef {
   name: string;
   /** How many move on to the next round (leave out on the last round) */
   advance?: number;
+  /** Stable ID for this round's music track (lowercase letters, numbers, - or _). Default: the name, e.g. "semi-final". */
+  key?: string;
+  /** Routine length in seconds for this round (e.g. 60, 90, 180). Falls back to the division's routineSeconds. */
+  seconds?: number;
+}
+
+/** One music track a player uploads for a division, e.g. { key: 'battle', label: 'Battle music' }. */
+export interface MusicSlotDef {
+  /** Stable ID: lowercase letters, numbers, - or _ (up to 30). "main" is reserved for the single routine track. */
+  key: string;
+  label: string;
+}
+
+/**
+ * Music a division takes, beyond plain `music: true` (one routine track for the whole division).
+ * Players upload one track per slot, up front.
+ */
+export interface MusicConfig {
+  /** Routine music. Default true; false when the division only has the extras below (e.g. a battle division). */
+  routine?: boolean;
+  /** One routine track per round (prelims, semi-final, final...) instead of one for the whole division. */
+  perRound?: boolean;
+  /** Extra tracks, e.g. battle music. */
+  extra?: MusicSlotDef[];
 }
 
 export interface DivisionDef {
@@ -236,8 +260,14 @@ export interface DivisionDef {
   description: string;
   /** Entry fee in cents */
   priceCents: number;
-  /** Does this division perform to uploaded music? */
-  music: boolean;
+  /**
+   * Does this division perform to uploaded music? true is one routine track per player; give a
+   * MusicConfig for one track per round and/or extra tracks such as battle music, e.g.
+   *   music: { perRound: true }                                        (prelims + final tracks)
+   *   music: { extra: [{ key: 'battle', label: 'Battle music' }] }     (routine + battle)
+   * Nothing here is specific to one toy: kendama, juggling, tops and yo-yo all use the same slots.
+   */
+  music: boolean | MusicConfig;
   /** Optional styles. Registrants pick between min and max of them. */
   styles?: { options: StyleDef[]; min: number; max: number };
   /** Division codes this one can't be entered together with */
@@ -247,6 +277,11 @@ export interface DivisionDef {
   entry?: EntryDef;
   /** Rounds for freestyle, panel and manual divisions. Default: one round. */
   rounds?: RoundDef[];
+  /**
+   * How long a routine runs, in seconds. The DJ page shows it and times it so a track isn't cut
+   * early. A round's own `seconds` wins. Leave out when it varies or doesn't matter.
+   */
+  routineSeconds?: number;
 }
 
 /**
