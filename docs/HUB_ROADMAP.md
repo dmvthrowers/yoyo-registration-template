@@ -11,8 +11,13 @@ real registrants and real payments mean schema, payment and auth changes get pro
 
 ## Decisions so far (owner)
 
-- **Path:** stay on one deployment per organization and make the event first-class inside it (stage 1), then
-  configuration as data (stage 2). A shared hub (stage 3) is not planned unless several clubs ask.
+- **Path (updated):** build it as a **multi-event, multi-club hub**: one deployment can hold several
+  organizations (clubs) and several events each, with roles per organization and event. It is also **portable**:
+  anyone can deploy their own copy for their own region. The first hub serves the Mid-Atlantic. (This replaces
+  the earlier "one deployment per organization, hub only if asked" path; the staged work below is reordered
+  accordingly.)
+- **Free tiers are the limit.** The Mid-Atlantic hub runs on free tiers, so it can't scale past that region
+  without funding. Design for it (see "Designing for free tiers").
 - **Who it's for first:** the Mid-Atlantic community (DMV Throwers and its region). It may expand beyond that.
 - **Anyone can build and deploy it.** The template is public and meant to be used by other clubs and regions
   without our help. That is a design requirement, not a nice-to-have (see below).
@@ -33,6 +38,25 @@ real registrants and real payments mean schema, payment and auth changes get pro
   of stage 3. It isn't designed yet; stage 1 keeps the event self-contained so it stays possible.
 - **Our deployment follows the same path.** VA-States is the first deployment and the proving ground: a change
   lands there when it's safe for a live contest, and in the template when it's generic.
+
+### Designing for free tiers
+
+The hub runs on free plans (Supabase database, auth and storage; Vercel hobby hosting; Resend email; Stripe has
+no monthly fee). That is a hard budget, so the design rules are:
+
+- **One deployment, many organizations**, separated by an `organization_id` on every row and enforced in the
+  database (row level security), not only in the app. No per-club servers, databases or services.
+- **Small data**: music and media are the big files. Per-event storage budgets, lo-fi pool shared, the season
+  archive and purge (so old events free their space), and compressed uploads with size limits.
+- **Email is rationed**: a queue with daily caps (already built), digests instead of one email per change, and a
+  per-organization allowance so one club can't use the whole hub's quota.
+- **Cheap reads**: static or cached public pages (results, schedule, directory), polling instead of realtime
+  where possible, indexes on the hot paths.
+- **Show the limits**: an admin "usage" panel (rows, storage, emails today, auth users) with warnings before a
+  free-tier cap is hit, and a documented upgrade path (which plan, what it costs) for a region that grows.
+- **Portable**: everything above is configuration and migrations in the repo, so another region deploys its own
+  hub (its own free accounts) instead of sharing ours, and a region that outgrows free tiers pays for its own
+  plans. Nothing assumes our accounts.
 
 ## The model we're heading to
 
@@ -75,10 +99,14 @@ Everything above "Competitions" is where today's app is thinnest.
 into the database with an admin builder (stage 2), and only consider B when several clubs are asking (stage 3).**
 Each stage ships on its own, and stage 1 is needed for everything after it.
 
-## Stage 1: events, days and multi-event, inside one deployment
+## Stage 1: organizations, events and days, inside one deployment
 
-Goal: one deployment can hold several events (this year's contest, a workshop day, a side tournament)
-and an event can span days. Existing single-event deployments don't change.
+Goal: one deployment can hold several organizations, each with several events (this year's contest, a workshop
+day, a side tournament), and an event can span days. Existing single-event deployments don't change.
+
+0. **Organizations.** An `organization_id` (with a default organization for existing data) beside `event_id`,
+   with row level security so one club never sees another's private data; roles are granted per organization
+   and event (`docs/ROLES.md`).
 
 1. **`events` in config.** An `EventDef` list: id, name, dates (one or many days), venue, deadlines, fee rules
    and which competitions it runs. A deployment with one event keeps working through a default.
@@ -101,10 +129,12 @@ with an admin builder (validated by the same pure rules in `lib/divisions-core.t
 half-edited event never reaches players. Keep the config file as an import/export format and the source for
 presets and tests.
 
-## Stage 3: shared hub (only if needed)
+## Stage 3: growing the hub
 
-Organizations, per-organization payments (Stripe Connect), role-based staff access across organizations,
-data separation and retention rules, a template gallery. Decide this with real demand, not in advance.
+What a hub needs once several clubs share it, beyond stage 1: per-organization payments (each club connects its
+own Stripe account, Stripe Connect), a self-serve "create my organization" flow, per-organization branding and
+domains, usage limits and a billing path for regions that outgrow free tiers, and a template gallery of presets.
+Roles and the portal (`docs/ROLES.md`) cut across all stages and ship in their own small steps.
 
 ## Principles for new work
 
