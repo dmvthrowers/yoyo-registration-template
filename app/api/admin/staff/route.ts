@@ -4,11 +4,12 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { z } from 'zod';
+import { GRANTABLE_ROLES } from '@/lib/roles';
 
 const createStaffSchema = z.object({
   email: z.string().trim().email().max(320),
   display_name: z.string().trim().min(1).max(100),
-  role: z.enum(['judge', 'dj', 'audio_tech', 'admin']),
+  role: z.string().refine((r) => (GRANTABLE_ROLES as string[]).includes(r), 'That role cannot be granted by hand'),
   password: z.string().min(8).max(128).optional().or(z.literal('')),
   is_active: z.boolean().optional(),
   is_public_profile: z.boolean().optional(),
