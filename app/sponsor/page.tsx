@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { Field, inputCls } from '@/components/form/Field';
@@ -9,7 +9,7 @@ import { contest } from '@/contest.config';
 type V = Record<string, string>;
 const EMPTY: V = {
   first_name: '', last_name: '', email: '', phone: '', brand_name: '', social_handle: '', contact_method: '', website: '',
-  logo_url: '', tier: '', vendor_table: '', division_sponsor: '', in_kind: '', retail_value: '', heard_from: '', notes: '', _hp: '',
+  logo_url: '', payment_method: '', billing_email: '', display_name: '', product_use_ok: '', tier: '', vendor_table: '', division_sponsor: '', in_kind: '', retail_value: '', heard_from: '', notes: '', _hp: '',
 };
 
 function YesNo({ name, value, onChange }: { name: string; value: string; onChange: (v: string) => void }) {
@@ -25,8 +25,15 @@ function YesNo({ name, value, onChange }: { name: string; value: string; onChang
   );
 }
 
+interface TierState { id: string; label: string; amount: string; slots?: number; left?: number; full: boolean }
+
 export default function SponsorPage() {
   const cfg = contest.sponsors;
+  const [tiers, setTiers] = useState<TierState[]>(cfg.tiers.map((t) => ({ id: t.id, label: t.label, amount: t.amount, slots: t.slots, full: false })));
+  // Price comes from config; how many are left comes from the server.
+  useEffect(() => {
+    fetch('/api/sponsor-inquiry').then((r) => (r.ok ? r.json() : null)).then((j: { tiers?: TierState[] } | null) => { if (j?.tiers) setTiers(j.tiers); }).catch(() => {});
+  }, []);
   const [v, setV] = useState<V>(EMPTY);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -114,10 +121,18 @@ export default function SponsorPage() {
 
           <Field label="What would you like to do? *">
             <div className="space-y-2">
-              {[...cfg.tiers.map((t) => ({ id: t.id, text: `${t.label} (${t.amount})` })), ...cfg.otherChoices.map((c) => ({ id: c.id, text: c.label }))].map((o) => (
-                <label key={o.id} className="flex items-center gap-2 text-sm text-white">
-                  <input type="radio" name="tier" value={o.id} checked={v.tier === o.id} onChange={() => setVal('tier')(o.id)} required />
-                  {o.text}
+              {[
+                ...tiers.map((t) => ({
+                  id: t.id,
+                  full: t.full,
+                  text: `${t.label} (${t.amount})`,
+                  note: t.slots === undefined ? '' : t.full ? 'Full' : `${t.left} of ${t.slots} left`,
+                })),
+                ...cfg.otherChoices.map((c) => ({ id: c.id, full: false, text: c.label, note: '' })),
+              ].map((o) => (
+                <label key={o.id} className={`flex items-center gap-2 text-sm ${o.full ? 'text-text-muted' : 'text-white'}`}>
+                  <input type="radio" name="tier" value={o.id} checked={v.tier === o.id} disabled={o.full} onChange={() => setVal('tier')(o.id)} required />
+                  <span>{o.text}{o.note && <span className="text-gold-light"> · {o.note}</span>}</span>
                 </label>
               ))}
             </div>
@@ -127,8 +142,19 @@ export default function SponsorPage() {
           <Field label="Interested in sponsoring a division?"><YesNo name="division_sponsor" value={v.division_sponsor} onChange={setVal('division_sponsor')} /></Field>
           <Field label="Will you include product?"><YesNo name="in_kind" value={v.in_kind} onChange={setVal('in_kind')} /></Field>
           {v.in_kind === 'yes' && (
-            <Field label="Estimated retail value" hint="A rough dollar amount is fine."><input className={inputCls(false)} value={v.retail_value} onChange={set('retail_value')} maxLength={30} inputMode="decimal" /></Field>
+            <>
+              <Field label="Estimated retail value" hint="A rough dollar amount is fine."><input className={inputCls(false)} value={v.retail_value} onChange={set('retail_value')} maxLength={30} inputMode="decimal" /></Field>
+              <Field label="May we use your product for prize bags, raffles and giveaways?" hint="We credit your brand from the stage and on social media."><YesNo name="product_use_ok" value={v.product_use_ok} onChange={setVal('product_use_ok')} /></Field>
+            </>
           )}
+          <Field label="How would you like to pay?" hint="Pay whichever way is easiest. After we review your inquiry we will send an invoice or link.">
+            <select className={inputCls(false)} value={v.payment_method} onChange={set('payment_method')}>
+              <option value="">Pick one</option>
+              {cfg.paymentMethods.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
+          <Field label="Billing email" hint="Only if invoices should go to someone other than you."><input type="email" className={inputCls(false)} value={v.billing_email} onChange={set('billing_email')} maxLength={254} /></Field>
+          <Field label="How should we list your name?" hint="On the banner and in posts, if different from your brand name."><input className={inputCls(false)} value={v.display_name} onChange={set('display_name')} maxLength={160} /></Field>
           <Field label="How did you hear about us?">
             <select className={inputCls(false)} value={v.heard_from} onChange={set('heard_from')}>
               <option value="">Pick one</option>

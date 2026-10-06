@@ -118,19 +118,25 @@ export const contest = {
   sponsors: {
     enabled: true,
     intro: 'Thanks for wanting to support the contest. Tell us a little about you and what you have in mind, and we will get back to you.',
+    /**
+     * Tiers, top first. `slots` caps how many can be committed (leave it out for open tiers); the form shows
+     * how many are left, counting sponsors at that tier who are committed or paid on the /sponsors screen.
+     */
     tiers: [
-      { id: 'presenting', label: 'Presenting', amount: '$2,000+' },
-      { id: 'gold', label: 'Gold', amount: '$500+' },
+      { id: 'presenting', label: 'Presenting', amount: '$2,000+', slots: 1 },
+      { id: 'gold', label: 'Gold', amount: '$500+', slots: 2 },
       { id: 'silver', label: 'Silver', amount: '$100+' },
       { id: 'bronze', label: 'Bronze', amount: '$50' },
       { id: 'in_kind', label: 'In-kind / community', amount: 'Product or service' },
-    ],
+    ] as readonly { id: string; label: string; amount: string; slots?: number }[],
     /** Other things someone can ask for instead of (or before choosing) a tier. [] for none. */
     otherChoices: [
       { id: 'not_sure', label: 'Not sure yet' },
       { id: 'table_only', label: 'Table purchase only' },
     ],
     contactMethods: ['Email', 'Phone call', 'Text message', 'Instagram or other social DM'],
+    /** How sponsors can pay. Payment happens outside the form (an invoice or link after review); this only records what is easiest. */
+    paymentMethods: ['PayPal', 'Venmo', 'Check', 'Bank transfer', 'Not sure yet'],
     heardFrom: ['Social media', 'Friend or club member', 'At an event', 'Web search', 'Other'],
   },
 

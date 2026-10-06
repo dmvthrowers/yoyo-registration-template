@@ -4,7 +4,14 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { contest } from '@/contest.config';
 import { inquiryRow, inquirySchema } from '@/lib/sponsor-inquiry';
+import { loadTierAvailability } from '@/lib/sponsor-availability';
 import { sendSponsorInquiryNoticeEmail, sendSponsorInquiryReceivedEmail } from '@/lib/email';
+
+/** GET /api/sponsor-inquiry: the tiers with price and how many slots are left (counts only). */
+export const GET = withErrorHandling(async (requestId) => {
+  const tiers = await loadTierAvailability();
+  return NextResponse.json({ tiers }, { headers: { 'x-request-id': requestId, 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
+});
 
 /**
  * POST /api/sponsor-inquiry
@@ -38,6 +45,12 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   // Honeypot: look successful so a bot doesn't retry.
   if (d._hp) return NextResponse.json({ ok: true }, { status: 201, headers: { 'x-request-id': requestId } });
 
+  // A full tier can't be asked for; the form already disables it, this covers a page that was open a while.
+  const tierState = (await loadTierAvailability()).find((t) => t.id === d.tier);
+  if (tierState?.full) {
+    return apiError('conflict', `${tierState.label} is full. Pick another tier, or choose "Not sure yet" and tell us what you have in mind.`, requestId);
+  }
+
   const { data, error } = await createAdminClient().from('contest_sponsor_inquiries').insert(inquiryRow(d)).select('id').single();
   if (error || !data) {
     console.error('[sponsor-inquiry] insert error:', error);
@@ -54,6 +67,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     `Interested in: ${tier}`,
     `Email: ${d.email}${d.phone ? `   Phone: ${d.phone}` : ''}`,
     d.contact_method ? `Prefers: ${d.contact_method}` : '',
+    d.payment_method ? `Would like to pay by: ${d.payment_method}` : '',
     d.website ? `Website: ${d.website}` : '',
     `Vendor table: ${yn(d.vendor_table)}   Division sponsorship: ${yn(d.division_sponsor)}   In-kind product: ${yn(d.in_kind)}`,
     d.notes ? `Note: ${d.notes}` : '',

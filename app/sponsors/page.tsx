@@ -18,6 +18,7 @@ interface Inquiry {
   division_sponsor: boolean | null;
   in_kind: boolean | null;
   retail_value_cents: number | null;
+  payment_method: string | null;
   notes: string | null;
 }
 
@@ -128,6 +129,7 @@ function Board({ token }: { token: string }) {
                   Interested in: {i.tier.replace(/_/g, ' ')}
                   {i.vendor_table ? ' · wants a vendor table' : ''}{i.division_sponsor ? ' · division sponsor' : ''}
                   {i.in_kind ? ` · product${i.retail_value_cents ? ` (about ${money(i.retail_value_cents)})` : ''}` : ''}
+                  {i.payment_method ? ` · pay by ${i.payment_method}` : ''}
                 </p>
                 {i.notes && <p style={{ color: 'var(--text-body)', fontSize: '0.8rem', margin: '0 0 0.5rem', whiteSpace: 'pre-wrap' }}>{i.notes}</p>}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

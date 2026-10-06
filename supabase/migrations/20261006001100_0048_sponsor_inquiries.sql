@@ -25,6 +25,13 @@ create table if not exists public.contest_sponsor_inquiries (
   division_sponsor boolean,
   in_kind       boolean,
   retail_value_cents integer check (retail_value_cents is null or retail_value_cents between 0 and 100000000),
+  -- how they would like to pay and who to bill, if not the contact (payment itself happens outside the form)
+  payment_method text check (payment_method is null or length(payment_method) <= 60),
+  billing_email text check (billing_email is null or (length(billing_email) between 3 and 254 and billing_email like '%_@_%')),
+  -- how the name should read on the banner and in posts, if different from the brand name
+  display_name  text check (display_name is null or length(display_name) <= 160),
+  -- may product they include be used for prize bags, raffles and giveaways (credited to them)
+  product_use_ok boolean,
   heard_from    text check (heard_from is null or length(heard_from) <= 80),
   notes         text check (notes is null or length(notes) <= 2000),
   sponsor_id    uuid references public.contest_sponsors (id) on delete set null,

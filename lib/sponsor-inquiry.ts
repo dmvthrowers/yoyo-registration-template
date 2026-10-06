@@ -5,9 +5,10 @@ import { z } from 'zod';
  * from the `contest.sponsors` config so the same form works for any event, and tested without a database.
  */
 export interface SponsorFormConfig {
-  tiers: readonly { id: string; label: string; amount: string }[];
+  tiers: readonly { id: string; label: string; amount: string; slots?: number }[];
   otherChoices: readonly { id: string; label: string }[];
   contactMethods: readonly string[];
+  paymentMethods: readonly string[];
   heardFrom: readonly string[];
 }
 
@@ -51,6 +52,10 @@ export function inquirySchema(cfg: SponsorFormConfig) {
     division_sponsor: yesNo,
     in_kind: yesNo,
     retail_value: optionalText(30),
+    payment_method: optionalText(60).refine((v) => v === undefined || cfg.paymentMethods.includes(v), 'Pick one of the payment options listed.'),
+    billing_email: z.string().trim().toLowerCase().email('Enter a valid billing email or leave it blank.').max(254).optional().or(z.literal('')).transform((v) => (v ? v : undefined)),
+    display_name: optionalText(160),
+    product_use_ok: yesNo,
     heard_from: optionalText(80).refine((v) => v === undefined || cfg.heardFrom.includes(v), 'Pick one of the options listed.'),
     notes: optionalText(2000),
     /** Honeypot: real people never see or fill this. */
@@ -78,6 +83,11 @@ export function inquiryRow(d: SponsorInquiryInput) {
     in_kind: d.in_kind ?? null,
     // a retail value only means something when product is included
     retail_value_cents: d.in_kind === false ? null : parseDollarsToCents(d.retail_value) ?? null,
+    payment_method: d.payment_method ?? null,
+    billing_email: d.billing_email ?? null,
+    display_name: d.display_name ?? null,
+    // only meaningful when product is included
+    product_use_ok: d.in_kind === false ? null : d.product_use_ok ?? null,
     heard_from: d.heard_from ?? null,
     notes: d.notes ?? null,
   };
@@ -97,6 +107,10 @@ export interface StoredInquiry {
   division_sponsor: boolean | null;
   in_kind: boolean | null;
   retail_value_cents: number | null;
+  payment_method: string | null;
+  billing_email: string | null;
+  display_name: string | null;
+  product_use_ok: boolean | null;
   heard_from: string | null;
   notes: string | null;
 }
@@ -115,6 +129,10 @@ export function inquiryToSponsor(i: StoredInquiry, cfg: Pick<SponsorFormConfig, 
     i.website ? `Website: ${i.website}` : null,
     i.contact_method ? `Prefers: ${i.contact_method}` : null,
     i.phone ? `Phone: ${i.phone}` : null,
+    i.display_name ? `List them as: ${i.display_name}` : null,
+    i.payment_method ? `Would like to pay by: ${i.payment_method}` : null,
+    i.billing_email ? `Billing email: ${i.billing_email}` : null,
+    i.product_use_ok === true ? 'OK to use their product for prize bags, raffles and giveaways.' : i.product_use_ok === false ? 'Asked that product NOT be used for prizes or giveaways.' : null,
     i.heard_from ? `Heard about us: ${i.heard_from}` : null,
     i.notes ? `Their note: ${i.notes}` : null,
   ].filter(Boolean).join('\n').slice(0, 2000);
@@ -129,4 +147,33 @@ export function inquiryToSponsor(i: StoredInquiry, cfg: Pick<SponsorFormConfig, 
     notes: notes || null,
     deliverables: [] as { label: string; done: boolean }[],
   };
+}
+
+// ---------------------------------------------------------------- slots left
+
+export interface TierAvailability {
+  id: string;
+  label: string;
+  amount: string;
+  /** undefined = open tier */
+  slots?: number;
+  /** undefined for an open tier */
+  left?: number;
+  full: boolean;
+}
+
+/**
+ * Tiers with how many slots are left. A slot is used by a sponsor at that tier (matched by label, ignoring
+ * case) who is committed or paid; prospects, contacted and declined sponsors don't hold one. Open tiers never fill.
+ */
+export function tierAvailability(
+  tiers: SponsorFormConfig['tiers'],
+  sponsors: readonly { tier: string | null; status: string }[],
+): TierAvailability[] {
+  return tiers.map((t) => {
+    if (t.slots === undefined) return { id: t.id, label: t.label, amount: t.amount, full: false };
+    const used = sponsors.filter((s) => (s.status === 'committed' || s.status === 'paid') && s.tier?.trim().toLowerCase() === t.label.toLowerCase()).length;
+    const left = Math.max(0, t.slots - used);
+    return { id: t.id, label: t.label, amount: t.amount, slots: t.slots, left, full: left === 0 };
+  });
 }
