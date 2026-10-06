@@ -106,6 +106,46 @@ presets and tests.
 Organizations, per-organization payments (Stripe Connect), role-based staff access across organizations,
 data separation and retention rules, a template gallery. Decide this with real demand, not in advance.
 
+## Sponsor inquiry form (planned)
+
+An organizer should be able to take sponsor inquiries without a third-party form service. Plan: a public
+`/sponsor` page whose tiers and benefits come from config (`contest.sponsors`), so nothing is event-specific in
+code. It writes to a new `contest_sponsor_inquiries` table (service role only), kept apart from
+`contest_sponsors` so an unvetted submission never counts toward pledged money. Staff with `sponsors.manage`
+review inquiries on `/sponsors` and **convert** one into a prospect (message copied into notes) or **dismiss**
+it. Spam control without tracking: a honeypot, a per-IP rate limit and server validation; no CAPTCHA service or
+analytics. The organizer gets a notice email and the sender a plain confirmation, through the existing email
+layer, with the notice address in config. Inquiries hold contact details, so they get an owner in the archive and
+purge plan (converted ones live on in the pipeline; dismissed ones are deleted after a set time). A deployment
+that already has an old form can import its submissions (CSV) as prospects.
+
+Open: whether to show prices, whether sponsors ever pay online or always by invoice, and whether a sponsor can
+log in to see their own tier (the `sponsor` role already can, once an organizer links the account).
+
+## Forms on our own system (future state)
+
+Every public form an organizer runs (sponsor inquiry, vendor or merch-table application, volunteer interest,
+media or press request, feedback, a one-off sign-up) should live in the hub instead of a third-party form
+service, so the data stays under the organizer's control and the same spam, privacy and retention rules apply to
+all of them. Sponsor inquiry above is the first one; the rest follow the same shape.
+
+- **A form is configuration plus a submission table**, not new code per form: a `forms` config (id, title, intro,
+  fields with type, label, help text, required, options, max length; a success message; who is notified; which
+  role reviews it) validated by one pure module, rendered by one public page (`/f/[id]`), stored in one
+  `contest_form_submissions` table (form id, answers as JSON, status, reviewer, timestamps). Field types stay small
+  on purpose: short text, long text, email, phone, choice, multiple choice, number, yes/no.
+- **Review lives in the role portals.** A submission shows up for the role that owns it (sponsor inquiries for
+  `sponsors.manage`, volunteer interest for `volunteers.manage`, merch applications for `merch.manage`), with
+  convert, reply and dismiss actions. Admin sees all of them.
+- **One set of protections:** honeypot, per-IP rate limit, server-side validation against the form's own
+  definition, size limits, no CAPTCHA service and no analytics, plain-language errors, works at 360px and with a
+  keyboard.
+- **Retention is per form** and listed in the archive and purge plan; exports are CSV.
+- **Later, a builder:** an admin screen to create and edit forms without touching the config file (with a publish
+  step so a half-edited form never goes live), and import of old third-party submissions.
+- **Why not now:** only the sponsor inquiry form is wanted for VSYC-27. Building it as the first instance of this
+  shape keeps the later forms cheap without building a form builder before it's needed.
+
 ## Principles for new work
 
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
