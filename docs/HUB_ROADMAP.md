@@ -106,7 +106,9 @@ presets and tests.
 Organizations, per-organization payments (Stripe Connect), role-based staff access across organizations,
 data separation and retention rules, a template gallery. Decide this with real demand, not in advance.
 
-## Sponsor inquiry form (planned)
+## Sponsor inquiry form (first version built)
+
+**Built:** `/sponsor` (config in `contest.sponsors`: tiers, other choices, contact methods, where people heard of you), `POST /api/sponsor-inquiry` (honeypot, per-IP rate limit, validation from config), table `contest_sponsor_inquiries` (migration 0048), notice and confirmation emails (`SPONSOR_NOTICE_EMAIL`), and a **New inquiries** panel on `/sponsors` with Add as prospect and Dismiss. Fields mirror a typical hosted-form version (name, email, phone, brand, handle, contact method, website, logo link, tier, vendor table, division sponsorship, product and retail value, how heard, notes). **Not built yet:** logo upload (a link for now), slot caps per tier, deliverable checklists pre-filled by tier, CSV import of old submissions, and the dismissed-inquiry deletion job. The original plan follows.
 
 An organizer should be able to take sponsor inquiries without a third-party form service. Plan: a public
 `/sponsor` page whose tiers and benefits come from config (`contest.sponsors`), so nothing is event-specific in

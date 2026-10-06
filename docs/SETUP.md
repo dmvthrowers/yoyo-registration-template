@@ -121,6 +121,7 @@ Import the repo in Vercel (or use the README's button) and add these environment
 | `CRON_SECRET` | yes | The value you stored in Vault in step 3 |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | recommended | Public contact address |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO` | optional | Resend → API Keys, after verifying your domain. Without them, emails queue but aren't sent |
+| `SPONSOR_NOTICE_EMAIL` | optional | Where "new sponsor inquiry" notices go (the public form at `/sponsor`). Falls back to `ADMIN_ALERT_EMAIL`, then the contest contact address |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | optional | Vercel → Storage → Upstash Redis. Without them, rate limiting is off |
 | `NEXT_PUBLIC_SENTRY_DSN`, `HEALTHCHECKS_PING_KEY`, `QSTASH_*` | optional | Error reports, job monitoring, email backstop |
 
