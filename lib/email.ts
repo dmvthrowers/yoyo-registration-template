@@ -2,6 +2,7 @@ import { buildContestIcs } from './ics';
 import { enqueueEmails, queueEmail, type QueueOptions } from './outbox';
 import { contest, fullTitle, whenWhere, venueCity, longDate, monthDay, deadlineLabel, divisionByCode } from '@/contest.config';
 import type { TeamSummary } from './team-entries';
+import { joinDivisions, musicDivisions } from './music';
 
 const sponsorThanks = contest.presentedBy.name
   ? `${contest.shortName} was brought to you by ${contest.presentedBy.name}.`
@@ -35,6 +36,7 @@ export interface RenderedEmail {
 export type OutboxEmail =
   | { template: 'confirmation'; params: ConfirmationParams }
   | { template: 'music_received'; params: MusicReceivedParams }
+  | { template: 'music_reminder'; params: MusicReminderParams }
   | { template: 'payment_reminder'; params: PaymentReminderParams }
   | { template: 'payment_received'; params: PaymentReceivedParams }
   | { template: 'spectator_confirmation'; params: SpectatorConfirmationParams }
@@ -47,6 +49,7 @@ export function renderEmail(e: OutboxEmail): RenderedEmail {
   switch (e.template) {
     case 'confirmation': return renderConfirmation(e.params);
     case 'music_received': return renderMusicReceived(e.params);
+    case 'music_reminder': return renderMusicReminder(e.params);
     case 'payment_reminder': return renderPaymentReminder(e.params);
     case 'payment_received': return renderPaymentReceived(e.params);
     case 'spectator_confirmation': return renderSpectatorConfirmation(e.params);
@@ -81,6 +84,12 @@ interface ConfirmationParams {
   alreadyPaid?: boolean;
   /** Teams they started or joined; captains get their join code to share. */
   teams?: TeamSummary[];
+}
+
+/** ", one track for each of 1A and X" when a player entered more than one music division. */
+function musicSlotsNote(divisions: string[]): string {
+  const codes = musicDivisions(divisions, (c) => divisionByCode(c)?.music === true);
+  return codes.length > 1 ? `: one track for each of ${joinDivisions(codes)}` : '';
 }
 
 /** "Pair", "Act"… for a team division (falls back to "team"). */
@@ -135,6 +144,56 @@ function renderMusicReceived(p: MusicReceivedParams): RenderedEmail {
     subject: `Music received for ${contest.shortName} — ${p.firstName}`,
     html: buildMusicReceivedHtml(p),
     text: buildMusicReceivedText(p),
+  };
+}
+
+export interface MusicReminderParams {
+  to: string;
+  /** Parent or guardian of a minor */
+  cc?: string[];
+  firstName: string;
+  /** Division codes that still have no track */
+  divisions: string[];
+  uploadUrl: string;
+  deadlineLabel: string;
+  /** Say that an empty slot gets a lo-fi track (only when the lo-fi pool exists) */
+  lofiFallback: boolean;
+}
+
+function renderMusicReminder(p: MusicReminderParams): RenderedEmail {
+  const names = p.divisions.map((d) => divisionByCode(d)?.name ?? d);
+  const list = joinDivisions(p.divisions);
+  const fallback = p.lofiFallback
+    ? 'If a division is still empty at the deadline, a lo-fi track plays for that routine instead.'
+    : 'If a division is still empty at the deadline, we cannot play music for that routine.';
+  return {
+    to: p.to,
+    ...(p.cc?.length ? { cc: p.cc } : {}),
+    subject: `Music reminder for ${contest.shortName} — ${p.firstName}, ${list} still needs a track`,
+    html: emailWrap(`
+    <h1 style="font-family:Georgia,serif;font-size:1.6rem;color:#C9A84C;margin:0 0 8px;">Music Reminder</h1>
+    <p style="font-size:0.9rem;margin:0 0 24px;">Hey ${esc(p.firstName)} — we don't have music for ${esc(list)} yet.</p>
+    <div style="background:#0d1428;padding:20px;margin-bottom:16px;">
+      <div style="font-size:0.6rem;letter-spacing:0.16em;color:#C9A84C;font-weight:800;margin-bottom:12px;">STILL NEEDED</div>
+      ${names.map((n) => `<div style="font-size:0.85rem;margin-bottom:6px;color:#fff;">${esc(n)}</div>`).join('')}
+      <div style="font-size:0.85rem;margin-top:12px;"><strong style="color:#fff;">Deadline:</strong> ${esc(p.deadlineLabel)}</div>
+      <a href="${p.uploadUrl}" style="display:inline-block;background:#C9A84C;color:#0d1428;font-weight:800;font-size:0.78rem;letter-spacing:0.1em;padding:12px 24px;text-decoration:none;margin-top:12px;">UPLOAD MUSIC →</a>
+    </div>
+    <p style="font-size:0.82rem;color:#6a7a9a;">You upload one track for each division you entered. ${esc(fallback)}</p>
+  `),
+    text: [
+      `Music Reminder — ${contest.shortName}`,
+      ``,
+      `Hey ${p.firstName} — we don't have music for ${list} yet.`,
+      ``,
+      `Still needed: ${names.join('; ')}`,
+      `Deadline: ${p.deadlineLabel}`,
+      `Upload: ${p.uploadUrl}`,
+      ``,
+      `You upload one track for each division you entered. ${fallback}`,
+      ``,
+      `Questions? Reply to this email or contact ${contest.contactEmail}`,
+    ].join('\n'),
   };
 }
 
@@ -317,7 +376,7 @@ function buildConfirmationHtml(p: ConfirmationParams, fee: string): string {
     ${p.musicUploadUrl ? `
     <div style="background:#0d1428;border-left:4px solid #C9A84C;padding:20px;margin-bottom:16px;">
       <div style="font-size:0.6rem;letter-spacing:0.16em;color:#C9A84C;font-weight:800;margin-bottom:12px;">MUSIC UPLOAD</div>
-      <p style="font-size:0.85rem;margin:0 0 12px;">Upload your music using the secure link below. <strong style="color:#fff;">Deadline: ${musicDeadline}.</strong></p>
+      <p style="font-size:0.85rem;margin:0 0 12px;">Upload your music using the secure link below${musicSlotsNote(p.divisions)}. <strong style="color:#fff;">Deadline: ${musicDeadline}.</strong></p>
       <a href="${p.musicUploadUrl}" style="display:inline-block;background:#C9A84C;color:#0d1428;font-weight:800;font-size:0.78rem;letter-spacing:0.1em;padding:12px 24px;text-decoration:none;">UPLOAD MUSIC →</a>
       <p style="font-size:0.75rem;margin:12px 0 0;color:#6a7a9a;">Format: DIVISION_LastName_FirstName.mp3 — the system will rename it automatically.</p>
       <p style="font-size:0.75rem;margin:8px 0 0;color:#6a7a9a;">Music must be appropriate for all audiences — no explicit language, sexual content, or glorification of violence. <strong style="color:#fff;">Inappropriate music results in disqualification.</strong> Full rules are on the upload page.</p>
@@ -366,7 +425,7 @@ function buildConfirmationText(p: ConfirmationParams, fee: string): string {
   if (p.musicUploadUrl) {
     lines.push(
       `MUSIC UPLOAD`,
-      `Upload your music (deadline ${musicDeadline}): ${p.musicUploadUrl}`,
+      `Upload your music${musicSlotsNote(p.divisions)} (deadline ${musicDeadline}): ${p.musicUploadUrl}`,
       `Format: DIVISION_LastName_FirstName.mp3 — the system will rename it automatically.`,
       `Music must be appropriate for all audiences — no explicit language, sexual content, or glorification of violence. Inappropriate music results in disqualification.`,
       ``,

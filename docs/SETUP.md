@@ -143,7 +143,9 @@ and redeploy.
 
 - [ ] Register a competitor with a fee due, pay with `4242 4242 4242 4242`, land on `/confirm`
       as paid. The admin dashboard shows it paid via `stripe`.
-- [ ] Upload a music file from the confirmation email or `/portal`.
+- [ ] Upload a music file from the confirmation email or `/portal` (one per division that uses
+      music). Optional: put lo-fi tracks you may legally play in the `lofi/` folder of the
+      `contest-music` bucket, then try the dry runs on the dashboard's Music tab.
 - [ ] Make a 100% comp code in the dashboard, register with it: no Stripe page.
 - [ ] RSVP as a spectator at `/spectate`; sign in at `/spectators/portal` with the emailed code.
 - [ ] Sign up to volunteer at `/volunteer`.
