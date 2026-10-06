@@ -28,13 +28,62 @@ export interface FeeResult {
   comp_base_fee_cents: number;
 }
 
+// ---------------------------------------------------------------- scoring format capabilities
+
+/*
+ * What each scoring format can do, in one place. Code that used to ask "is this freestyle, panel or
+ * manual?" asks formatCaps()/usesScoreSheet() instead, so a new format is one new row here (the type of
+ * FORMATS makes TypeScript list every format that's missing) rather than a hunt through the pages.
+ * The scoring math for each format is below and in lib/standings.ts; docs/FORMATS.md describes them;
+ * docs/HUB_ROADMAP.md says where this is heading.
+ */
+export type ScoringFormat = Scoring['format'];
+
+export interface FormatCaps {
+  /** Short name for admin screens and docs */
+  label: string;
+  /** Judges enter a score for each entrant on a score sheet (POST /api/scores) */
+  scoreSheet: boolean;
+  /** Entrants perform in a run order that the DJ and judges follow */
+  runOrder: boolean;
+  /** The division can have rounds (prelims, finals) */
+  rounds: boolean;
+  /** Entrants are ranked against each other (showcases are not judged) */
+  ranked: boolean;
+  /** The format has its own judging screen and data, not the shared score sheet */
+  ownScreen: boolean;
+}
+
+export const FORMATS: Record<ScoringFormat, FormatCaps> = {
+  freestyle: { label: 'Freestyle', scoreSheet: true, runOrder: true, rounds: true, ranked: true, ownScreen: false },
+  panel: { label: 'Panel', scoreSheet: true, runOrder: true, rounds: true, ranked: true, ownScreen: false },
+  manual: { label: 'Manual score', scoreSheet: true, runOrder: true, rounds: true, ranked: true, ownScreen: false },
+  ladder: { label: 'Trick ladder', scoreSheet: false, runOrder: false, rounds: false, ranked: true, ownScreen: true },
+  bracket: { label: 'Battle bracket', scoreSheet: false, runOrder: false, rounds: false, ranked: true, ownScreen: true },
+  showcase: { label: 'Showcase', scoreSheet: false, runOrder: true, rounds: false, ranked: false, ownScreen: false },
+};
+
+export const formatCaps = (format: ScoringFormat): FormatCaps => FORMATS[format];
+
+/** Judges score it on the shared score sheet. */
+export const usesScoreSheet = (format: ScoringFormat | undefined): boolean => !!format && FORMATS[format].scoreSheet;
+
+/** Same question about a division's scoring, narrowing it to the formats that use the score sheet. */
+export const hasScoreSheet = (s: Scoring): s is FreestyleScoring | PanelScoring | ManualScoring => FORMATS[s.format].scoreSheet;
+
+/** It has a run order (DJ queue, "now performing"). */
+export const usesRunOrder = (format: ScoringFormat | undefined): boolean => !!format && FORMATS[format].runOrder;
+
+/** It can be split into rounds. */
+export const supportsRounds = (format: ScoringFormat | undefined): boolean => !!format && FORMATS[format].rounds;
+
 /** A division's entry rules (solo unless it says otherwise). */
 export const entryOf = (d: DivisionDef | undefined): EntryDef => d?.entry ?? { type: 'solo' };
 export const isTeamDivision = (d: DivisionDef | undefined) => entryOf(d).type === 'team';
 
 /** A division's rounds (one unnamed round unless it says otherwise; brackets/ladders/showcases have one). */
 export function roundsOf(d: DivisionDef | undefined): RoundDef[] {
-  const multi = d && ['freestyle', 'panel', 'manual'].includes(d.scoring.format) && d.rounds?.length;
+  const multi = d && supportsRounds(d.scoring.format) && d.rounds?.length;
   return multi ? d!.rounds! : [{ name: 'Final' }];
 }
 
@@ -699,7 +748,7 @@ function scoringIssues(d: DivisionDef): string[] {
     out.push(`${d.code}: team entries need 1 ≤ min ≤ max, max between 2 and 50`);
   }
   if (d.rounds && d.rounds.length > 0) {
-    if (!['freestyle', 'panel', 'manual'].includes(sc.format)) out.push(`${d.code}: rounds only apply to freestyle, panel and manual divisions`);
+    if (!supportsRounds(sc.format)) out.push(`${d.code}: rounds only apply to freestyle, panel and manual divisions`);
     if (d.rounds.length > 5) out.push(`${d.code}: at most 5 rounds`);
     d.rounds.forEach((r, i) => {
       const last = i === d.rounds!.length - 1;
