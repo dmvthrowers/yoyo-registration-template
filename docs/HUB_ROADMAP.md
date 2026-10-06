@@ -9,6 +9,31 @@ This is a direction, not a commitment to a schedule. Work in small steps that ea
 app. The live Virginia State Yo-Yo Contest app (VA-States) is the first deployment and stays safe:
 real registrants and real payments mean schema, payment and auth changes get production care.
 
+## Decisions so far (owner)
+
+- **Path:** stay on one deployment per organization and make the event first-class inside it (stage 1), then
+  configuration as data (stage 2). A shared hub (stage 3) is not planned unless several clubs ask.
+- **Who it's for first:** the Mid-Atlantic community (DMV Throwers and its region). It may expand beyond that.
+- **Anyone can build and deploy it.** The template is public and meant to be used by other clubs and regions
+  without our help. That is a design requirement, not a nice-to-have (see below).
+
+### What "anyone can deploy it" means for the work
+
+- **No Mid-Atlantic or DMV Throwers specifics in the template**, ever: names, places, dates, domains, sponsor and
+  contact details, example data and wording all come from configuration. Our own contest is just one config.
+- **Setup is documented end to end** (`docs/SETUP.md`) for someone who has never seen the repo, with a checklist,
+  the services they need (Supabase, Stripe, Resend, Vercel) and what each costs, and a demo seed so a fresh copy
+  shows something real on day one.
+- **Safe defaults:** a fresh deployment is private until the organizer turns things on (registration closed,
+  results unpublished), takes no real payments until Stripe is configured, and collects no more personal data than
+  the config asks for.
+- **Another region can run its own series** with its own divisions, formats, prices, rules and branding by editing
+  configuration, and can pull in template updates without conflicts (config and presets stay separate from code).
+- **Multiple organizers in one region** (a regional circuit of events run by different clubs) is a possible variation
+  of stage 3. It isn't designed yet; stage 1 keeps the event self-contained so it stays possible.
+- **Our deployment follows the same path.** VA-States is the first deployment and the proving ground: a change
+  lands there when it's safe for a live contest, and in the template when it's generic.
+
 ## The model we're heading to
 
 ```
@@ -106,7 +131,7 @@ data separation and retention rules, a template gallery. Decide this with real d
 ## Open questions
 
 - Is a "multi-event" deployment mostly one organizer running several related events (a contest plus a
-  workshop), or separate organizers sharing a hub? That decides stage 1 versus stage 3.
+  workshop), or separate organizers sharing a hub? (Leaning: one organizer first, regional circuit later.)
 - Do fees and bundles ever span events (one price for the contest and the workshop)?
 - Who builds an event: a developer editing config (stage 1), or a non-technical organizer (stage 2)?
 - Which toys and formats are next after yo-yo, juggling and kendama, and do any need a format we don't have?
