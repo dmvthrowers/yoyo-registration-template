@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { competition } from '@/contest.config';
+import { Field } from '@/components/form/Field';
 
 /** Optional setup fields, labelled from competition.gear. A "" label hides the field. */
 const GEAR_FIELDS = ([
@@ -490,14 +491,5 @@ export default function SpectatorPortalPage() {
         }
       `}</style>
     </>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs font-black tracking-caps text-gold mb-1.5">{label}</label>
-      {children}
-    </div>
   );
 }
