@@ -37,6 +37,8 @@ Then:
   - `toy` and `gear` set the wording ("kendama", "Diabolo / Sticks & string").
   - `divisions` lists each division with its code, name, price, whether it uses music, its
     styles, which divisions it can't be combined with, and how it's judged (below).
+  - `maxTotalStyles` (optional) caps styles across everything one person enters. A division
+    without styles counts as one, so `2` lets someone enter 1A plus one X style, or two X styles.
   - `combos` are bundle prices. `pricing` holds the early-bird discount, the walk-up surcharge,
     and `pricesTbd`, which shows "TBD" until your fees are set.
   - The template ships with yo-yo's **1A**, **X** (2A–5A styles) and **SBJ**.
