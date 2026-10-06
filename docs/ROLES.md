@@ -57,9 +57,9 @@ Today an account has one role (`contest_staff_accounts.role`: judge, dj, audio_t
 `identity.role`. The move is in small, separately shippable steps, each safe on its own:
 
 1. **Core (done):** `lib/roles.ts`, its tests, this page. Nothing uses it yet; no behavior changes.
-2. **Grants table** (additive migration): `contest_role_grants (auth_user_id, role, event_id, granted_by, created_at,
+2. **Grants table (done, migration 0044)** (additive migration): `contest_role_grants (auth_user_id, role, event_id, granted_by, created_at,
    revoked_at)`, service-role only. Backfill one grant per existing staff account from its `role`.
-3. **Identity returns grants:** `getStaffIdentityFromToken` also returns `grants` (from the table, falling back to
+3. **Identity returns grants (done):** `getStaffIdentityFromToken` also returns `grants` (from the table, falling back to
    `grantsFromLegacyRole`) and keeps `.role` for old callers. Players and volunteers get their automatic grants
    from their registration and volunteer rows.
 4. **Routes use `can()`:** replace `['admin','dj','audio_tech'].includes(identity.role)` and the like with
