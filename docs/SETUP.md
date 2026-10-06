@@ -35,7 +35,8 @@ Then:
 
 - **Your toy, divisions and prices**: the `competition` block, lower in the same file.
   - `toy` and `gear` set the wording ("kendama", "Diabolo / Sticks & string").
-  - `divisions` lists each division with its code, name, price, whether it uses music, its
+  - `divisions` lists each division with its code, name, price, its music (`true` for one routine
+    track; or one track per round and/or extras like battle music, see `MusicConfig`), its
     styles, which divisions it can't be combined with, and how it's judged (below).
   - `maxTotalStyles` (optional) caps styles across everything one person enters. A division
     without styles counts as one, so `2` lets someone enter 1A plus one X style, or two X styles.
@@ -143,8 +144,9 @@ and redeploy.
 
 - [ ] Register a competitor with a fee due, pay with `4242 4242 4242 4242`, land on `/confirm`
       as paid. The admin dashboard shows it paid via `stripe`.
-- [ ] Upload a music file from the confirmation email or `/portal` (one per division that uses
-      music). Optional: put lo-fi tracks you may legally play in the `lofi/` folder of the
+- [ ] Upload music from the confirmation email or `/portal`: one track per slot (a division's
+      routine music, or one per round and any extras like battle music: see `music` in
+      `contest.config.ts`). Optional: put lo-fi tracks you may legally play in the `lofi/` folder of the
       `contest-music` bucket, then try the dry runs on the dashboard's Music tab.
 - [ ] Make a 100% comp code in the dashboard, register with it: no Stripe page.
 - [ ] RSVP as a spectator at `/spectate`; sign in at `/spectators/portal` with the emailed code.
