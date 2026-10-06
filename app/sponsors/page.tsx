@@ -4,6 +4,24 @@ import { useCallback, useEffect, useState } from 'react';
 import BracketStaffGate from '@/components/BracketStaffGate';
 import { SPONSOR_STATUSES, type Deliverable, type SponsorSummary } from '@/lib/sponsors';
 
+interface Inquiry {
+  id: string;
+  created_at: string;
+  status: string;
+  contact_first: string;
+  contact_last: string;
+  email: string;
+  phone: string | null;
+  brand_name: string;
+  tier: string;
+  vendor_table: boolean | null;
+  division_sponsor: boolean | null;
+  in_kind: boolean | null;
+  retail_value_cents: number | null;
+  payment_method: string | null;
+  notes: string | null;
+}
+
 interface Sponsor {
   id: string;
   name: string;
@@ -31,6 +49,7 @@ function Board({ token }: { token: string }) {
   const [manage, setManage] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [name, setName] = useState('');
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const load = useCallback(async () => {
@@ -38,6 +57,10 @@ function Board({ token }: { token: string }) {
     if (!res.ok) { setMsg({ ok: false, text: 'Could not load sponsors. Reload and try again.' }); return; }
     const j = await res.json() as { manage: boolean; sponsors: Sponsor[]; summary: SponsorSummary | null };
     setManage(j.manage); setSponsors(j.sponsors); setSummary(j.summary);
+    if (j.manage) {
+      const r2 = await fetch('/api/admin/sponsors/inquiries', { headers: auth, cache: 'no-store' });
+      if (r2.ok) setInquiries(((await r2.json()) as { inquiries: Inquiry[] }).inquiries.filter((i) => i.status === 'new'));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   useEffect(() => { load(); }, [load]);
@@ -54,6 +77,18 @@ function Board({ token }: { token: string }) {
     return true;
   }
 
+  async function handleInquiry(id: string, action: 'convert' | 'dismiss') {
+    setMsg(null);
+    const res = await fetch(`/api/admin/sponsors/inquiries/${id}`, { method: 'POST', headers: auth, body: JSON.stringify({ action }) });
+    if (!res.ok) {
+      const j = await res.json().catch(() => null) as { error?: { message?: string } } | null;
+      setMsg({ ok: false, text: j?.error?.message ?? 'That did not save. Try again.' });
+    } else {
+      setMsg({ ok: true, text: action === 'convert' ? 'Added to the pipeline as a prospect.' : 'Dismissed.' });
+    }
+    await load();
+  }
+
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (await send('POST', null, { name, status: 'prospect', amount_cents: 0 })) setName('');
@@ -68,6 +103,7 @@ function Board({ token }: { token: string }) {
       <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '1.6rem', margin: '0 0 0.25rem' }}>Sponsors</h1>
       <p style={{ color: 'var(--text-muted)', margin: '0 0 1rem', fontSize: '0.85rem' }}>
         {manage ? 'Track every sponsor from first contact to paid, and what each one is owed.' : 'Your sponsorship: what you committed and what we owe you.'}
+        {manage && <> <a href="/sponsors/form" style={{ color: 'var(--gold-light)' }}>Edit the sponsor form and tiers</a></>}
       </p>
       <p role="status" aria-live="polite" style={{ margin: '0 0 1rem', fontSize: '0.85rem', minHeight: '1.2rem', color: msg ? (msg.ok ? 'var(--gold-light)' : '#ff6b6b') : 'transparent' }}>{msg?.text ?? ''}</p>
 
@@ -80,6 +116,31 @@ function Board({ token }: { token: string }) {
             </div>
           ))}
         </div>
+      )}
+
+      {manage && inquiries.length > 0 && (
+        <section aria-labelledby="inq-h" style={{ background: 'var(--navy)', border: '1px solid var(--gold)', padding: '1rem', marginBottom: '1.5rem' }}>
+          <h2 id="inq-h" style={{ color: 'var(--gold)', fontSize: '1rem', margin: '0 0 0.75rem' }}>New inquiries ({inquiries.length})</h2>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {inquiries.map((i) => (
+              <div key={i.id} style={{ borderTop: '1px solid var(--navy-border)', paddingTop: '0.75rem' }}>
+                <strong style={{ color: '#fff' }}>{i.brand_name}</strong>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> · {i.contact_first} {i.contact_last} · {i.email}{i.phone ? ` · ${i.phone}` : ''}</span>
+                <p style={{ color: 'var(--text-body)', fontSize: '0.8rem', margin: '0.3rem 0' }}>
+                  Interested in: {i.tier.replace(/_/g, ' ')}
+                  {i.vendor_table ? ' · wants a vendor table' : ''}{i.division_sponsor ? ' · division sponsor' : ''}
+                  {i.in_kind ? ` · product${i.retail_value_cents ? ` (about ${money(i.retail_value_cents)})` : ''}` : ''}
+                  {i.payment_method ? ` · pay by ${i.payment_method}` : ''}
+                </p>
+                {i.notes && <p style={{ color: 'var(--text-body)', fontSize: '0.8rem', margin: '0 0 0.5rem', whiteSpace: 'pre-wrap' }}>{i.notes}</p>}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" style={btn(true)} onClick={() => handleInquiry(i.id, 'convert')}>Add as prospect</button>
+                  <button type="button" style={btn()} onClick={() => { if (window.confirm(`Dismiss the inquiry from ${i.brand_name}?`)) handleInquiry(i.id, 'dismiss'); }}>Dismiss</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {manage && (

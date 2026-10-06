@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const routes = [
     '/',
+    ...(contest.sponsors.enabled ? ['/sponsor'] : []),
     '/spectate',
     '/policies',
     '/fee-calculator',
