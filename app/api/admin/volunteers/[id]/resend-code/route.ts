@@ -5,13 +5,14 @@ import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { logAudit } from '@/lib/audit';
 import { sendVolunteerConfirmedEmail } from '@/lib/email';
 import { getVolunteerRole } from '@/lib/volunteer-roles';
+import { can } from '@/lib/roles';
 
 async function requireAdmin(req: NextRequest, requestId: string) {
   const token = getBearerToken(req);
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'volunteers.manage')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

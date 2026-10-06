@@ -62,7 +62,7 @@ Today an account has one role (`contest_staff_accounts.role`: judge, dj, audio_t
 3. **Identity returns grants (done):** `getStaffIdentityFromToken` also returns `grants` (from the table, falling back to
    `grantsFromLegacyRole`) and keeps `.role` for old callers. Players and volunteers get their automatic grants
    from their registration and volunteer rows.
-4. **Routes use `can()`:** replace `['admin','dj','audio_tech'].includes(identity.role)` and the like with
+4. **Routes use `can()` (started):** scores, brackets, ladder, DJ music, run order, budget, volunteers, comp codes, spectators, contestants, event flags and the ops dashboard now check capabilities; `requireAdminRequest` uses `isAdmin`. A test pins that today's four legacy roles get the same answers as before. Still on `requireAdminRequest` (admin only): the other `/api/admin/*` routes. Original note: replace `['admin','dj','audio_tech'].includes(identity.role)` and the like with
    capability checks, route by route, with a test for each. `requireAdminRequest` becomes `requireCapability(...)`.
 5. **The portal:** a `/portal` page (and menu) built from `portalsFor`: one sign-in, one pane.
 6. **New modules**, each its own PR behind its capability: stream, media (video and pictures), MC, merch, sponsors,

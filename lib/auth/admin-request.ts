@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiError } from '@/lib/api-error';
+import { isAdmin, can } from '@/lib/roles';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 
 export async function requireAdminRequest(req: NextRequest, requestId: string) {
@@ -9,7 +10,7 @@ export async function requireAdminRequest(req: NextRequest, requestId: string) {
   }
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !isAdmin(identity.grants)) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 
@@ -28,7 +29,7 @@ export async function requireRunOrderEditorRequest(req: NextRequest, requestId: 
   }
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || !['admin', 'dj', 'audio_tech', 'judge'].includes(identity.role)) {
+  if (!identity || !identity.isActive || !can(identity.grants, 'runorder.edit')) {
     return apiError('forbidden', 'Admin, DJ/audio, or judge staff access required', requestId);
   }
 

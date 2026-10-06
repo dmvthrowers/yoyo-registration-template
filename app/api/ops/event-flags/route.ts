@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { clearEventFlagCache, getEventFlagBoolean } from '@/lib/event-flags';
 import { z } from 'zod';
+import { can } from '@/lib/roles';
 
 const eventFlagsPatchSchema = z.object({
   results_published: z.boolean().optional(),
@@ -15,7 +16,7 @@ async function requireAdmin(req: NextRequest, requestId: string) {
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'event.configure')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

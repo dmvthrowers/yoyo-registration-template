@@ -10,6 +10,7 @@ import {
   type FreestyleSheet, type ScoreBreakdown,
   hasScoreSheet,
 } from '@/lib/divisions-core';
+import { can } from '@/lib/roles';
 
 type Division = string;
 
@@ -164,7 +165,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
       return apiError('unauthorized', 'Missing bearer token', requestId);
     }
     const identity = await getStaffIdentityFromToken(token);
-    if (!identity || !identity.isActive || !['judge', 'admin'].includes(identity.role)) {
+    if (!identity || !identity.isActive || !can(identity.grants, 'scores.enter')) {
       return apiError('forbidden', 'Judge or admin access required', requestId);
     }
     judgeIdentity = { authUserId: identity.authUserId, displayName: identity.displayName };
@@ -345,7 +346,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     return apiError('unauthorized', 'Missing bearer token', requestId);
   }
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || !['judge', 'admin'].includes(identity.role)) {
+  if (!identity || !identity.isActive || !can(identity.grants, 'scores.enter')) {
     return apiError('forbidden', 'Judge or admin access required', requestId);
   }
 

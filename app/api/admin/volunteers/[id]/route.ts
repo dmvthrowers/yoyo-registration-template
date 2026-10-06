@@ -8,13 +8,14 @@ import { VOLUNTEER_ROLE_KEYS, VOLUNTEER_STATUSES, getVolunteerRole } from '@/lib
 import { generateReadableCode } from '@/lib/tokens';
 import { z } from 'zod';
 import { contest, zonedDate } from '@/contest.config';
+import { can } from '@/lib/roles';
 
 async function requireAdmin(req: NextRequest, requestId: string) {
   const token = getBearerToken(req);
   if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
 
   const identity = await getStaffIdentityFromToken(token);
-  if (!identity || !identity.isActive || identity.role !== 'admin') {
+  if (!identity || !identity.isActive || !can(identity.grants, 'volunteers.manage')) {
     return apiError('forbidden', 'Admin access required', requestId);
   }
 

@@ -3,6 +3,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { resolveSlot } from '@/lib/music-config';
+import { can } from '@/lib/roles';
 
 export const runtime = 'nodejs';
 
@@ -25,7 +26,7 @@ export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
   if (!identity || !identity.isActive) {
     return apiError('forbidden', 'Staff access required', requestId);
   }
-  if (!['dj', 'audio_tech', 'admin'].includes(identity.role)) {
+  if (!can(identity.grants, 'music.play')) {
     return apiError('forbidden', 'DJ/audio staff access required', requestId);
   }
 

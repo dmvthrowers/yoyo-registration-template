@@ -7,6 +7,7 @@ import { isPublished, publishedDivisions } from '@/lib/results-visibility';
 import { runOrderDisplayName, type DisplayNameParts } from '@/lib/display-name';
 import { DIVISION_CODES, divisionByCode, type DivisionDef, type LadderScoring } from '@/contest.config';
 import { compareLadder, isTeamDivision, ladderNext, ladderResult, type LadderAttempt, type LadderResult } from '@/lib/divisions-core';
+import { can } from '@/lib/roles';
 
 /**
  * Trick ladders (format "ladder", see docs/FORMATS.md).
@@ -52,7 +53,7 @@ function ladderOf(code: string): { d: DivisionDef; sc: LadderScoring } | null {
   return d && d.scoring.format === 'ladder' ? { d, sc: d.scoring } : null;
 }
 
-const isWriter = (id: StaffIdentity | null) => !!id && id.isActive && (id.role === 'judge' || id.role === 'admin');
+const isWriter = (id: StaffIdentity | null) => !!id && id.isActive && can(id.grants, 'scores.enter');
 
 type Admin = ReturnType<typeof createAdminClient>;
 
