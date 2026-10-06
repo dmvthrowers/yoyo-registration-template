@@ -136,6 +136,81 @@ own Stripe account, Stripe Connect), a self-serve "create my organization" flow,
 domains, usage limits and a billing path for regions that outgrow free tiers, and a template gallery of presets.
 Roles and the portal (`docs/ROLES.md`) cut across all stages and ship in their own small steps.
 
+## Finance and budget: a proper budgeting tool
+
+**Goal.** Turn the budget module into a real planning-and-tracking tool for a contest or event: plan the budget
+before registration opens, see plan versus actual as money moves, forecast whether the event breaks even, and
+close the books cleanly afterward. Finance is a role (`finance`, see `docs/ROLES.md`) so a treasurer can run it
+without being an admin.
+
+**Where it is today.** `lib/budget.ts` and `BudgetManager` hold flat income and expense entries in three
+categories (sponsor, merch, other) with a description, amount and date, live paid-registration income, one
+fundraising goal, and a public transparency page. There is no plan, no per-line categories, no vendors,
+receipts, payment status, forecast, or link to prizes, sponsors or payouts.
+
+### What it should do
+
+- **Plan versus actual.** A budget built from categories and line items (venue, insurance, equipment, prizes,
+  stream and AV, food, printing, staff, merch cost, fees, marketing, contingency). Each line has a planned amount
+  and the actuals recorded against it, with the difference and a status (under, on track, over).
+- **Configurable categories** per organization, with sensible presets (a small club contest, a multi-day festival),
+  nested (category, line) and a place for in-kind items valued at a fair price.
+- **Income that comes from the app, not retyped.** Registration revenue (net of discounts, comps and refunds),
+  merch sales, sponsor pledges and payments, donations, ticket or spectator income, grants. Payment-processor
+  fees and refunds and disputes (`charge.dispute.*`) show as expenses or reversals so the net is true.
+- **Expenses with a paper trail.** Vendor, date, amount, who paid, how (card, cash, check, personal money to be
+  reimbursed), a receipt photo or file, and a status (planned, committed, paid, reimbursed). People other than
+  finance can submit an expense or a receipt for approval.
+- **Forecast and break-even.** From the price list, early-bird and walk-up rules, combos and entrant counts:
+  income at 25, 50 and 100 entrants, the break-even number, and a worst-case. It reuses `lib/pricing` and
+  `lib/prizes`, so changing a price or the prize plan moves the forecast.
+- **Prizes and prize cost.** The prize plan (`lib/prizes.ts`: places by entrants, champion prizes) becomes a
+  budgeted line, with sponsor-donated and bought prizes tracked separately.
+- **Sponsors.** Pledged, invoiced and received amounts per sponsor and tier, deliverables owed, and in-kind value,
+  feeding both the sponsor module and the budget.
+- **Merch.** Cost of goods, quantities, sales and leftover stock value, so merch shows its real margin.
+- **Cash flow and deadlines.** What is due when (deposits, vendor balances, payouts), the cash position over time,
+  and warnings before money runs short. Payment-processor payouts reconciled against registrations.
+- **Reimbursements and payouts.** Who is owed what, mark paid, a record of prize payouts and stipends.
+- **Multi-event, multi-year.** Per event and per organization; copy last year's budget as a starting point;
+  compare actuals across events; a season rollup.
+- **Controls.** Roles (`finance.view`, `finance.edit`; expense submission and approval), a full audit log of every
+  change, locked periods after the books close, and attachments that live under the storage budget.
+- **Reports and exports.** Plan versus actual, a statement of income and expenses, cash flow, a sponsor report,
+  a public transparency page with what the organizer chooses to show, and CSV (and a QuickBooks-friendly) export
+  for the accountant.
+
+### Data model (sketch)
+
+`budget_categories` (organization, parent, name, kind: income or expense) and `budget_lines` (event, category,
+name, planned_cents, notes); `ledger_entries` (event, line, direction, amount_cents, date, vendor or source,
+payee, method, status, reimbursable, approved_by, receipt file, links to a registration, sponsor, order or
+dispute); `sponsors` and `pledges`; `payouts`; `budget_periods` (open or closed). Amounts stay integer cents.
+Entries are append-and-correct (a change is a reversing entry plus a new one), so the history is trustworthy.
+
+### Stages
+
+1. **Plan and lines.** Categories and planned lines, link existing entries to lines, plan-versus-actual view,
+   break-even forecast from the price list. Additive; the current flat entries keep working.
+2. **Expenses with receipts.** Vendors, payment method and status, receipt upload, reimbursement tracking,
+   expense submission and approval (needs the roles work).
+3. **Income feeds.** Registration income net of fees, refunds and disputes; merch and sponsor pledges flowing in
+   automatically; payout reconciliation.
+4. **Cash flow and alerts.** Dated commitments, cash position, and warnings.
+5. **Multi-event and templates.** Per event and per organization, copy-forward, season rollup.
+6. **Reports, exports and the audit trail.** Statements, accountant exports, locked periods.
+
+Each stage ships on its own and leaves the current budget page working. Receipts and attachments are the main
+storage cost on free tiers, so they get size limits and the same archive-and-purge treatment as music.
+
+### Open questions
+
+- Is a "contest" budget usually one event or a whole season, and do clubs budget in a spreadsheet today that we
+  should import from?
+- Is the organizer a registered nonprofit (categories, receipts and reports for tax purposes), or informal?
+- Who submits expenses: only finance, or any volunteer or staff member with approval?
+- Do sponsors get a portal view of their own pledge, invoice and deliverables?
+
 ## Principles for new work
 
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
@@ -154,7 +229,7 @@ Roles and the portal (`docs/ROLES.md`) cut across all stages and ship in their o
 
 Two tracks run side by side: the **event/organization model** below, and **roles and the portal** (`docs/ROLES.md`:
 core done, then a grants table, identity with roles, routes on capabilities, the single-pane portal, and the new
-modules for stream, media, MC, merch, sponsors and finance).
+modules for stream, media, MC, merch, sponsors and finance). The finance module has its own plan below ("Finance and budget").
 
 1. Extract the scoring-format interface and registry (no behavior change; makes formats pluggable). Started: the
    capability table is in (`FORMATS` in `lib/divisions-core.ts`); the standings and results screens come next.
