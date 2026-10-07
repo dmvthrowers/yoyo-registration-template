@@ -26,3 +26,6 @@ Thumbs.db
 
 # rendered auth email templates (npm run auth-emails)
 supabase/email-templates/dist/
+
+# season archive output goes to your site repo as a PR, never into this repo
+/archive/
