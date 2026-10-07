@@ -162,6 +162,25 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 - **Why not now:** only the sponsor inquiry form is wanted for VSYC-27. Building it as the first instance of this
   shape keeps the later forms cheap without building a form builder before it's needed.
 
+## Contest app feature plan (October 2026)
+
+What to build inside the app once events are first-class, from three sources: research into how real
+kendama, juggling, diabolo, spin top and related events run, a teardown of an existing yo-yo contest
+platform's public site and admin, and a teardown of a dedicated bracket product.
+
+- [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the field research, with sources. New formats (F1–F10),
+  registration features (R1–R10), contest-site pages (S1–S8) and club-site ideas (C1–C4).
+- [`CONTEST_APP_MASTER_PLAN.md`](CONTEST_APP_MASTER_PLAN.md): the research merged with the teardowns
+  (contest-day operations and spectator features, T1–T18) into one build order, plus the decisions needed.
+- [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md): the master plan checked against what VA-States and the
+  templates already have (have it, partial, gap), with the build order cut down to the real gaps.
+
+**Phase 1, in short:** a scoring completeness tracker (which judges haven't scored whom), two more publish
+stages, bracket match scores (to 3 / to 5), score tooltips and a leaderboard heat map, MC announcer sheets,
+a kendama preset that describes kendama correctly with today's formats, trick list and prize table pages,
+and $0 add-on divisions. Each new format is a plugin (see "Principles for new work") and follows the same
+order: `divisions-core.ts` with tests, additive migration, judge UI, public results, contest-site words, demo.
+
 ## Principles for new work
 
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
@@ -191,3 +210,5 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 - Do fees and bundles ever span events (one price for the contest and the workshop)?
 - Who builds an event: a developer editing config (stage 1), or a non-technical organizer (stage 2)?
 - Which toys and formats are next after yo-yo, juggling and kendama, and do any need a format we don't have?
+  Answered in [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the six formats cover about 70% of events; kendama
+  is the biggest gap. Its own open questions are in [`CONTEST_APP_MASTER_PLAN.md`](CONTEST_APP_MASTER_PLAN.md) (Part 6).

@@ -100,6 +100,7 @@ CI runs typecheck, lint, tests, build and the migration replay on every pull req
 - [`docs/FORMATS.md`](docs/FORMATS.md) — every judging format, team entries and rounds
 - [`docs/REPO_GUIDE.md`](docs/REPO_GUIDE.md) — how the app works, file by file
 - [`docs/STRIPE_PAYMENTS.md`](docs/STRIPE_PAYMENTS.md) — payments, refunds, reconciliation
+- [`docs/HUB_ROADMAP.md`](docs/HUB_ROADMAP.md) and [`docs/CONTEST_APP_PLAN.md`](docs/CONTEST_APP_PLAN.md) — where the app is heading and what gets built next
 - [`AGENTS.md`](AGENTS.md) — rules for AI coding agents (and a good read for people)
 
 ## Security
