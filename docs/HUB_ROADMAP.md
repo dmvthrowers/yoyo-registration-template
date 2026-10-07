@@ -1,13 +1,47 @@
-# Hub roadmap: any skill toy, any event format
+# Hub roadmap: any skill toy, any event, self-hosted at low cost
 
-**Long-term goal.** One app that runs registration and scoring for any skill toy and any competition
-or event format, online or in person. Yo-yo first, then juggling and kendama (diabolo, spin tops and
-others after that). It should grow, shrink and combine events: a single event, or a multi-day,
-multi-event structure.
+**End goal.** A platform we run ourselves first, that turns into a template anyone can self-host at
+low cost for a **full event page**: the public site (info, schedule, venue, rules, sponsors, FAQ),
+registration and payments, judging, live results, the open budget and the archive. Two levels: a static
+site template for organizers who only want a public page, and this app for those who want to host
+everything themselves.
+Any skill or dexterity toy, any event type, online or in person, one day or several. Yo-yo first,
+then juggling and kendama, then the rest.
 
 This is a direction, not a commitment to a schedule. Work in small steps that each leave a working
 app. The live Virginia State Yo-Yo Contest app (VA-States) is the first deployment and stays safe:
 real registrants and real payments mean schema, payment and auth changes get production care.
+
+## From our platform to anyone's template
+
+What "done" looks like, and what's still between here and there.
+
+**Done means:**
+
+- **Two clear levels.** Level 1: copy the static site template, edit one config, publish free on
+  GitHub Pages. Level 2: add this app for registration, payments, judging and results. The two share
+  the event's facts so nothing is typed twice, and the site links into the app.
+- **Low cost, stated plainly.** A small event runs with no fixed monthly bill on free tiers
+  (Supabase, Resend, GitHub, a host's free plan). The only per-event cost is payment fees, and a free
+  event needs no payment account at all. A custom domain is optional (about $10–15 a year). The setup
+  guide lists every service, what it costs, and the free-tier limits that matter.
+- **No developer needed.** A first-run setup page, a demo seed so a fresh copy shows something real,
+  and (stage 2) an admin builder instead of editing config files.
+- **Updates without conflicts.** Config, presets and branding stay apart from code, so a
+  deployment can pull template updates cleanly.
+- **The templates are what we run.** Our live repos and the templates stay in parity, so every
+  improvement from a real contest reaches everyone who uses the templates.
+
+**What's in the way:**
+
+| Gap | Today | Next step |
+|---|---|---|
+| Event facts typed twice | Name, date, venue and divisions live in both the site config and the app config | The app publishes the event's public facts as a feed (E2, E3); the static site reads it at build time when an app exists, and its own config when not |
+| Payments are required | Stripe is listed as needed | Let an event run with no payment provider: free registration, pay at the door recorded as a channel |
+| Hosting cost honesty | "Free tier works" for Vercel | Vercel's free plan is for non-commercial use, so an event that charges fees may need a paid plan. Check whether a nonprofit contest qualifies, list the cost, and test a no-cost alternative host |
+| Free-tier limits | Email quota is tracked | Track the rest that a busy event can hit: database size, storage for music and video, inactive-project pausing on Supabase's free plan |
+| Setup still needs SQL | First admin is a hand-run insert | One-time first-admin step (E9), email stub (E8), first-run page |
+| Live and template drift | Features land in VA-States first and are ported by hand; some never were | Work the gaps in [`PARITY.md`](PARITY.md) down to zero, then keep it there with the parity rule (every PR ports or logs) |
 
 ## Decisions so far (owner)
 
@@ -16,6 +50,17 @@ real registrants and real payments mean schema, payment and auth changes get pro
 - **Who it's for first:** the Mid-Atlantic community (DMV Throwers and its region). It may expand beyond that.
 - **Anyone can build and deploy it.** The template is public and meant to be used by other clubs and regions
   without our help. That is a design requirement, not a nice-to-have (see below).
+- **Two templates, two levels.** The public event site stays a static template
+  ([`yoyo-contest-template`](https://github.com/dmvthrowers/yoyo-contest-template)): the easy option for an
+  organizer who only wants a site. This app is the second, fuller option: registration through results,
+  self-hosted. They are not merged into one.
+- **Our live deployments keep their own repos.** `dmvthrowers.github.io` (the club site and the VSYC
+  public pages together, in one repo) and the registration app (`VA-States`) stay separate repos, not
+  forks that track the templates automatically.
+- **Live and template stay in parity.** That covers all three pairs: VA-States and this template, the
+  VSYC pages and the contest site template, and the club pages and the club site template. Anything
+  generic that lands in a live repo lands in its template, and the reverse, so the templates are always
+  what we actually run. See [`PARITY.md`](PARITY.md).
 
 ### What "anyone can deploy it" means for the work
 
@@ -165,9 +210,12 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 ## Contest app feature plan (October 2026)
 
 What to build inside the app once events are first-class. It starts from how real kendama, juggling,
-diabolo, spin top and related events run, and from what tends to go wrong on contest day. Every
-feature is designed around our own principles (built for the people in the room, minors private by
-default, free to watch, every number explains itself, one app from sign-up to archive, any toy).
+diabolo, spin top and related events run, and from what tends to go wrong on contest day. Every feature
+is designed around our own principles: built for the people in the room, minors private by default,
+free to watch, open at every level (budget, code, rules, scoring), fair and safe for everyone, one app
+from sign-up to archive, always open source, any skill or dexterity toy, and any event type. It also
+carries over what the community calendar
+([`dmvt-event-hub`](https://github.com/dmvthrowers/dmvt-event-hub)) does well (E1–E10).
 
 - [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the field research, with sources. New formats (F1–F10),
   registration features (R1–R10), contest-site pages (S1–S8) and club-site ideas (C1–C4).
@@ -185,6 +233,14 @@ plugin (see "Principles for new work") and follows the same order: `divisions-co
 
 ## Principles for new work
 
+- **Always open source.** The template stays public domain, with no paid tier or closed add-ons.
+- **Open at every level.** Budget, code, rules and scoring are public from the start: rules and scoring
+  before registration opens, every judge's score once a round is released, and money in and out on a
+  public page. Only personal data stays private.
+- **Fair and safe.** The same rules for every player, judges with no stake in the result, a code of
+  conduct everyone in the room accepts, private ways to report a problem, and nobody priced out.
+- **Event type agnostic.** A contest, jam, workshop, meetup, convention or online contest is the same
+  kind of event; judging is optional, not assumed.
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
   come from configuration. A kendama or juggling event should need no code change.
 - **A scoring format is a plugin.** New formats (e.g. a judged trick list, timed relays, head-to-head

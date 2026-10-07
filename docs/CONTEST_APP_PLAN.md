@@ -35,6 +35,7 @@
 | T6 | Judge practice mode | ❌ | — |
 | T7 | Bundles and add-ons | 🟡 | Combo pricing exists; no merch add-ons, custom questions or pay-at-door channel |
 | T8 | Volunteer shifts | 🟡 | Volunteer page + roles exist; no shift sign-up with time slots |
+| T19 | Scoring that survives bad signal | ❌ | Judge page has no offline save; a dropped connection loses the unsent score |
 
 **Verdict:** T1 is the single highest-leverage build. T2 needs a run-order gate and a "checked" step, not a rebuild.
 
@@ -74,6 +75,7 @@
 | R7 | Workshop-host / performer forms | ❌ | — |
 | R8 | Raffle | ❌ | — |
 | R9 | Bracket import and export (CSV) | ❌ | — |
+| R11 | Photo and video consent | ❌ | Minor name opt-in exists (`contest_public_name()`); no photo or video consent |
 
 ## 5. Ideas that are only ours
 
@@ -82,6 +84,51 @@
 | O1 | First contest path | ❌ | — |
 | O2 | Player page after the contest | 🟡 | Player login exists; no scores, score sheet, video or certificate on it |
 | O3 | Club link | ❌ | — |
+| O4 | Open books | 🟡 | Budget and finance screens exist for staff; nothing public |
+| O5 | Rules with a changelog | 🟡 | Rules pages exist; no version or change list |
+
+## 5b. Learned from the event hub
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| E1 | Subscribe with filters | 🟡 | One spectator `.ics` (`lib/ics.ts`); no per-division, per-player or RSS feeds |
+| E2 | One event shape for both apps | ❌ | Waits on hub stage 1 (`EventDef`) |
+| E3 | Publish to the community calendar | ❌ | — |
+| E4 | Daily housekeeping | 🟡 | Crons exist for email and payment reconcile; deadlines, locks, reminders and purge are manual |
+| E5 | Report a problem | ❌ | — |
+| E6 | Status page | ❌ | — |
+| E7 | Submit an event, no account | ❌ | Regional circuit only |
+| E8 | Email stub for new deployments | 🟡 | With no `RESEND_API_KEY` the outbox keeps retrying (`lib/outbox.ts`); nothing is lost, but there is no log or preview of what would have gone out |
+| E9 | First admin, once | 🟡 | Done by a hand-run SQL insert (`docs/SETUP.md` §6); safe, but a one-time step would be simpler for non-developers |
+| E10 | Agent skills in the repo | ❌ | — |
+
+Already shared with the hub: honeypot and rate limits, hashed one-time tokens, magic-link portals, an
+audit log.
+
+## 5c. From research into other tools
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| D1 | Player career page | ❌ | Needs the season archive |
+| D2 | Open results data | ❌ | The planned archive freeze (not built yet) writes HTML and JSON; add CSV and a license |
+| D3 | Psych sheet | ❌ | — |
+| D4 | Judge notes | ❌ | — |
+| D5 | Contest data format | ❌ | — |
+| D6 | Schedule conflict check | ❌ | — |
+
+## 5d. Fair and safe
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| P1 | Code of conduct for everyone | 🟡 | Players and spectators accept it at registration (`code_of_conduct_accepted`); not judges, volunteers, staff or sponsors; no version recorded |
+| P2 | Confidential conduct reports | 🟡 | Reports go by email to one address; no private form, team routing or record |
+| P3 | Judge conflicts of interest | ❌ | — |
+| P4 | Published draws | ❌ | Run order is set by staff; no recorded draw |
+| P5 | Appeals with a clock | ❌ | — |
+| P6 | Accommodations | ❌ | — |
+| P7 | Nobody priced out | 🟡 | Comp codes exist; no waiver request or age-based pricing |
+| P8 | Youth safety | 🟡 | Minors' public names are protected (`contest_public_name()`); the rest is new |
+| P9 | Fair divisions | 🟡 | Divisions and ages are config; no over-placement flag |
 
 ## 6. What we already have (no work needed)
 
@@ -96,27 +143,36 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 
 ### Phase 1: Contest-day leverage, minimal code
 1. **T1** scores-in board, the one build that changes contest day
-2. **T2** release gates: a run-order gate and a head-judge "checked" step on the existing releases table
-3. **F1** bracket match scores, the smallest format change; unlocks kendama battles
-4. **T11+T12** how it was scored + score shading (frontend only)
-5. **T4** MC cards, small with high day-of value
-6. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
-7. **R2** $0 add-on divisions
-8. **T18** contest guide page + **O1** first contest path
+2. **P1** code of conduct for everyone · **P2** confidential conduct reports · **P4** published draws
+3. **T19** scoring that survives bad signal · **R11** photo and video consent
+4. **T2** release gates: a run-order gate and a head-judge "checked" step on the existing releases table
+5. **F1** bracket match scores, the smallest format change; unlocks kendama battles
+6. **T11+T12** how it was scored + score shading (frontend only)
+7. **T4** MC cards, small with high day-of value
+8. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
+9. **R2** $0 add-on divisions
+10. **T18** contest guide page + **O1** first contest path
+11. **E8** email stub · **E9** first admin once
+12. **O5** rules with a changelog · **O4** open books
 
 ### Phase 2: Formats and the public side
-9. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
-10. **T10** contest feed · **T9** fan picks (if we decide yes)
-11. **T5** music desk (run-order naming, lock, reminders)
-12. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
-13. **T8** volunteer shifts · **R1** video prelims
+13. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
+14. **T10** contest feed · **T9** fan picks (if we decide yes)
+15. **T5** music desk (run-order naming, lock, reminders)
+16. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
+17. **T8** volunteer shifts · **R1** video prelims
+18. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
+19. **D3** psych sheet · **D4** judge notes · **D6** schedule conflict check
+20. **P3** judge conflicts · **P5** appeals · **P6** accommodations · **P7** fee waivers · **P8** youth safety · **P9** fair divisions
 
 ### Phase 3: Bigger / niche
-14. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-15. **T3** judge calibration notes · **T6** judge practice mode
-16. **T14, T15, T17** battle board
-17. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
-18. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+21. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+22. **T3** judge calibration notes · **T6** judge practice mode
+23. **T14, T15, T17** battle board
+24. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+25. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
+26. **D1** player career page · **D2** open results data · **D5** contest data format
+27. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
 A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid
@@ -126,7 +182,7 @@ tiers or upsells · automatic staff task assignment.
 
 ## Open decisions
 
-The ten in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
+The eleven in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
 VSYC-27 or a separate jam; host or partner on a juggling convention; import outside brackets or run
 them all here; girls divisions as add-ons or standalone; video prelims at all; who gets the club-site
-results snippet; fan picks yes or no; where the budget lives; sponsor payments online or invoice-only.
+results snippet; fan picks yes or no; where the public budget's books are kept; sponsor payments online or invoice-only; the event hub and this app as two apps or one.
