@@ -6,7 +6,7 @@ We looked at how real skill toy events run ([`FORMAT_RESEARCH.md`](FORMAT_RESEAR
 contest and bracket tools organizers use today, to learn what goes wrong on contest day. This plan
 doesn't copy any of them. Every feature below is designed from our own principles, uses our own
 names, and fits the app we already have (judge, MC, DJ, overlay, spectate, volunteer and results
-pages). Item codes (F, R, S, C, T, O, E) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
+pages). Item codes (F, R, S, C, T, O, E, D) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
 
 ---
 
@@ -157,6 +157,24 @@ portals, an audit log, a spectator `.ics`). These are the parts it does that thi
 
 ---
 
+## Part 5c: From research into other tools
+
+What [The Yoyo Archive](https://yoyoarchive.org/), [WCA Live and its results
+export](https://www.worldcubeassociation.org/export/results), the open-source competition app
+[BCOE&M](https://github.com/geoffhumphrey/brewcompetitiononlineentry) and CompAdminPro do that fits
+our principles. Each is our own design, not a copy.
+
+| # | Feature | How ours works |
+|---|---------|----------------|
+| D1 | **Player career page** | Every public placement a player has across seasons and events, linked from each results table. Builds on O2 and the season archive; minors follow the public-name rule. |
+| D2 | **Open results data** | Each season's public results as JSON and CSV under an open license, published with the archive, so others (including the Yoyo Archive's open dataset) can reuse them instead of retyping. Fits "open at every level". |
+| D3 | **Psych sheet** | Registered players in a division with their past placements, for seeding the run order and for the MC cards. |
+| D4 | **Judge notes** | A short written note per player per judge, shown on that player's score sheet. Optional per division. |
+| D5 | **A documented contest data format** | One JSON shape for a whole contest (divisions, rounds, entries, results) for import, export and moving between deployments. R9 bracket import and export uses it. |
+| D6 | **Schedule conflict check** | When building the schedule, warn if a player's divisions or rounds overlap. |
+
+---
+
 ## Part 6: Build order
 
 ### Phase 1: Contest-day leverage, before VSYC-27 planning locks
@@ -191,6 +209,7 @@ Mostly config and contest-day tools. Little new format code.
 - R1 video prelims
 - T8 volunteer shifts
 - E1 filtered calendar feeds · E4 daily housekeeping · E5 report a problem · E6 status page
+- D3 psych sheet · D4 judge notes · D6 schedule conflict check
 - E2 one event shape (with hub stage 1)
 - S8 `convention` preset (with R7 forms, R8 raffle)
 
@@ -209,6 +228,7 @@ Mostly config and contest-day tools. Little new format code.
 - T7 bundles and add-ons
 - E3 publish to the community calendar · E7 submit an event, no account (regional circuit)
 - E10 agent skills
+- D1 player career page · D2 open results data · D5 contest data format (with the season archive)
 
 Each format follows the same steps: `divisions-core.ts` with unit tests, an additive migration with
 a validation trigger, the judge UI, the public results, the contest site's format words, and a demo

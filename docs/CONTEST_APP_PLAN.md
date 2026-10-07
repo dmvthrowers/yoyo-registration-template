@@ -105,6 +105,17 @@
 Already shared with the hub: honeypot and rate limits, hashed one-time tokens, magic-link portals, an
 audit log.
 
+## 5c. From research into other tools
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| D1 | Player career page | ❌ | Needs the season archive |
+| D2 | Open results data | ❌ | The archive freeze writes JSON; add CSV and a license |
+| D3 | Psych sheet | ❌ | — |
+| D4 | Judge notes | ❌ | — |
+| D5 | Contest data format | ❌ | — |
+| D6 | Schedule conflict check | ❌ | — |
+
 ## 6. What we already have (no work needed)
 
 Registration with Stripe + Turnstile · spectator RSVP · player signup · judge portal · DJ portal ·
@@ -136,14 +147,16 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 15. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
 16. **T8** volunteer shifts · **R1** video prelims
 17. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
+18. **D3** psych sheet · **D4** judge notes · **D6** schedule conflict check
 
 ### Phase 3: Bigger / niche
-18. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-19. **T3** judge calibration notes · **T6** judge practice mode
-20. **T14, T15, T17** battle board
-21. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
-22. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
-23. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+19. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+20. **T3** judge calibration notes · **T6** judge practice mode
+21. **T14, T15, T17** battle board
+22. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+23. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
+24. **D1** player career page · **D2** open results data · **D5** contest data format
+25. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
 A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid
