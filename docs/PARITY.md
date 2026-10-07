@@ -25,6 +25,11 @@ The templates are generators (`site.jsonc` plus `build.py`), while the live site
 HTML. So parity means the same pages, sections, features and fixes, not the same files: a new
 section on a live page becomes a section the template's generator can produce from config.
 
+### Other template families
+
+The same rule covers the youth group template: [`Scouts-Template-Site`](https://github.com/dmvthrowers/Scouts-Template-Site)
+and the two live troop and pack sites built from it. Its pairs and gaps are in that repo's `PARITY.md`.
+
 ## The rule
 
 Every PR to a live repo or a template does one of three things, and says which in its description:
