@@ -44,13 +44,40 @@ logged here, before the PR merges.
 
 ## Known gaps
 
-From the VA-States roadmap (re-checked 2026-10-06) and `AGENTS.md`. Remove a row when it's closed.
+Audited 2026-10-07 by comparing the two repos' `main` branches. Remove a row when it's closed. The
+static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("Parity fixes").
 
-| Gap | Where it is | Missing from | Note |
-|---|---|---|---|
-| Battles, round plans, disputes, split, champion, prizes, score status | VA-States | template | The template's champion rule is the older one |
-| Roles and portals (grants, `/staff` single pane, organizer and sponsor roles) | template | VA-States | VA-States sponsors are admin-only until roles are ported (a separate project) |
-| Migrations, `db-backup.yml`, `DAY_OF.md` | both | — | Drifted; port by hand, not by copying files |
-| Legacy `contest_staff_accounts.role` column | both | — | Drop once migrations 0044 and 0045 are everywhere |
-| VSYC public pages vs. the contest site template | `dmvthrowers.github.io` | `yoyo-contest-template` | Not audited yet; do a first pass and fill in this row |
-| Club pages vs. the club site template | `dmvthrowers.github.io` | `yoyoclub-template` | Not audited yet; do a first pass and fill in this row |
+### VA-States → template (port into the template)
+
+| Gap | Files in VA-States | Note |
+|---|---|---|
+| Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set, `fetchHomeStateEligible`), migration 0047 | The template still uses the old "entered the champion's state" rule |
+| Round plans | `lib/round-plan*.ts`, `lib/use-round-plans.ts`, `components/RoundPlanPanel.tsx`, `/api/rounds/plan`, `/api/admin/rounds/plan`, migration 0045 | |
+| Division split | `lib/division-split.ts`, `components/SplitPreviewPanel.tsx`, `/api/admin/division-split` | |
+| Prizes | `lib/prizes.ts`, `components/PrizePlanPanel.tsx`, `/api/admin/prizes` | |
+| Score status | `lib/score-status.ts`, `/api/admin/score-status` | Groundwork for the scores-in board (T1) |
+| DJ battle view | `lib/battle-cue.ts`, `components/DjBattleView.tsx`, `/api/dj/battle` | |
+| Payment dispute flags | `lib/stripe-dispute*.ts`, migration 0046 | |
+| Bot check on public forms | `lib/turnstile.ts`, `components/Turnstile.tsx` | Port as an optional service that switches off when its key is blank |
+| Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
+| Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
+
+### Template → VA-States (port into the live app)
+
+| Gap | Files in the template | Note |
+|---|---|---|
+| Roles, grants and the `/staff` single pane | `lib/roles.ts`, `lib/modules*.ts`, `components/StaffPane.tsx`, `components/ModuleBoard.tsx`, `/api/admin/roles`, `/api/staff/modules`, migrations 0044, 0045, 0047 | A separate project; until then VA-States sponsors stay admin-only |
+| Role pages | `app/mc`, `app/media`, `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff` | Depend on roles |
+| Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
+| Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
+| Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
+| Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
+
+### Both
+
+| Gap | Note |
+|---|---|
+| 151 of the 236 shared files under `app/`, `lib/` and `components/` differ | Much of it is VSYC wording written into VA-States code (surveys, emails, home page, nav and footer) where the template reads `contest.config.ts`. Move that wording into VA-States' config until every shared file is identical; then a port is a copy. Largest: `lib/surveys.ts`, `app/admin/results/page.tsx`, `lib/email.ts`, `app/page.tsx`, `lib/standings.ts` |
+| Migration numbers 0037–0049 mean different things in each repo | Write a mapping table (VA-States number ↔ template number) before porting any schema change; number new migrations the same in both |
+| Survey table name | VA-States uses `vsyc26_survey_responses`, the template `contest_survey_responses`; pick the generic name in both |
+| Legacy `contest_staff_accounts.role` column | Drop once migrations 0044 and 0045 are everywhere |
