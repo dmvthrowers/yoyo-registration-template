@@ -1,13 +1,47 @@
-# Hub roadmap: any skill toy, any event format
+# Hub roadmap: any skill toy, any event, self-hosted at low cost
 
-**Long-term goal.** One app that runs registration and scoring for any skill toy and any competition
-or event format, online or in person. Yo-yo first, then juggling and kendama (diabolo, spin tops and
-others after that). It should grow, shrink and combine events: a single event, or a multi-day,
-multi-event structure.
+**End goal.** A platform we run ourselves first, that turns into a template anyone can self-host at
+low cost for a **full event page**: the public site (info, schedule, venue, rules, sponsors, FAQ),
+registration and payments, judging, live results, the open budget and the archive, from one deploy.
+Any skill or dexterity toy, any event type, online or in person, one day or several. Yo-yo first,
+then juggling and kendama, then the rest.
 
 This is a direction, not a commitment to a schedule. Work in small steps that each leave a working
 app. The live Virginia State Yo-Yo Contest app (VA-States) is the first deployment and stays safe:
 real registrants and real payments mean schema, payment and auth changes get production care.
+
+## From our platform to anyone's template
+
+What "done" looks like, and what's still between here and there.
+
+**Done means:**
+
+- **One deploy, the whole event.** A deploy button and one config file give an organizer the full
+  event page. Today it takes two templates: `yoyo-contest-template` (the static public site) and
+  this app (registration through results).
+- **Low cost, stated plainly.** A small event runs with no fixed monthly bill on free tiers
+  (Supabase, Resend, GitHub, a host's free plan). The only per-event cost is payment fees, and a free
+  event needs no payment account at all. A custom domain is optional (about $10–15 a year). The setup
+  guide lists every service, what it costs, and the free-tier limits that matter.
+- **No developer needed.** A first-run setup page, a demo seed so a fresh copy shows something real,
+  and (stage 2) an admin builder instead of editing config files.
+- **Updates without conflicts.** Config, presets and branding stay apart from code, so a
+  deployment can pull template updates cleanly.
+- **Our own event is just one config.** VA-States becomes a deployment of the template, not a fork.
+
+**What's in the way:**
+
+| Gap | Today | Next step |
+|---|---|---|
+| Two templates for one event | Public site is a separate static template | Render the public event pages from the same config inside the app; keep the static template for clubs that only want a site. (Decision below.) |
+| Payments are required | Stripe is listed as needed | Let an event run with no payment provider: free registration, pay at the door recorded as a channel |
+| Hosting cost honesty | "Free tier works" for Vercel | Vercel's free plan is for non-commercial use, so an event that charges fees may need a paid plan. Check whether a nonprofit contest qualifies, list the cost, and test a no-cost alternative host |
+| Free-tier limits | Email quota is tracked | Track the rest that a busy event can hit: database size, storage for music and video, inactive-project pausing on Supabase's free plan |
+| Setup still needs SQL | First admin is a hand-run insert | One-time first-admin step (E9), email stub (E8), first-run page |
+| VA-States is a fork | Features land there first and are ported by hand | Finish porting (battles, round plans, prizes and the rest), then run VA-States from the template plus its config |
+
+**Decision needed:** one template that serves both the public site and the app, or two templates
+that share one config file?
 
 ## Decisions so far (owner)
 

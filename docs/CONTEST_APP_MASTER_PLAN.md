@@ -36,6 +36,10 @@ pages). Item codes (F, R, S, C, T, O, E) match [`CONTEST_APP_PLAN.md`](CONTEST_A
 8. **Any event type.** A judged contest, a battle night, a jam, a workshop, a meetup, a convention,
    a fair or an online video contest. The event is the unit, and judging is something an event
    *may* have, not something every event must have. Nothing in code is one club's alone.
+9. **Cheap to run, easy to host.** The end goal is a template anyone can self-host for a full event
+   page. A small event runs on free tiers with no monthly bill; a free event needs no payment
+   account. Every feature has to fit that: no paid service required, optional services switch off
+   cleanly, and the setup guide states every cost up front.
 
 ---
 
