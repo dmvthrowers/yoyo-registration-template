@@ -35,6 +35,7 @@
 | T6 | Judge practice mode | ❌ | — |
 | T7 | Bundles and add-ons | 🟡 | Combo pricing exists; no merch add-ons, custom questions or pay-at-door channel |
 | T8 | Volunteer shifts | 🟡 | Volunteer page + roles exist; no shift sign-up with time slots |
+| T19 | Scoring that survives bad signal | ❌ | Judge page has no offline save; a dropped connection loses the unsent score |
 
 **Verdict:** T1 is the single highest-leverage build. T2 needs a run-order gate and a "checked" step, not a rebuild.
 
@@ -74,6 +75,7 @@
 | R7 | Workshop-host / performer forms | ❌ | — |
 | R8 | Raffle | ❌ | — |
 | R9 | Bracket import and export (CSV) | ❌ | — |
+| R11 | Photo and video consent | ❌ | Minor name opt-in exists (`contest_public_name()`); no photo or video consent |
 
 ## 5. Ideas that are only ours
 
@@ -116,31 +118,32 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 
 ### Phase 1: Contest-day leverage, minimal code
 1. **T1** scores-in board, the one build that changes contest day
-2. **T2** release gates: a run-order gate and a head-judge "checked" step on the existing releases table
-3. **F1** bracket match scores, the smallest format change; unlocks kendama battles
-4. **T11+T12** how it was scored + score shading (frontend only)
-5. **T4** MC cards, small with high day-of value
-6. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
-7. **R2** $0 add-on divisions
-8. **T18** contest guide page + **O1** first contest path
-9. **E8** email stub · **E9** first admin once
-10. **O5** rules with a changelog · **O4** open books
+2. **T19** scoring that survives bad signal · **R11** photo and video consent
+3. **T2** release gates: a run-order gate and a head-judge "checked" step on the existing releases table
+4. **F1** bracket match scores, the smallest format change; unlocks kendama battles
+5. **T11+T12** how it was scored + score shading (frontend only)
+6. **T4** MC cards, small with high day-of value
+7. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
+8. **R2** $0 add-on divisions
+9. **T18** contest guide page + **O1** first contest path
+10. **E8** email stub · **E9** first admin once
+11. **O5** rules with a changelog · **O4** open books
 
 ### Phase 2: Formats and the public side
-11. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
-12. **T10** contest feed · **T9** fan picks (if we decide yes)
-13. **T5** music desk (run-order naming, lock, reminders)
-14. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
-15. **T8** volunteer shifts · **R1** video prelims
-16. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
+12. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
+13. **T10** contest feed · **T9** fan picks (if we decide yes)
+14. **T5** music desk (run-order naming, lock, reminders)
+15. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
+16. **T8** volunteer shifts · **R1** video prelims
+17. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
 
 ### Phase 3: Bigger / niche
-17. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-18. **T3** judge calibration notes · **T6** judge practice mode
-19. **T14, T15, T17** battle board
-20. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
-21. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
-22. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+18. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+19. **T3** judge calibration notes · **T6** judge practice mode
+20. **T14, T15, T17** battle board
+21. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+22. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
+23. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
 A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid

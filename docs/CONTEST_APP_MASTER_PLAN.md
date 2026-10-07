@@ -80,6 +80,7 @@ schedule is slipping.
 | T6 | **Judge practice mode** | Trainees score alongside the panel on the judge page, clearly marked as practice. Their scores never count. Afterward they see how they lined up with the panel. |
 | T7 | **Bundles and add-ons** | Enter several divisions at a bundle price (building on combo pricing), add a shirt or merch at checkout, answer the organizer's own questions from config, and pay at the door as a recorded channel. |
 | T8 | **Volunteer shifts** | On the existing volunteer page: roles and time slots from config, sign-up, staff confirmation, a reminder the day before, and a day-of roster on `/staff`. |
+| T19 | **Scoring that survives bad signal** | Venue wifi drops. Judge scores are saved on the phone first and sent when the connection comes back, with a clear "saved, not sent yet" mark, so a dead spot never loses a score. Principle 1 promises it; nothing builds it yet. |
 
 ---
 
@@ -116,6 +117,7 @@ S3 prize table, S4 lineup page, S5 watch page, S6 visitor guide.
 | R7 | Workshop-host and performer sign-up forms | Conventions need these |
 | R8 | Raffle: tickets, a drawing time on the schedule, an admin draw | Every convention runs one |
 | R9 | Bracket import and export (CSV) | Players who already run brackets elsewhere can bring them in, and organizers can take theirs out |
+| R11 | Photo and video consent at registration (a guardian's for minors), honored on results videos, the recap and any gallery | Names of minors are already protected; photos and routine videos aren't tied to consent yet |
 
 ---
 
@@ -162,6 +164,8 @@ portals, an audit log, a spectator `.ics`). These are the parts it does that thi
 Mostly config and contest-day tools. Little new format code.
 
 - T1 scores-in board
+- T19 scoring that survives bad signal
+- R11 photo and video consent (before any video or gallery work ships)
 - T2 release gates
 - F1 bracket match scores (smallest change, biggest kendama payoff)
 - T11 how it was scored + T12 score shading (frontend only)
