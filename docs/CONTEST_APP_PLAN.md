@@ -110,7 +110,7 @@ audit log.
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | D1 | Player career page | ❌ | Needs the season archive |
-| D2 | Open results data | ❌ | The archive freeze writes JSON; add CSV and a license |
+| D2 | Open results data | ❌ | The planned archive freeze (not built yet) writes HTML and JSON; add CSV and a license |
 | D3 | Psych sheet | ❌ | — |
 | D4 | Judge notes | ❌ | — |
 | D5 | Contest data format | ❌ | — |
