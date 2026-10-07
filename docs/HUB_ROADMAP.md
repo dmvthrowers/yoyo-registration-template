@@ -54,10 +54,13 @@ What "done" looks like, and what's still between here and there.
   ([`yoyo-contest-template`](https://github.com/dmvthrowers/yoyo-contest-template)): the easy option for an
   organizer who only wants a site. This app is the second, fuller option: registration through results,
   self-hosted. They are not merged into one.
-- **Our live deployments keep their own repos.** The VSYC public pages (`dmvthrowers.github.io`) and the
-  registration app (`VA-States`) stay separate repos, not forks that track the templates automatically.
-- **Live and template stay in parity.** Anything generic that lands in a live repo lands in its template,
-  and the reverse, so the templates are always what we actually run. See [`PARITY.md`](PARITY.md).
+- **Our live deployments keep their own repos.** `dmvthrowers.github.io` (the club site and the VSYC
+  public pages together, in one repo) and the registration app (`VA-States`) stay separate repos, not
+  forks that track the templates automatically.
+- **Live and template stay in parity.** That covers all three pairs: VA-States and this template, the
+  VSYC pages and the contest site template, and the club pages and the club site template. Anything
+  generic that lands in a live repo lands in its template, and the reverse, so the templates are always
+  what we actually run. See [`PARITY.md`](PARITY.md).
 
 ### What "anyone can deploy it" means for the work
 
