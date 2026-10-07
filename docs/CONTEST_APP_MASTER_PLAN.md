@@ -1,159 +1,191 @@
 # Master Plan: Contest App Feature Roadmap
 
-**October 2026.** Merges three sources into one build order:
+**October 2026.** What we build next, and why each piece looks the way it does.
 
-1. **Claude's skill-toy format research** ([`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md)) — what formats real kendama, juggling, diabolo, spin top, cubing, stacking, and Beyblade events run, and where our templates fall short.
-2. **compete.yoyocontest.com teardown** (public site + admin, via an organizer account) — how the NYYL platform runs contest day: scoring oversight, publishing, music, registration.
-3. **Challonge teardown** (Stella Duellum 2026 bracket) — what a dedicated bracket product does that we don't.
-
-Claude's item codes (F1, R1, S1, C1) are kept for traceability. New items from the teardowns are coded **T1–T12**.
+We looked at how real skill toy events run ([`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md)) and at the
+contest and bracket tools organizers use today, to learn what goes wrong on contest day. This plan
+doesn't copy any of them. Every feature below is designed from our own principles, uses our own
+names, and fits the app we already have (judge, MC, DJ, overlay, spectate, volunteer and results
+pages). Item codes (F, R, S, C, T, O) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
 
 ---
 
-## Part 1 — Format engine gaps (Claude)
+## What makes it ours
 
-The six formats (`freestyle`, `panel`, `manual`, `ladder`, `bracket`, `showcase`) cover ~70% of events. The gaps, in value order:
+1. **Built for the people in the room.** Volunteer-run contests, staff on phones, patchy venue
+   wifi. Every screen works at 360px, with one hand, and survives a reload without losing work.
+2. **Kids are in the field.** Minors get privacy by default. In public they're a first name and
+   last initial, with no hometown unless a guardian says yes. Nothing that looks like betting.
+3. **Free to watch, nothing to sign up for.** Spectators never need an account. No ads, no
+   tracking, no third-party scripts.
+4. **Every number explains itself.** A spectator can see how a score was made. A player gets their
+   own score sheet afterward, so the contest teaches them something.
+5. **One app from sign-up to archive.** Registration, music, judging, results and the season
+   archive live together. The organizer owns the data, with no exports to someone else's service.
+6. **Any skill toy, any organizer.** Toy words, divisions and rules come from config. A kendama jam
+   or a juggling day needs no code change, and nothing in code is ours alone.
+
+---
+
+## Part 1: Formats
+
+The six formats (`freestyle`, `panel`, `manual`, `ladder`, `bracket`, `showcase`) cover about 70%
+of the events we researched. The gaps, in value order:
 
 | # | Format | Unlocks |
 |---|--------|---------|
-| F1 | Bracket match scoring (`matchScoring: { to: 3, finalsTo: 5 }`) | Kendama Open trick-deck battles, best-of-N battles |
-| F2 | Double elimination brackets | Pro kendama |
-| F3 | `race` — heats, finish order/time, top N advance | Kendama speed ladder, joggling, relays |
-| F4 | `trickscore` — pick tricks by point value in a time limit | Kendama World Cup style, best-trick sessions |
-| F5 | `numbers` — rank by object count, then catches | IJA/WJF numbers, club challenges |
-| F6 | `standing` — last-one-standing group heats | Combat juggling, Quarters for Time, flow battles |
-| F7 | Bracket seeding from a prior round (top N of panel → bracket) | Kendama freestyle qualifiers → Top 16 |
-| F8 | Swiss / round robin + top cut | Beyblade, club leagues, monthly mini-contests |
-| F9 | Panel scoring options (trimmed mean, rank averaging, time penalty, scaling) | IJA Championships, ITSA Artistic Showcase |
-| F10 | Configurable tie-breaks per division | Kendama moshikame-offs, loop-offs |
+| F1 | Bracket match scores (`matchScoring: { to: 3, finalsTo: 5 }`) | Kendama trick-deck battles, best-of-N battles |
+| F2 | Double elimination | Pro kendama |
+| F3 | `race`: heats, finish order or time, top N go through | Kendama speed ladder, joggling, relays |
+| F4 | `trickscore`: pick tricks by point value within a time limit | Kendama World Cup style, best-trick sessions |
+| F5 | `numbers`: rank by object count, then catches | Juggling numbers, club challenges |
+| F6 | `standing`: last one standing in a group | Combat juggling, Quarters for Time, flow battles |
+| F7 | Bracket seeds from a prior round (top N of a panel round) | Freestyle qualifier → Top 16 battles |
+| F8 | Swiss and round robin, then an optional top cut | Club leagues, battle nights with lots of players |
+| F9 | Panel options (trimmed mean, rank average, time penalty, scaling) | Act-style juggling and spin top contests |
+| F10 | Tie-breaks set per division | Moshikame-offs, loop-offs, extra time |
 
-Kendama is the single biggest gap: none of its four main formats (Open trick-deck, speed ladder, KEN game, KWC) fits our engine cleanly today.
-
----
-
-## Part 2 — Contest-day operations (compete.yoyocontest.com admin)
-
-These are the highest-leverage items in the whole plan. They don't add formats — they make the formats we have runnable under pressure.
-
-| # | Feature | What it is | Why it matters |
-|---|---------|-----------|----------------|
-| T1 | **Scoring completeness tracker** | Final-scores view lists exactly which judges haven't scored which players ("#14 — TE missing: Daniel, Tyler") | On contest day this replaces hunting people down with knowing instantly |
-| T2 | **Staged publishing pipeline** | Per-division toggles: freestyle order public → rankings to judges → results public, plus bulk publish | Prevents premature results; judge-preview step catches errors before the crowd sees them |
-| T3 | **Judge consistency analysis** | Std dev of normalized scores per player across judges, sortable, flags outliers | Catches a judge who's scoring a different contest than everyone else |
-| T4 | **MC announcer sheets** | PDF export: run order, name, age, hometown, pronunciation, sponsor | Whoever's on mic will thank you |
-| T5 | **Music workflow** | Dropbox folder per contest, "renumber files" prefixes filenames with freestyle order, lock uploads after deadline, bulk reminder emails, contest-day playback console | They built all of this because music is where contest day breaks |
-| T6 | **Shadow judging** | Parallel unofficial scoring, never touches real results, optional anonymized self-comparison | Trains new judges with zero risk |
-| T7 | **Registration passes & add-ons** | Bundle divisions at flat price; T-shirts/merch add-ons; custom registration questions; cash-only at-door mode | Direct revenue + fewer "can I just pay at the door?" problems |
-| T8 | **Volunteer shift sign-ups** | Public sign-up page with jobs + time slots, accept-toggle, CSV export | We have no volunteer management at all today |
+Kendama is the biggest gap: none of its four main formats fits our engine cleanly today.
 
 ---
 
-## Part 3 — Spectator & public experience (public teardown + Challonge)
+## Part 2: Contest day
 
-| # | Feature | Source | Notes |
-|---|---------|--------|-------|
-| T9 | **Spectator predictions** (bracket-pick tab) | Challonge | Zero-cost engagement loop; turns viewers into participants |
-| T10 | **Public activity log** | Challonge | Timestamped feed of score reports, match start/pause — transparency without a live dashboard, doubles as audit trail |
-| T11 | **Score breakdown tooltips** | compete.yoyocontest.com | Plain-language "what is this?" on every results column — builds trust with non-expert spectators |
-| T12 | **Heat map toggle** on leaderboards | compete.yoyocontest.com | Instant visual comparison across competitors; pure frontend |
-| T13 | **Freestyle video embeds** on results pages | compete.yoyocontest.com | YouTube playlist per competitor with count badge |
-| T14 | **Round-depth view filter** (Full / Top 16 / Top 8) + fullscreen | Challonge | Solves huge-bracket-on-phone; fullscreen mode for venue displays |
-| T15 | **Standings with clickable match history** | Challonge | Each player's W/L per round jumps to that match |
-| T16 | **Embeddable results/bracket widget** | Both | iframe snippet organizers embed on their own sites — every embed markets the product |
-| T17 | **Match lifecycle states** (started / paused / reported) | Challonge | Seed of "now playing" displays and station management |
-| T18 | **Rich contest info page** — fees, routine lengths, music deadlines (dual timezone), division cards | compete.yoyocontest.com | Surface pre-signup instead of burying it in the form |
+These don't add formats. They make the formats we have easy to run when the room is loud and the
+schedule is slipping.
 
-Also from Claude's list, fitting here: R10 live results per division (WCA Live model), S2 trick list page, S3 prize table, S4 lineup page, S5 watch page, S6 visitor guide.
+| # | Feature | How ours works |
+|---|---------|----------------|
+| T1 | **Scores-in board** | A grid of the run order against the panel: each square fills when that judge's score lands. The head judge sees the gaps at a glance, and each judge's own phone shows "you still owe #14, #15", so nobody has to go find anyone. |
+| T2 | **Release gates** | A round goes public only when the scores-in board is full and the head judge taps "checked". Separate gates for the run order and the results, all on the results releases we already have. |
+| T3 | **Judge calibration notes** | After the event, each judge privately sees how their scores sat against the rest of the panel. It's for growing judges, not policing them. The organizer sees the panel's overall spread. |
+| T4 | **MC cards** | On the existing MC page: one card per competitor in run order, with the name spelled the way the player says it (they enter it at sign-up), how they'd like to be introduced, and their sponsor. Minors' cards follow the privacy rules. Prints as a fallback. |
+| T5 | **Music desk** | Players upload to our own storage. Files are named by run order automatically, so nobody renames anything. Uploads lock at the deadline, with a countdown on the player's page. Missing tracks get one reminder. The DJ page plays in run order with "next up" showing. |
+| T6 | **Judge practice mode** | Trainees score alongside the panel on the judge page, clearly marked as practice. Their scores never count. Afterward they see how they lined up with the panel. |
+| T7 | **Bundles and add-ons** | Enter several divisions at a bundle price (building on combo pricing), add a shirt or merch at checkout, answer the organizer's own questions from config, and pay at the door as a recorded channel. |
+| T8 | **Volunteer shifts** | On the existing volunteer page: roles and time slots from config, sign-up, staff confirmation, a reminder the day before, and a day-of roster on `/staff`. |
 
 ---
 
-## Part 4 — Registration & event features (Claude R-list, kept)
+## Part 3: The public side
+
+| # | Feature | How ours works |
+|---|---------|----------------|
+| T9 | **Fan picks** | Just for fun: pick who you think takes each battle. No account, no prizes, no money, saved only in your browser. After the battle it shows "the crowd picked…". Off by default. |
+| T10 | **Contest feed** | A plain-language timeline on the spectate page and the stream overlay: "Open Freestyle round 2 is up", "Sport Ladder results are out". Staff see a fuller private version that doubles as the audit log. |
+| T11 | **How it was scored** | Every results page explains its format in the toy's own words, with a short note on each column. Each player gets a private score sheet with the per-judge breakdown. |
+| T12 | **Score shading** | Optional shading on results tables, so the gaps between places show without reading every number. |
+| T13 | **Routine videos** | Each routine's video on the results and player pages (privacy-friendly YouTube embeds), shown only with the player's consent. |
+| T14 | **Battle board, phone view** | The bracket opens on the current round and zooms out to the full tree, so a 64-player bracket is usable on a phone. |
+| T15 | **Battle board, player path** | Tap a player to follow their run through the bracket, battle by battle. |
+| T16 | **Results on club sites** | Club sites built from our club template can show their members' results with a snippet, so results travel with the club. |
+| T17 | **Battle board, live status** | Each battle is on deck, battling or done, and that status drives the overlay and a big-screen venue view. |
+| T18 | **Contest guide page** | One public page generated from config: divisions, fees, routine lengths, the music deadline in the reader's own time zone, and links to the rules. Everything a player needs before signing up, in one place. |
+
+Also here, from the research: R10 live results per division during the event, S2 trick list page,
+S3 prize table, S4 lineup page, S5 watch page, S6 visitor guide.
+
+---
+
+## Part 4: Registration and event features
 
 | # | Feature | Why |
 |---|---------|-----|
-| R1 | Video prelim submission + review queue + finalist status | IJA, ITSA, WJF all qualify by video; opens online contests |
-| R2 | $0 add-on divisions (Girls, Student) copying parent results filtered by eligibility | NAKO model |
-| R3 | Capped divisions with waitlist | Limited freestyle spots |
-| R4 | Pass types (competitor / multi-day / single-day / under-N free) | NAKO + conventions |
-| R5 | Trick list release date + self-placement acknowledgement | Kendama level integrity |
-| R6 | Equipment class per entry (`style_code`: diabolo 2D/3D/Vertax) | Small, clean |
-| R7 | Workshop-host & performer sign-up forms | Convention preset needs these |
-| R8 | Raffle (tickets, drawing time, admin draw) | Every convention does one |
-| R9 | Challonge import/export or link-out | Meet kendama players where they are |
+| R1 | Video prelims: a link per division, a review queue for the panel, and finalist status | Many juggling and spin top contests qualify by video; it also opens up online contests |
+| R2 | $0 add-on divisions (Girls, Student) that take a parent division's results filtered by eligibility | More podiums without more stage time |
+| R3 | Capped divisions with a waitlist | Limited freestyle spots |
+| R4 | Pass types: competitor, multi-day, single-day, under-N free | Conventions and multi-day events |
+| R5 | Trick list release date and a self-placement checkbox | Kendama level integrity |
+| R6 | Equipment class per entry (reuse `style_code`) | Diabolo 2D/3D, traditional vs. open tops |
+| R7 | Workshop-host and performer sign-up forms | Conventions need these |
+| R8 | Raffle: tickets, a drawing time on the schedule, an admin draw | Every convention runs one |
+| R9 | Bracket import and export (CSV) | Players who already run brackets elsewhere can bring them in, and organizers can take theirs out |
 
 ---
 
-## Part 5 — Unified build order
+## Part 5: Ideas that are only ours
 
-### Phase 1 — Contest-day leverage + correct descriptions (before VSYC-27 planning locks)
+Things none of the tools we looked at do, which fit a free, all-ages club:
 
-Mostly config and high-leverage ops. Little new format code.
+| # | Idea | What it is |
+|---|------|------------|
+| O1 | **First contest path** | A "never competed before?" walkthrough from the contest guide: what happens on the day, what to bring, how scoring works, and a beginner division picker. |
+| O2 | **Player page after the contest** | Each player's scores, score sheet, routine video and a printable certificate, in one place they can come back to. |
+| O3 | **Club link** | A player can name their home club, and the club's site shows the club's results. The contest becomes part of the club year, not a one-off. |
 
-- T1 scoring completeness tracker
-- T2 staged publishing pipeline
-- F1 bracket match scoring (smallest change, biggest kendama payoff)
-- T11 score tooltips + T12 heat map (frontend only)
-- T4 MC announcer sheets
-- S7 kendama preset rewrite using today's formats (speed ladder as `manual`, KEN as `bracket`)
+---
+
+## Part 6: Build order
+
+### Phase 1: Contest-day leverage, before VSYC-27 planning locks
+
+Mostly config and contest-day tools. Little new format code.
+
+- T1 scores-in board
+- T2 release gates
+- F1 bracket match scores (smallest change, biggest kendama payoff)
+- T11 how it was scored + T12 score shading (frontend only)
+- T4 MC cards
+- S7 kendama preset rewrite with today's formats (speed ladder as `manual`, KEN as `bracket`)
 - S2 trick list page, S3 prize table
 - R2 $0 add-on divisions (Girls, Student)
+- T18 contest guide page + O1 first contest path
 - C1 games library (club template)
 
-### Phase 2 — New formats + spectator engagement
+### Phase 2: New formats and the public side
 
 - F3 `race` with heats
-- F6 `standing` (last one standing)
-- F7 bracket seeding from qualifying round
-- F9 panel scoring options (trimmed mean, time penalty, rank)
-- T9 spectator predictions + T10 activity log
-- T13 video embeds + R10 live results check
-- T5 music workflow (renumber, lock, reminders)
+- F6 `standing`
+- F7 bracket seeds from a qualifying round
+- F9 panel options (trimmed mean, time penalty, rank)
+- T10 contest feed + T9 fan picks (if we decide yes)
+- T13 routine videos + R10 live results check
+- T5 music desk
+- O2 player page
 - R1 video prelims
-- T8 volunteer sign-ups
+- T8 volunteer shifts
 - S8 `convention` preset (with R7 forms, R8 raffle)
 
-### Phase 3 — Bigger and more niche
+### Phase 3: Bigger and more niche
 
 - F2 double elimination
-- F4 `trickscore` (KWC-style)
+- F4 `trickscore`
 - F5 `numbers`
-- F8 Swiss / round robin (pairs with C2 monthly mini-contests)
-- T3 judge consistency analysis
-- T6 shadow judging
-- T16 embeddable widget
-- T17 match lifecycle / now-playing
-- R9 Challonge integration
+- F8 Swiss and round robin (pairs with C2 monthly mini-contests)
+- T3 judge calibration notes
+- T6 judge practice mode
+- T14, T15, T17 battle board
+- T16 results on club sites + O3 club link
+- R9 bracket import and export
 - R4 pass types
-- T7 registration passes & add-ons
+- T7 bundles and add-ons
 
-Each format follows the same pipeline: `divisions-core.ts` + unit tests → additive migration with validation trigger → judge UI → public results → contest-site format words → demo in `examples/`.
-
----
-
-## Part 6 — Decisions needed
-
-From Claude's research:
-
-1. Which kendama formats come first at a DMV event? (Open trick-deck + speed ladder covers most US events.)
-2. Kendama division at VSYC-27, or a separate kendama jam like Blue Ridge Battle?
-3. Host our own juggling convention, or partner with UMD Juggling Club on the Congress of Jugglers in May?
-4. Challonge: integrate or replace?
-5. Girls divisions: free add-ons (NAKO model) or standalone divisions?
-6. Video prelims / online entries at all?
-
-New from the teardowns:
-
-7. **Embeddable widget strategy** — do we want other contests embedding our results/brackets? It's free marketing but also free load.
-8. **Spectator predictions** — any concern about pick'em-style features, or full steam ahead?
-9. **Budget tracker in-app?** compete.yoyocontest.com bakes contest P&L into admin. Ours could live in the finance tracking instead — decide where it belongs.
-10. **Sponsorship purchase flow** — PR #77 covers the sponsor pipeline; do we also want their public "buy a sponsorship level" checkout?
+Each format follows the same steps: `divisions-core.ts` with unit tests, an additive migration with
+a validation trigger, the judge UI, the public results, the contest site's format words, and a demo
+in `examples/`.
 
 ---
 
-## Appendix — What we deliberately skip
+## Part 7: Decisions needed
 
-- NYYL's 6-step member signup wizard (their membership model, not ours — our Stripe flow is simpler)
-- AI face-tagged photo galleries (heavy pipeline; revisit if we become a media hub)
-- Their league-level competitions map (we're one contest, not a league)
-- Challonge's template-cloning and Premier upsells (their business model)
-- WCA Groupifier-style task assignment (overkill until timed events get big)
+1. Which kendama formats come first at a DMV event? (Trick-deck battles plus speed ladder cover
+   most US events.)
+2. A kendama division at VSYC-27, or a separate kendama jam?
+3. Host a juggling convention, or partner with the UMD Juggling Club on the Congress of Jugglers in May?
+4. Brackets that already live in another tool: import them (R9), or run every bracket here?
+5. Girls divisions: $0 add-ons or standalone divisions?
+6. Video prelims and online entries at all?
+7. **Results on club sites:** offer the snippet to any club, or only clubs using our club template?
+8. **Fan picks:** build it (off by default), or skip it?
+9. **Budget:** keep contest money in the app's finance screens, or in separate finance tracking?
+10. **Sponsor payments:** keep invoice-only, or let sponsors pay for a tier online?
+
+---
+
+## What we're not building
+
+- A membership sign-up wizard. We're a contest app, not a league; our checkout stays one step.
+- AI face-tagged photo galleries. A heavy pipeline and a privacy problem with minors.
+- A league-wide competitions map. We run contests, not a league.
+- Paid tiers, template marketplaces or upsells. The app is free and the template is public.
+- Automatic staff task assignment. Overkill until timed events get big.

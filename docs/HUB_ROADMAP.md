@@ -164,22 +164,24 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 
 ## Contest app feature plan (October 2026)
 
-What to build inside the app once events are first-class, from three sources: research into how real
-kendama, juggling, diabolo, spin top and related events run, a teardown of an existing yo-yo contest
-platform's public site and admin, and a teardown of a dedicated bracket product.
+What to build inside the app once events are first-class. It starts from how real kendama, juggling,
+diabolo, spin top and related events run, and from what tends to go wrong on contest day. Every
+feature is designed around our own principles (built for the people in the room, minors private by
+default, free to watch, every number explains itself, one app from sign-up to archive, any toy).
 
 - [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the field research, with sources. New formats (F1–F10),
   registration features (R1–R10), contest-site pages (S1–S8) and club-site ideas (C1–C4).
-- [`CONTEST_APP_MASTER_PLAN.md`](CONTEST_APP_MASTER_PLAN.md): the research merged with the teardowns
-  (contest-day operations and spectator features, T1–T18) into one build order, plus the decisions needed.
+- [`CONTEST_APP_MASTER_PLAN.md`](CONTEST_APP_MASTER_PLAN.md): the plan in our own terms: principles,
+  formats, contest-day tools and public features (T1–T18), ideas only we have (O1–O3), build order and
+  the decisions needed.
 - [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md): the master plan checked against what VA-States and the
   templates already have (have it, partial, gap), with the build order cut down to the real gaps.
 
-**Phase 1, in short:** a scoring completeness tracker (which judges haven't scored whom), two more publish
-stages, bracket match scores (to 3 / to 5), score tooltips and a leaderboard heat map, MC announcer sheets,
-a kendama preset that describes kendama correctly with today's formats, trick list and prize table pages,
-and $0 add-on divisions. Each new format is a plugin (see "Principles for new work") and follows the same
-order: `divisions-core.ts` with tests, additive migration, judge UI, public results, contest-site words, demo.
+**Phase 1, in short:** a scores-in board (which judges still owe which scores), release gates with a
+head-judge check, bracket match scores (to 3 / to 5), "how it was scored" notes and score shading, MC
+cards, a kendama preset that describes kendama correctly with today's formats, trick list and prize table
+pages, $0 add-on divisions, and a contest guide page with a first-contest path. Each new format is a
+plugin (see "Principles for new work") and follows the same order: `divisions-core.ts` with tests, additive migration, judge UI, public results, contest-site words, demo.
 
 ## Principles for new work
 

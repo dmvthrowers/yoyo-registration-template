@@ -1,6 +1,6 @@
-# Final Plan: Contest App — What We Have vs. What's Next
+# Contest App Plan: What We Have vs. What's Next
 
-**October 2026.** The master plan, compared against what's actually in the codebase today
+**October 2026.** The [master plan](CONTEST_APP_MASTER_PLAN.md), compared against what's actually in the codebase today
 (va-states registration app + contest site templates). Status per item: ✅ have it, 🟡 partial,
 ❌ gap. Build order at the bottom includes only real gaps, reprioritized.
 
@@ -27,32 +27,32 @@
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| T1 | Scoring completeness tracker | ❌ | Nothing shows which judges are missing which scores |
-| T2 | Staged publishing | 🟡 | `vsyc_results_releases` gives per-division/round result releases + global flag — but no freestyle-order-public or judge-preview stages |
-| T3 | Judge consistency analysis | ❌ | — |
-| T4 | MC announcer sheets | ❌ | No pronunciation/hometown export |
-| T5 | Music workflow (renumber, lock, reminders, playback console) | 🟡 | Music upload + per-division slots exist; no Dropbox renumber, no deadline lock, no bulk reminders, DJ portal exists but check it covers playback |
-| T6 | Shadow judging | ❌ | — |
-| T7 | Registration passes & add-ons | ❌ | Single-division Stripe checkout only |
-| T8 | Volunteer shift sign-ups | 🟡 | Volunteer page + roles exist; no public shift sign-up with time slots |
+| T1 | Scores-in board | ❌ | Nothing shows which judges are missing which scores |
+| T2 | Release gates | 🟡 | `vsyc_results_releases` gives per-division/round result releases + global flag, but no run-order gate and no head-judge "checked" step |
+| T3 | Judge calibration notes | ❌ | — |
+| T4 | MC cards | 🟡 | MC page exists; no say-it-like-this name field or per-competitor cards |
+| T5 | Music desk | 🟡 | Music upload + per-division slots exist; no run-order file naming, no deadline lock, no reminders; DJ page exists but check it covers playback |
+| T6 | Judge practice mode | ❌ | — |
+| T7 | Bundles and add-ons | 🟡 | Combo pricing exists; no merch add-ons, custom questions or pay-at-door channel |
+| T8 | Volunteer shifts | 🟡 | Volunteer page + roles exist; no shift sign-up with time slots |
 
-**Verdict:** T1 is the single highest-leverage build. T2 needs two more stages, not a rebuild.
+**Verdict:** T1 is the single highest-leverage build. T2 needs a run-order gate and a "checked" step, not a rebuild.
 
 ## 3. Spectator & public experience
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| T9 | Spectator predictions | ❌ | — |
-| T10 | Public activity log | ❌ | — |
-| T11 | Score breakdown tooltips | ❌ | — |
-| T12 | Heat map toggle | ❌ | — |
-| T13 | Freestyle video embeds | 🟡 | `lib/contest-videos.ts` exists; check whether results pages actually render playlists |
-| T14 | Round-depth filter + fullscreen | ❌ | — |
-| T15 | Standings with clickable match history | ❌ | — |
-| T16 | Embeddable results/bracket widget | ❌ | — |
-| T17 | Match lifecycle states | ❌ | — |
-| T18 | Rich contest info page | 🟡 | Registration exists; division fees/routine lengths/music deadlines not surfaced pre-signup in one view |
-| R10 | Live results (WCA Live model) | 🟡 | Results/spectate/overlay pages exist; verify they update mid-event, not just on publish |
+| T9 | Fan picks | ❌ | — |
+| T10 | Contest feed | ❌ | — |
+| T11 | How it was scored | ❌ | — |
+| T12 | Score shading | ❌ | — |
+| T13 | Routine videos | 🟡 | `lib/contest-videos.ts` exists; check whether results pages actually render playlists |
+| T14 | Battle board, phone view | ❌ | — |
+| T15 | Battle board, player path | ❌ | — |
+| T16 | Results on club sites | ❌ | — |
+| T17 | Battle board, live status | ❌ | — |
+| T18 | Contest guide page | 🟡 | Registration exists; division fees/routine lengths/music deadlines not surfaced pre-signup in one view |
+| R10 | Live results during the event | 🟡 | Results/spectate/overlay pages exist; verify they update mid-event, not just on publish |
 | S2 | Trick list page | ❌ | — |
 | S3 | Prize table | ❌ | — |
 | S4 | Lineup page | ❌ | — |
@@ -73,9 +73,17 @@
 | R6 | Equipment class per entry | 🟡 | `style_code` exists for yo-yo styles (multipliers); not yet used for equipment classes |
 | R7 | Workshop-host / performer forms | ❌ | — |
 | R8 | Raffle | ❌ | — |
-| R9 | Challonge import/export | ❌ | — |
+| R9 | Bracket import and export (CSV) | ❌ | — |
 
-## 5. What we already have (no work needed)
+## 5. Ideas that are only ours
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| O1 | First contest path | ❌ | — |
+| O2 | Player page after the contest | 🟡 | Player login exists; no scores, score sheet, video or certificate on it |
+| O3 | Club link | ❌ | — |
+
+## 6. What we already have (no work needed)
 
 Registration with Stripe + Turnstile · spectator RSVP · player signup · judge portal · DJ portal ·
 run order + walk-up admin · per-division/round results releases · admin registrations/results/brackets/codes/schedule ·
@@ -86,38 +94,39 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 
 ## Revised build order (gaps only)
 
-### Phase 1 — Contest-day leverage, minimal code
-1. **T1** scoring completeness tracker — the one build that changes contest day
-2. **T2** two more publish stages (freestyle order public, judge preview) on the existing releases table
-3. **F1** bracket match scoring — smallest format change, unlocks kendama battles
-4. **T11+T12** tooltips + heat map — frontend only, immediate spectator trust
-5. **T4** MC announcer sheets — small, high day-of value
-6. **S7** kendama preset rewrite (config only) + **S2/S3** trick list + prize table pages
+### Phase 1: Contest-day leverage, minimal code
+1. **T1** scores-in board, the one build that changes contest day
+2. **T2** release gates: a run-order gate and a head-judge "checked" step on the existing releases table
+3. **F1** bracket match scores, the smallest format change; unlocks kendama battles
+4. **T11+T12** how it was scored + score shading (frontend only)
+5. **T4** MC cards, small with high day-of value
+6. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
 7. **R2** $0 add-on divisions
+8. **T18** contest guide page + **O1** first contest path
 
-### Phase 2 — Formats + engagement
-8. **F3** race/heats · **F6** standing · **F7** bracket seeding · **F9** panel options
-9. **T9+T10** predictions + activity log
-10. **T5** music workflow completion (lock, renumber, reminders)
-11. **T13** video embeds (finish) + **R10** verify live results
-12. **T8** volunteer shift sign-ups · **R1** video prelims
+### Phase 2: Formats and the public side
+9. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
+10. **T10** contest feed · **T9** fan picks (if we decide yes)
+11. **T5** music desk (run-order naming, lock, reminders)
+12. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
+13. **T8** volunteer shifts · **R1** video prelims
 
-### Phase 3 — Bigger / niche
-13. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-14. **T3** judge consistency · **T6** shadow judging
-15. **T14–T17** bracket spectator suite (depth filter, match history, lifecycle, embed widget)
-16. **T16** results embed widget · **R9** Challonge integration · **T7** passes & add-ons
-17. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+### Phase 3: Bigger / niche
+14. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+15. **T3** judge calibration notes · **T6** judge practice mode
+16. **T14, T15, T17** battle board
+17. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+18. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
-NYYL member wizard · AI photo galleries · league competitions map · WCA-style task assignment ·
-Challonge template-cloning/Premier mechanics.
+A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid
+tiers or upsells · automatic staff task assignment.
 
 ---
 
-## Open decisions (unchanged from master plan)
+## Open decisions
 
-1. Which kendama formats first? 2. Kendama at VSYC-27 or separate jam? 3. Host or partner on a
-juggling convention? 4. Challonge: integrate or replace? 5. Girls divisions: add-on or standalone?
-6. Video prelims at all? 7. Embeddable widget: free marketing vs. free load? 8. Predictions: any
-concerns? 9. Budget tracker: in-app or in finance tracking? 10. Public sponsorship checkout?
+The ten in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
+VSYC-27 or a separate jam; host or partner on a juggling convention; import outside brackets or run
+them all here; girls divisions as add-ons or standalone; video prelims at all; who gets the club-site
+results snippet; fan picks yes or no; where the budget lives; sponsor payments online or invoice-only.

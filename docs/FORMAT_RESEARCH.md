@@ -166,7 +166,7 @@ Beginner/Intermediate/Open as yo-yo-style ladders, which isn't how kendama ladde
 | R6 | **Equipment class / style per entry** (diabolo 2D/3D/Vertax; top traditional vs open) | Reuse `style_code` |
 | R7 | **Workshop-host and performer sign-up forms** | Congress of Jugglers uses Google Forms for both. Fits the "forms on our own system" plan in the roadmap. |
 | R8 | **Raffle**: tickets sold at check-in or merch, drawing time on the schedule, winner drawn in admin | Every convention we looked at does one |
-| R9 | **Challonge import/export** (or a link-out option) | The kendama scene already uses Challonge. Meet players where they are, at least for brackets. |
+| R9 | **Bracket import and export (CSV)** | The kendama scene often runs brackets in other tools. Let organizers bring a bracket in or take theirs out. |
 | R10 | **Live results page per division** like WCA Live (we have `results`, `spectate`, `overlay`; check they update during the event, not only once published) | Spectators and the stream |
 
 ### 3c. Contest site (`yoyo-contest-template`) features
@@ -218,7 +218,7 @@ Beginner/Intermediate/Open as yo-yo-style ladders, which isn't how kendama ladde
 - F4 `trickscore` (KWC-style)
 - F5 `numbers`
 - F8 Swiss / round robin (pairs with C2 monthly mini-contests)
-- R9 Challonge
+- R9 bracket import and export
 - R4 pass types
 
 Each format is added in the same order every time:
@@ -241,7 +241,8 @@ Each format is added in the same order every time:
 3. **Should we host a convention?** Or partner with the UMD Juggling Club on the Congress of Jugglers
    (May, College Park) and run yo-yo workshops and games there? Partnering costs less and fits the
    regional calendar.
-4. **Challonge: integrate or replace?** Players know it. Our app owns waivers, payments, and privacy.
+4. **Brackets that already live in another tool: import them, or run every bracket here?** Our app
+   owns waivers, payments, and privacy.
 5. **Girls / women divisions:** add-on at $0 (NAKO model) or a standalone division?
 6. **Video prelims:** do we want online entries at all? They widen the field but add review work and
    a privacy policy for videos of minors.
