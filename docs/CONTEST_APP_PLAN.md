@@ -82,6 +82,8 @@
 | O1 | First contest path | ❌ | — |
 | O2 | Player page after the contest | 🟡 | Player login exists; no scores, score sheet, video or certificate on it |
 | O3 | Club link | ❌ | — |
+| O4 | Open books | 🟡 | Budget and finance screens exist for staff; nothing public |
+| O5 | Rules with a changelog | 🟡 | Rules pages exist; no version or change list |
 
 ## 5b. Learned from the event hub
 
@@ -122,22 +124,23 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 7. **R2** $0 add-on divisions
 8. **T18** contest guide page + **O1** first contest path
 9. **E8** email stub · **E9** first admin once
+10. **O5** rules with a changelog · **O4** open books
 
 ### Phase 2: Formats and the public side
-10. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
-11. **T10** contest feed · **T9** fan picks (if we decide yes)
-12. **T5** music desk (run-order naming, lock, reminders)
-13. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
-14. **T8** volunteer shifts · **R1** video prelims
-15. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
+11. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
+12. **T10** contest feed · **T9** fan picks (if we decide yes)
+13. **T5** music desk (run-order naming, lock, reminders)
+14. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
+15. **T8** volunteer shifts · **R1** video prelims
+16. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
 
 ### Phase 3: Bigger / niche
-16. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-17. **T3** judge calibration notes · **T6** judge practice mode
-18. **T14, T15, T17** battle board
-19. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
-20. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
-21. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+17. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+18. **T3** judge calibration notes · **T6** judge practice mode
+19. **T14, T15, T17** battle board
+20. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+21. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
+22. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
 A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid
@@ -150,4 +153,4 @@ tiers or upsells · automatic staff task assignment.
 The eleven in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
 VSYC-27 or a separate jam; host or partner on a juggling convention; import outside brackets or run
 them all here; girls divisions as add-ons or standalone; video prelims at all; who gets the club-site
-results snippet; fan picks yes or no; where the budget lives; sponsor payments online or invoice-only; the event hub and this app as two apps or one.
+results snippet; fan picks yes or no; where the public budget's books are kept; sponsor payments online or invoice-only; the event hub and this app as two apps or one.

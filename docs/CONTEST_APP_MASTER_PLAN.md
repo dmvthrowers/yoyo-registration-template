@@ -18,8 +18,13 @@ pages). Item codes (F, R, S, C, T, O, E) match [`CONTEST_APP_PLAN.md`](CONTEST_A
    last initial, with no hometown unless a guardian says yes. Nothing that looks like betting.
 3. **Free to watch, nothing to sign up for.** Spectators never need an account. No ads, no
    tracking, no third-party scripts.
-4. **Every number explains itself.** A spectator can see how a score was made. A player gets their
-   own score sheet afterward, so the contest teaches them something.
+4. **Open at every level, from the start.** Budget, code, rules and scoring are public before the
+   event, not explained after it. The rules and scoring method are published before registration
+   opens, and every change is logged. Every judge's score is shown, per judge and per category,
+   once a round is released. Money in and money out (fees, sponsors, costs, what's left) is on a
+   public page. The code is open. Nothing about how the contest works is hidden. The only thing kept
+   private is personal data about people, especially minors (principle 2): process and money are
+   open, contact details and kids' details are not.
 5. **One app from sign-up to archive.** Registration, music, judging, results and the season
    archive live together. The organizer owns the data, with no exports to someone else's service.
 6. **Always open source.** The template stays public and free to copy (public domain). No paid
@@ -65,7 +70,7 @@ schedule is slipping.
 |---|---------|----------------|
 | T1 | **Scores-in board** | A grid of the run order against the panel: each square fills when that judge's score lands. The head judge sees the gaps at a glance, and each judge's own phone shows "you still owe #14, #15", so nobody has to go find anyone. |
 | T2 | **Release gates** | A round goes public only when the scores-in board is full and the head judge taps "checked". Separate gates for the run order and the results, all on the results releases we already have. |
-| T3 | **Judge calibration notes** | After the event, each judge privately sees how their scores sat against the rest of the panel. It's for growing judges, not policing them. The organizer sees the panel's overall spread. |
+| T3 | **Judge calibration notes** | After the event, each judge sees how their scores sat against the rest of the panel, as a tool for growing judges. The panel-level spread is published with the results, since every raw score is already public. |
 | T4 | **MC cards** | On the existing MC page: one card per competitor in run order, with the name spelled the way the player says it (they enter it at sign-up), how they'd like to be introduced, and their sponsor. Minors' cards follow the privacy rules. Prints as a fallback. |
 | T5 | **Music desk** | Players upload to our own storage. Files are named by run order automatically, so nobody renames anything. Uploads lock at the deadline, with a countdown on the player's page. Missing tracks get one reminder. The DJ page plays in run order with "next up" showing. |
 | T6 | **Judge practice mode** | Trainees score alongside the panel on the judge page, clearly marked as practice. Their scores never count. Afterward they see how they lined up with the panel. |
@@ -80,7 +85,7 @@ schedule is slipping.
 |---|---------|----------------|
 | T9 | **Fan picks** | Just for fun: pick who you think takes each battle. No account, no prizes, no money, saved only in your browser. After the battle it shows "the crowd picked…". Off by default. |
 | T10 | **Contest feed** | A plain-language timeline on the spectate page and the stream overlay: "Open Freestyle round 2 is up", "Sport Ladder results are out". Staff see a fuller private version that doubles as the audit log. |
-| T11 | **How it was scored** | Every results page explains its format in the toy's own words, with a short note on each column. Each player gets a private score sheet with the per-judge breakdown. |
+| T11 | **How it was scored** | Every results page explains its format in the toy's own words, with a short note on each column. Every judge's score, per category, is public once the round is released, and each player gets a score sheet that walks through their own numbers. |
 | T12 | **Score shading** | Optional shading on results tables, so the gaps between places show without reading every number. |
 | T13 | **Routine videos** | Each routine's video on the results and player pages (privacy-friendly YouTube embeds), shown only with the player's consent. |
 | T14 | **Battle board, phone view** | The bracket opens on the current round and zooms out to the full tree, so a 64-player bracket is usable on a phone. |
@@ -119,6 +124,8 @@ Things none of the tools we looked at do, which fit a free, all-ages club:
 | O1 | **First contest path** | A "never competed before?" walkthrough from the contest guide: what happens on the day, what to bring, how scoring works, and a beginner division picker. |
 | O2 | **Player page after the contest** | Each player's scores, score sheet, routine video and a printable certificate, in one place they can come back to. |
 | O3 | **Club link** | A player can name their home club, and the club's site shows the club's results. The contest becomes part of the club year, not a one-off. |
+| O4 | **Open books** | A public budget page for each event: registration and spectator income, sponsor money by tier, costs by category, and what's left over and where it goes. Planned numbers go up before the event, actuals after. Built on the existing budget and finance screens. |
+| O5 | **Rules with a changelog** | Rules, scoring method and division details are published before registration opens, each with a version and a dated list of changes, so nobody is surprised on the day. |
 
 ---
 
@@ -159,6 +166,7 @@ Mostly config and contest-day tools. Little new format code.
 - S2 trick list page, S3 prize table
 - R2 $0 add-on divisions (Girls, Student)
 - T18 contest guide page + O1 first contest path
+- O5 rules with a changelog · O4 open books (planned budget public before VSYC-27)
 - E8 email stub, E9 first admin once (setup safety, small)
 - C1 games library (club template)
 
@@ -211,7 +219,8 @@ in `examples/`.
 6. Video prelims and online entries at all?
 7. **Results on club sites:** offer the snippet to any club, or only clubs using our club template?
 8. **Fan picks:** build it (off by default), or skip it?
-9. **Budget:** keep contest money in the app's finance screens, or in separate finance tracking?
+9. **Budget:** the budget is public (O4). Decide only where the books are kept: the app's finance
+   screens, or separate finance tracking that feeds the public page.
 10. **Sponsor payments:** keep invoice-only, or let sponsors pay for a tier online?
 11. **Event hub and contest app:** stay two apps sharing one event shape (E2, E3), or fold the
     calendar into this app later as its public front door?
