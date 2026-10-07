@@ -617,10 +617,10 @@ export default function JudgePage() {
 
           <form onSubmit={handleLogin} style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.4rem' }}>
+              <label htmlFor="judge-staff-email" style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.4rem' }}>
                 STAFF EMAIL
               </label>
-              <input
+              <input id="judge-staff-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -629,10 +629,10 @@ export default function JudgePage() {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.4rem' }}>
+              <label htmlFor="judge-password" style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.4rem' }}>
                 PASSWORD
               </label>
-              <input
+              <input id="judge-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -1029,10 +1029,10 @@ export default function JudgePage() {
               )}
 
               <div style={{ marginBottom: '0.8rem' }}>
-                <label style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.3rem' }}>
+                <label htmlFor="judge-notes-optional" style={{ display: 'block', fontSize: '0.6rem', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.3rem' }}>
                   NOTES (OPTIONAL)
                 </label>
-                <textarea
+                <textarea id="judge-notes-optional"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   maxLength={500}
