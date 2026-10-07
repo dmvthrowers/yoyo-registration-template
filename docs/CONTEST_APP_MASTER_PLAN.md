@@ -6,7 +6,7 @@ We looked at how real skill toy events run ([`FORMAT_RESEARCH.md`](FORMAT_RESEAR
 contest and bracket tools organizers use today, to learn what goes wrong on contest day. This plan
 doesn't copy any of them. Every feature below is designed from our own principles, uses our own
 names, and fits the app we already have (judge, MC, DJ, overlay, spectate, volunteer and results
-pages). Item codes (F, R, S, C, T, O) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
+pages). Item codes (F, R, S, C, T, O, E) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
 
 ---
 
@@ -22,8 +22,15 @@ pages). Item codes (F, R, S, C, T, O) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_
    own score sheet afterward, so the contest teaches them something.
 5. **One app from sign-up to archive.** Registration, music, judging, results and the season
    archive live together. The organizer owns the data, with no exports to someone else's service.
-6. **Any skill toy, any organizer.** Toy words, divisions and rules come from config. A kendama jam
-   or a juggling day needs no code change, and nothing in code is ours alone.
+6. **Always open source.** The template stays public and free to copy (public domain). No paid
+   tier, no closed add-ons, no feature held back for one club. Another region can run it without
+   asking us.
+7. **Any skill or dexterity toy.** Yo-yo, kendama, juggling, diabolo, spin tops, cubes, flow props,
+   stacking and whatever comes next. Toy words, divisions and rules come from config; a new toy
+   needs no code change, and no screen assumes yo-yo.
+8. **Any event type.** A judged contest, a battle night, a jam, a workshop, a meetup, a convention,
+   a fair or an online video contest. The event is the unit, and judging is something an event
+   *may* have, not something every event must have. Nothing in code is one club's alone.
 
 ---
 
@@ -115,6 +122,28 @@ Things none of the tools we looked at do, which fit a free, all-ages club:
 
 ---
 
+## Part 5b: What we learned from the event hub
+
+[`dmvt-event-hub`](https://github.com/dmvthrowers/dmvt-event-hub) is our community calendar: anyone
+submits an event with no login, confirms by email, and manages it later from a private link. Most of
+its security basics are already here too (honeypot, rate limit, hashed one-time tokens, magic-link
+portals, an audit log, a spectator `.ics`). These are the parts it does that this app doesn't:
+
+| # | Idea | How it lands here |
+|---|------|-------------------|
+| E1 | **Subscribe with filters** | Calendar feeds (`.ics`, `webcal://`, RSS) scoped by division, day or player: "add my rounds to my calendar". Cached with an ETag so calendar apps don't hammer the server. Today there's one spectator `.ics`. |
+| E2 | **One event shape for both apps** | The hub's event fields (type, start and end, recurrence, venue with coordinates, free or cost, ages, skill level, capacity, tags) become the base of the stage-1 `EventDef`. Contest details (divisions, formats, rounds) sit on top. Any event type fits, and events move between the two apps without translation. |
+| E3 | **Publish to the calendar** | When an event goes public here, it appears on the community calendar automatically (through a feed the hub reads), so nobody types it in twice. |
+| E4 | **Daily housekeeping** | One scheduled job that closes registration on the deadline, locks music uploads, sends the reminders (missing music, volunteer shifts, renewals), hides past events and runs the retention purge on schedule. Today these are manual flags. |
+| E5 | **Report a problem** | A small "something wrong?" link on public pages (misspelled name, wrong score, a privacy request) that lands in a staff queue with resolve and dismiss, recorded in the audit log. |
+| E6 | **Status page** | A public page showing whether registration, payments and email are working, using each provider's own status, so on contest day "is it down?" has an answer. |
+| E7 | **Submit an event, no account** | For a regional circuit (hub stage 3): another club submits its event, confirms by email and manages it from a private link, with an organizer approving it before it goes live. |
+| E8 | **Email stub for new deployments** | A fresh copy logs emails instead of sending until a provider is set, so setup never needs a mail account on day one. Fits "safe defaults". |
+| E9 | **First admin, once** | The first admin is set up by a one-time server-side step that does nothing after an admin exists, instead of a default password. |
+| E10 | **Agent skills in the repo** | Short operating guides for recurring jobs (moderation, privacy checks, test data, health checks), so any maintainer or agent does them the same way. |
+
+---
+
 ## Part 6: Build order
 
 ### Phase 1: Contest-day leverage, before VSYC-27 planning locks
@@ -130,6 +159,7 @@ Mostly config and contest-day tools. Little new format code.
 - S2 trick list page, S3 prize table
 - R2 $0 add-on divisions (Girls, Student)
 - T18 contest guide page + O1 first contest path
+- E8 email stub, E9 first admin once (setup safety, small)
 - C1 games library (club template)
 
 ### Phase 2: New formats and the public side
@@ -144,6 +174,8 @@ Mostly config and contest-day tools. Little new format code.
 - O2 player page
 - R1 video prelims
 - T8 volunteer shifts
+- E1 filtered calendar feeds · E4 daily housekeeping · E5 report a problem · E6 status page
+- E2 one event shape (with hub stage 1)
 - S8 `convention` preset (with R7 forms, R8 raffle)
 
 ### Phase 3: Bigger and more niche
@@ -159,6 +191,8 @@ Mostly config and contest-day tools. Little new format code.
 - R9 bracket import and export
 - R4 pass types
 - T7 bundles and add-ons
+- E3 publish to the community calendar · E7 submit an event, no account (regional circuit)
+- E10 agent skills
 
 Each format follows the same steps: `divisions-core.ts` with unit tests, an additive migration with
 a validation trigger, the judge UI, the public results, the contest site's format words, and a demo
@@ -179,6 +213,8 @@ in `examples/`.
 8. **Fan picks:** build it (off by default), or skip it?
 9. **Budget:** keep contest money in the app's finance screens, or in separate finance tracking?
 10. **Sponsor payments:** keep invoice-only, or let sponsors pay for a tier online?
+11. **Event hub and contest app:** stay two apps sharing one event shape (E2, E3), or fold the
+    calendar into this app later as its public front door?
 
 ---
 

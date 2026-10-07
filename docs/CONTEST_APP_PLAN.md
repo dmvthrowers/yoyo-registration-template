@@ -83,6 +83,24 @@
 | O2 | Player page after the contest | 🟡 | Player login exists; no scores, score sheet, video or certificate on it |
 | O3 | Club link | ❌ | — |
 
+## 5b. Learned from the event hub
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| E1 | Subscribe with filters | 🟡 | One spectator `.ics` (`lib/ics.ts`); no per-division, per-player or RSS feeds |
+| E2 | One event shape for both apps | ❌ | Waits on hub stage 1 (`EventDef`) |
+| E3 | Publish to the community calendar | ❌ | — |
+| E4 | Daily housekeeping | 🟡 | Crons exist for email and payment reconcile; deadlines, locks, reminders and purge are manual |
+| E5 | Report a problem | ❌ | — |
+| E6 | Status page | ❌ | — |
+| E7 | Submit an event, no account | ❌ | Regional circuit only |
+| E8 | Email stub for new deployments | 🟡 | With no `RESEND_API_KEY` the outbox keeps retrying (`lib/outbox.ts`); nothing is lost, but there is no log or preview of what would have gone out |
+| E9 | First admin, once | 🟡 | Done by a hand-run SQL insert (`docs/SETUP.md` §6); safe, but a one-time step would be simpler for non-developers |
+| E10 | Agent skills in the repo | ❌ | — |
+
+Already shared with the hub: honeypot and rate limits, hashed one-time tokens, magic-link portals, an
+audit log.
+
 ## 6. What we already have (no work needed)
 
 Registration with Stripe + Turnstile · spectator RSVP · player signup · judge portal · DJ portal ·
@@ -103,20 +121,23 @@ survey/feedback/upload pages · volunteer page (basic) · home-state eligibility
 6. **S7** kendama preset rewrite (config only) + **S2/S3** trick list and prize table pages
 7. **R2** $0 add-on divisions
 8. **T18** contest guide page + **O1** first contest path
+9. **E8** email stub · **E9** first admin once
 
 ### Phase 2: Formats and the public side
-9. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
-10. **T10** contest feed · **T9** fan picks (if we decide yes)
-11. **T5** music desk (run-order naming, lock, reminders)
-12. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
-13. **T8** volunteer shifts · **R1** video prelims
+10. **F3** race/heats · **F6** standing · **F7** bracket seeds · **F9** panel options
+11. **T10** contest feed · **T9** fan picks (if we decide yes)
+12. **T5** music desk (run-order naming, lock, reminders)
+13. **T13** routine videos (finish) + **R10** verify live results · **O2** player page
+14. **T8** volunteer shifts · **R1** video prelims
+15. **E1** filtered feeds · **E4** daily housekeeping · **E5** report a problem · **E6** status page · **E2** one event shape
 
 ### Phase 3: Bigger / niche
-14. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
-15. **T3** judge calibration notes · **T6** judge practice mode
-16. **T14, T15, T17** battle board
-17. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
-18. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
+16. **F2** double elim · **F4** trickscore · **F5** numbers · **F8** Swiss/round robin
+17. **T3** judge calibration notes · **T6** judge practice mode
+18. **T14, T15, T17** battle board
+19. **T16** results on club sites + **O3** club link · **R9** bracket import/export · **T7** bundles and add-ons
+20. **E3** publish to the community calendar · **E7** submit an event, no account · **E10** agent skills
+21. **S8** convention preset · **R7/R8** workshop forms + raffle · **C1** games library
 
 ### Deliberately not building
 A membership sign-up wizard · AI face-tagged galleries · a league-wide competitions map · paid
@@ -126,7 +147,7 @@ tiers or upsells · automatic staff task assignment.
 
 ## Open decisions
 
-The ten in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
+The eleven in the [master plan](CONTEST_APP_MASTER_PLAN.md) (Part 7): kendama formats first; kendama at
 VSYC-27 or a separate jam; host or partner on a juggling convention; import outside brackets or run
 them all here; girls divisions as add-ons or standalone; video prelims at all; who gets the club-site
-results snippet; fan picks yes or no; where the budget lives; sponsor payments online or invoice-only.
+results snippet; fan picks yes or no; where the budget lives; sponsor payments online or invoice-only; the event hub and this app as two apps or one.

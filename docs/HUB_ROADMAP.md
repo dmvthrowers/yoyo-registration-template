@@ -166,8 +166,10 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 
 What to build inside the app once events are first-class. It starts from how real kendama, juggling,
 diabolo, spin top and related events run, and from what tends to go wrong on contest day. Every
-feature is designed around our own principles (built for the people in the room, minors private by
-default, free to watch, every number explains itself, one app from sign-up to archive, any toy).
+feature is designed around our own principles: built for the people in the room, minors private by
+default, free to watch, every number explains itself, one app from sign-up to archive, always open
+source, any skill or dexterity toy, and any event type. It also carries over what the community
+calendar ([`dmvt-event-hub`](https://github.com/dmvthrowers/dmvt-event-hub)) does well (E1–E10).
 
 - [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the field research, with sources. New formats (F1–F10),
   registration features (R1–R10), contest-site pages (S1–S8) and club-site ideas (C1–C4).
@@ -185,6 +187,9 @@ plugin (see "Principles for new work") and follows the same order: `divisions-co
 
 ## Principles for new work
 
+- **Always open source.** The template stays public domain, with no paid tier or closed add-ons.
+- **Event type agnostic.** A contest, jam, workshop, meetup, convention or online contest is the same
+  kind of event; judging is optional, not assumed.
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording
   come from configuration. A kendama or juggling event should need no code change.
 - **A scoring format is a plugin.** New formats (e.g. a judged trick list, timed relays, head-to-head
