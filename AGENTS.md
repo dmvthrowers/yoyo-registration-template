@@ -73,3 +73,7 @@ This template is derived from [VA-States](https://github.com/dmvthrowers/VA-Stat
 Virginia State Yo-Yo Contest registration app. **Fixes land in VA-States first**, then are ported
 here (shared pieces: `components/form/Field.tsx`, the SEO routes, the accessibility fixes). The two
 have drifted in other places (migrations, `db-backup.yml`, `DAY_OF.md`), so port by hand.
+
+**Parity is required.** The live app and this template must stay in step. Every PR here or in
+VA-States either ports the change, logs it in [`docs/PARITY.md`](docs/PARITY.md), or says it is
+live-only config. Read that file before porting.

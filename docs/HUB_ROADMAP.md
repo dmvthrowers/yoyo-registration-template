@@ -2,7 +2,9 @@
 
 **End goal.** A platform we run ourselves first, that turns into a template anyone can self-host at
 low cost for a **full event page**: the public site (info, schedule, venue, rules, sponsors, FAQ),
-registration and payments, judging, live results, the open budget and the archive, from one deploy.
+registration and payments, judging, live results, the open budget and the archive. Two levels: a static
+site template for organizers who only want a public page, and this app for those who want to host
+everything themselves.
 Any skill or dexterity toy, any event type, online or in person, one day or several. Yo-yo first,
 then juggling and kendama, then the rest.
 
@@ -16,9 +18,9 @@ What "done" looks like, and what's still between here and there.
 
 **Done means:**
 
-- **One deploy, the whole event.** A deploy button and one config file give an organizer the full
-  event page. Today it takes two templates: `yoyo-contest-template` (the static public site) and
-  this app (registration through results).
+- **Two clear levels.** Level 1: copy the static site template, edit one config, publish free on
+  GitHub Pages. Level 2: add this app for registration, payments, judging and results. The two share
+  the event's facts so nothing is typed twice, and the site links into the app.
 - **Low cost, stated plainly.** A small event runs with no fixed monthly bill on free tiers
   (Supabase, Resend, GitHub, a host's free plan). The only per-event cost is payment fees, and a free
   event needs no payment account at all. A custom domain is optional (about $10–15 a year). The setup
@@ -27,21 +29,19 @@ What "done" looks like, and what's still between here and there.
   and (stage 2) an admin builder instead of editing config files.
 - **Updates without conflicts.** Config, presets and branding stay apart from code, so a
   deployment can pull template updates cleanly.
-- **Our own event is just one config.** VA-States becomes a deployment of the template, not a fork.
+- **The templates are what we run.** Our live repos and the templates stay in parity, so every
+  improvement from a real contest reaches everyone who uses the templates.
 
 **What's in the way:**
 
 | Gap | Today | Next step |
 |---|---|---|
-| Two templates for one event | Public site is a separate static template | Render the public event pages from the same config inside the app; keep the static template for clubs that only want a site. (Decision below.) |
+| Event facts typed twice | Name, date, venue and divisions live in both the site config and the app config | The app publishes the event's public facts as a feed (E2, E3); the static site reads it at build time when an app exists, and its own config when not |
 | Payments are required | Stripe is listed as needed | Let an event run with no payment provider: free registration, pay at the door recorded as a channel |
 | Hosting cost honesty | "Free tier works" for Vercel | Vercel's free plan is for non-commercial use, so an event that charges fees may need a paid plan. Check whether a nonprofit contest qualifies, list the cost, and test a no-cost alternative host |
 | Free-tier limits | Email quota is tracked | Track the rest that a busy event can hit: database size, storage for music and video, inactive-project pausing on Supabase's free plan |
 | Setup still needs SQL | First admin is a hand-run insert | One-time first-admin step (E9), email stub (E8), first-run page |
-| VA-States is a fork | Features land there first and are ported by hand | Finish porting (battles, round plans, prizes and the rest), then run VA-States from the template plus its config |
-
-**Decision needed:** one template that serves both the public site and the app, or two templates
-that share one config file?
+| Live and template drift | Features land in VA-States first and are ported by hand; some never were | Work the gaps in [`PARITY.md`](PARITY.md) down to zero, then keep it there with the parity rule (every PR ports or logs) |
 
 ## Decisions so far (owner)
 
@@ -50,6 +50,14 @@ that share one config file?
 - **Who it's for first:** the Mid-Atlantic community (DMV Throwers and its region). It may expand beyond that.
 - **Anyone can build and deploy it.** The template is public and meant to be used by other clubs and regions
   without our help. That is a design requirement, not a nice-to-have (see below).
+- **Two templates, two levels.** The public event site stays a static template
+  ([`yoyo-contest-template`](https://github.com/dmvthrowers/yoyo-contest-template)): the easy option for an
+  organizer who only wants a site. This app is the second, fuller option: registration through results,
+  self-hosted. They are not merged into one.
+- **Our live deployments keep their own repos.** The VSYC public pages (`dmvthrowers.github.io`) and the
+  registration app (`VA-States`) stay separate repos, not forks that track the templates automatically.
+- **Live and template stay in parity.** Anything generic that lands in a live repo lands in its template,
+  and the reverse, so the templates are always what we actually run. See [`PARITY.md`](PARITY.md).
 
 ### What "anyone can deploy it" means for the work
 
