@@ -212,10 +212,10 @@ all of them. Sponsor inquiry above is the first one; the rest follow the same sh
 What to build inside the app once events are first-class. It starts from how real kendama, juggling,
 diabolo, spin top and related events run, and from what tends to go wrong on contest day. Every feature
 is designed around our own principles: built for the people in the room, minors private by default,
-free to watch, open at every level (budget, code, rules, scoring), one app from sign-up to archive,
-always open source, any skill or dexterity toy, and any event type. It also carries over what the
-community calendar ([`dmvt-event-hub`](https://github.com/dmvthrowers/dmvt-event-hub)) does well
-(E1–E10).
+free to watch, open at every level (budget, code, rules, scoring), fair and safe for everyone, one app
+from sign-up to archive, always open source, any skill or dexterity toy, and any event type. It also
+carries over what the community calendar
+([`dmvt-event-hub`](https://github.com/dmvthrowers/dmvt-event-hub)) does well (E1–E10).
 
 - [`FORMAT_RESEARCH.md`](FORMAT_RESEARCH.md): the field research, with sources. New formats (F1–F10),
   registration features (R1–R10), contest-site pages (S1–S8) and club-site ideas (C1–C4).
@@ -237,6 +237,8 @@ plugin (see "Principles for new work") and follows the same order: `divisions-co
 - **Open at every level.** Budget, code, rules and scoring are public from the start: rules and scoring
   before registration opens, every judge's score once a round is released, and money in and out on a
   public page. Only personal data stays private.
+- **Fair and safe.** The same rules for every player, judges with no stake in the result, a code of
+  conduct everyone in the room accepts, private ways to report a problem, and nobody priced out.
 - **Event type agnostic.** A contest, jam, workshop, meetup, convention or online contest is the same
   kind of event; judging is optional, not assumed.
 - **Nothing toy-, club- or event-specific in code.** Names, dates, venues, divisions, prices, formats and wording

@@ -6,7 +6,7 @@ We looked at how real skill toy events run ([`FORMAT_RESEARCH.md`](FORMAT_RESEAR
 contest and bracket tools organizers use today, to learn what goes wrong on contest day. This plan
 doesn't copy any of them. Every feature below is designed from our own principles, uses our own
 names, and fits the app we already have (judge, MC, DJ, overlay, spectate, volunteer and results
-pages). Item codes (F, R, S, C, T, O, E, D) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
+pages). Item codes (F, R, S, C, T, O, E, D, P) match [`CONTEST_APP_PLAN.md`](CONTEST_APP_PLAN.md).
 
 ---
 
@@ -40,6 +40,11 @@ pages). Item codes (F, R, S, C, T, O, E, D) match [`CONTEST_APP_PLAN.md`](CONTES
    page. A small event runs on free tiers with no monthly bill; a free event needs no payment
    account. Every feature has to fit that: no paid service required, optional services switch off
    cleanly, and the setup guide states every cost up front.
+10. **Fair to everyone, safe for everyone.** Every player is judged by the same rules, by judges
+    with no stake in the result, and anyone can see how it was done. Everyone in the room (players,
+    families, judges, volunteers, staff, sponsors and spectators) agrees to the code of conduct, can
+    report a problem privately, and is protected when they do. Nobody is priced out, and anyone who
+    needs an accommodation can ask for one without explaining themselves in public.
 
 ---
 
@@ -175,6 +180,25 @@ our principles. Each is our own design, not a copy.
 
 ---
 
+## Part 5d: Fair and safe
+
+How principle 10 becomes features. Some exist already (code of conduct acceptance at
+registration, the public-name rule for minors, comp codes); the rest are new.
+
+| # | Feature | How ours works |
+|---|---------|----------------|
+| P1 | **Code of conduct for everyone in the room** | Players and spectators already accept it at registration. Extend it to judges, volunteers, staff and sponsors when they're added, and record which version each person accepted, so a revised code is re-accepted. |
+| P2 | **Confidential conduct reports** | A private form, separate from the public "report a problem" link (E5), linked from every page and the contest-day screens. Anonymous if the reporter wants. It goes to a named conduct team of at least two people and skips anyone named in the report. Each report gets an acknowledgment, a response time and a private record of the outcome, with retention set in the archive plan. |
+| P3 | **Judge conflicts of interest** | Judges declare relationships before the event (coach, family, teammate, same sponsor team). The app flags conflicts when building panels; a conflicted judge's score for that player is left out and the panel average stands in. The count of declarations is published with the results. |
+| P4 | **Published draws** | Run order and bracket seeding come from a recorded random draw (with its seed) or a published rule, never a hand edit without a logged reason. Anyone can check the draw. |
+| P5 | **Appeals with a clock** | A player or guardian can file a scoring appeal within a set window after a round is released. The head judge records a decision and the reason; results show "under appeal" until then, and the outcome is public. |
+| P6 | **Accommodations** | At registration, ask privately for what you need: a quiet space, seating, an interpreter, more setup time, medical notes. Only the staff who need it see it, and it reaches them on their own screens (MC cards, run order) without exposing details. |
+| P7 | **Nobody priced out** | Spectating stays free. A fee waiver on request with no questions asked, built on comp codes, plus free or reduced entry below a set age. |
+| P8 | **Youth safety** | No private messaging between staff and minors in the app; guardians are the contact for anyone under 18; roles that work with minors need two adults present on the schedule; a youth-protection check is recorded as done or not done (status only, no documents). |
+| P9 | **Fair divisions** | Eligibility rules (age, level, residency) published before registration opens (O5). Self-placement (R5) plus past results (D1, D3) flag a likely over-placed entry for the organizer to review, never an automatic block. |
+
+---
+
 ## Part 6: Build order
 
 ### Phase 1: Contest-day leverage, before VSYC-27 planning locks
@@ -183,6 +207,7 @@ Mostly config and contest-day tools. Little new format code.
 
 - T1 scores-in board
 - T19 scoring that survives bad signal
+- P1 code of conduct for everyone · P2 confidential conduct reports · P4 published draws
 - R11 photo and video consent (before any video or gallery work ships)
 - T2 release gates
 - F1 bracket match scores (smallest change, biggest kendama payoff)
@@ -210,6 +235,7 @@ Mostly config and contest-day tools. Little new format code.
 - T8 volunteer shifts
 - E1 filtered calendar feeds · E4 daily housekeeping · E5 report a problem · E6 status page
 - D3 psych sheet · D4 judge notes · D6 schedule conflict check
+- P3 judge conflicts · P5 appeals · P6 accommodations · P7 fee waivers · P8 youth safety · P9 fair divisions
 - E2 one event shape (with hub stage 1)
 - S8 `convention` preset (with R7 forms, R8 raffle)
 
