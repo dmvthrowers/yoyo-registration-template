@@ -188,3 +188,19 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Bracket match scores
+
+For battles won on points (kendama trick-deck battles, best-of-N), add `matchScoring` to a bracket division:
+
+```ts
+scoring: { format: 'bracket', seeding: 'random', thirdPlaceMatch: true, matchScoring: { to: 3, finalsTo: 5 } }
+```
+
+First to `to` wins a match; the final plays to `finalsTo` (default: same as `to`); the third-place match plays to
+`to`. On the admin and judge bracket screens the selected match shows a **+ / −** counter for each side; **Save score**
+stores it (`/api/admin/bracket/score`). When a side reaches the target it is set as the winner exactly as **Confirm**
+would (advancing, filling the third-place match), and a score that is no longer decisive takes a standing winner back.
+Play stops at the target, so a score above it, or both sides on it, is refused. Running scores show on the public
+bracket. Taking a result back removes the scores of any later match whose entrants change. Needs migration
+`0058_bracket_match_scores.sql`. Without `matchScoring`, brackets work as before.
