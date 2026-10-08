@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { requireAdminRequest } from '@/lib/auth/admin-request';
+import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { competition, contest } from '@/contest.config';
 import { isTeamDivision } from '@/lib/divisions-core';
 import { prizePlan } from '@/lib/prizes';
 
 /**
- * GET /api/admin/prizes (admin)
+ * GET /api/admin/prizes (needs the event.configure capability: admin)
  *
  * The prize plan for the number of people entered so far (paid registrations per division, or teams
  * in a team division): the podium places and champion prize for each division, and the total to buy
@@ -16,7 +16,7 @@ import { prizePlan } from '@/lib/prizes';
  * won't award its champion prize. Read-only.
  */
 export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
-  const auth = await requireAdminRequest(req, requestId);
+  const auth = await requireCapabilityRequest(req, requestId, 'event.configure');
   if (auth instanceof NextResponse) return auth;
 
   const db = createAdminClient();
