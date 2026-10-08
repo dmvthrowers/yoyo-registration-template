@@ -188,3 +188,16 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## How it was scored
+
+The results page ends with each division's scoring in plain words, with a "How it's scored" note for every number
+(`lib/how-scored.ts`). The words are built from the division's own scoring config, so changing a cap or a deduction
+in `contest.config.ts` changes the explanation too.
+
+`contest.resultsShading: true` shades each row of the freestyle, panel and manual results tables by how close it is to
+the best score (best row filled to the right edge, worst almost clear), so the gaps between places show without reading
+every number. Off by default. The score is always printed too, so shading is never the only signal.
+
+Not built yet: a per-judge, per-category public score sheet for each player (the second half of T11). That needs
+decisions on how judges are named publicly; see the build plan.

@@ -82,6 +82,12 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Shade each row of the results tables by how close it is to the best score, so the gaps between
+   * places show without reading every number (docs/FORMATS.md → How it was scored). Off by default.
+   */
+  resultsShading: false,
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',
