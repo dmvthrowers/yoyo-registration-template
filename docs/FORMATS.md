@@ -188,3 +188,12 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Open books
+
+The public budget page (`/budget`) adds a **By Category** section: income and costs by category, with a **Planned**
+column next to **Actual**. In the admin Budget tab, tick **Planned figure** to publish a number before the event;
+planned rows never count toward the totals or the fundraising goal. Categories: registration (planned only, since
+actual registration income is read live from paid fees), sponsor, merch, spectator income, venue, prizes, equipment,
+printing, food, insurance and other. `contest.budgetLeftoverNote` says where any surplus goes. Needs migration
+`0057_open_books.sql`.

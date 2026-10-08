@@ -82,6 +82,12 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Shown on the public budget page: where any money left after the event goes ("" hides it).
+   * Plain sentence, e.g. "Anything left over pays for next year's venue deposit and loaner yo-yos."
+   */
+  budgetLeftoverNote: '',
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',
