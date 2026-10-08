@@ -15,6 +15,7 @@
     "auth-emails": "node --experimental-strip-types --no-warnings scripts/render-auth-emails.mjs",
     "divisions": "node --experimental-strip-types --no-warnings scripts/sync-divisions.mjs",
     "archive": "node --env-file-if-exists=.env.local --import tsx scripts/archive.ts",
+    "first-admin": "node --env-file-if-exists=.env.local --import tsx scripts/first-admin.ts",
     "archive:verify": "node --env-file-if-exists=.env.local --import tsx scripts/archive-verify.ts"
   },
   "dependencies": {
