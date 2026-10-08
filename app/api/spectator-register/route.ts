@@ -3,6 +3,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { spectatorSchema } from '@/lib/validation';
 import { logAudit } from '@/lib/audit';
+import { contest } from '@/contest.config';
 import { sendSpectatorConfirmationEmail } from '@/lib/email';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -59,6 +60,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       volunteer_interest:       data.volunteer_interest ?? false,
       liability_accepted:       data.liability_accepted,
       code_of_conduct_accepted: data.code_of_conduct_accepted,
+      code_of_conduct_version:  contest.codeOfConductVersion,
       ip_address:               ip === 'unknown' ? null : ip,
       user_agent:               req.headers.get('user-agent') ?? null,
     })

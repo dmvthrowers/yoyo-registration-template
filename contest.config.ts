@@ -82,6 +82,13 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Version of the code of conduct people accept at sign-up. It is stored with each registration,
+   * spectator and volunteer, so after you revise the code, bump this and you can see who accepted
+   * the old one (docs/FORMATS.md → Code of conduct version).
+   */
+  codeOfConductVersion: '1',
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',

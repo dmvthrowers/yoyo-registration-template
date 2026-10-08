@@ -188,3 +188,11 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Code of conduct version
+
+`contest.codeOfConductVersion` (default `'1'`) is stored as `code_of_conduct_version` on every registration,
+walk-up, spectator and volunteer when they accept the code. The registrations CSV export has the column. After you
+revise the code, bump the version: `lib/conduct-version.ts` sorts people into `current`, `outdated` (accepted an
+older version) and `unrecorded` (signed up before versions were stored, null in the database). Judges, staff and
+sponsors don't accept the code in a form today, so they aren't covered yet. Needs migration `0054_conduct_version.sql`.
