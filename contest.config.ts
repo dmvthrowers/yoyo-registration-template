@@ -82,6 +82,23 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * The public contest guide at /guide (docs/FORMATS.md → Contest guide): everything a player needs
+   * before signing up, built from the settings in this file. `enabled: false` drops the page and its
+   * footer link. `bring` is the "what to bring" list for a first-timer; mark newcomer-friendly
+   * divisions with `beginnerFriendly: true` on the division.
+   */
+  guide: {
+    enabled: true,
+    intro: 'New here? This page has what you need before you sign up.',
+    bring: [
+      'Your yo-yos and spare string',
+      'A water bottle and a snack',
+      'A photo ID if you are 18 or older',
+      'A parent or guardian, if you are under 18',
+    ] as readonly string[],
+  },
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',
@@ -305,6 +322,8 @@ export interface DivisionDef {
   styles?: { options: StyleDef[]; min: number; max: number };
   /** Division codes this one can't be entered together with */
   cannotCombineWith?: string[];
+  /** Shown as a good place to start on the contest guide's first-contest path */
+  beginnerFriendly?: boolean;
   scoring: Scoring;
   /** Solo (default) or team entries */
   entry?: EntryDef;
@@ -378,6 +397,7 @@ export const competition: {
       priceCents: 2000,
       music: true,
       cannotCombineWith: ['1A', 'X'],
+      beginnerFriendly: true,
       scoring: { format: 'freestyle', techCap: 20, evalCap: 20, negativeClicks: false, deductions: null },
     },
   ],

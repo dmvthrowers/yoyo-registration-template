@@ -188,3 +188,11 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Contest guide
+
+`/guide` is one public page built from `contest.config.ts`: date and venue, every division with its fee, how it is
+judged and its routine length, the registration and music-upload deadlines (in the venue's time zone and, when it
+differs, the reader's own), and a "Never competed before?" path: divisions marked `beginnerFriendly: true`, the
+`contest.guide.bring` list and the day's planned schedule. Nothing to write by hand; change the config and the page
+follows. `contest.guide.enabled: false` drops the page and its footer link.
