@@ -8,6 +8,7 @@ import MusicManager from '@/components/MusicManager';
 import VolunteerManager from '@/components/VolunteerManager';
 import BudgetManager from '@/components/BudgetManager';
 import SurveyResults from '@/components/SurveyResults';
+import PrizePlanPanel from '@/components/PrizePlanPanel';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { contest } from '@/contest.config';
 import { holdsAnyRole } from '@/lib/roles';
@@ -932,6 +933,8 @@ export default function AdminDashboardPage() {
                 </table>
               </div>
             </section>
+
+            {token && <PrizePlanPanel token={token} />}
 
             <section className="border border-navy-border bg-navy p-4 mb-8">
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
