@@ -53,7 +53,6 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 |---|---|---|
 | Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set, `fetchHomeStateEligible`), migration 0047 | The template still uses the old "entered the champion's state" rule |
 | Round plans | `lib/round-plan*.ts`, `lib/use-round-plans.ts`, `components/RoundPlanPanel.tsx`, `/api/rounds/plan`, `/api/admin/rounds/plan`, migration 0045 | |
-| Division split | `lib/division-split.ts`, `components/SplitPreviewPanel.tsx`, `/api/admin/division-split` | |
 | Prizes | `lib/prizes.ts`, `components/PrizePlanPanel.tsx`, `/api/admin/prizes` | |
 | Score status | `lib/score-status.ts`, `/api/admin/score-status` | Groundwork for the scores-in board (T1) |
 | DJ battle view | `lib/battle-cue.ts`, `components/DjBattleView.tsx`, `/api/dj/battle` | |

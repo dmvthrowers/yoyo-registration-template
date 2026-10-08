@@ -23,6 +23,8 @@ type, and optionally rounds. `presets/competitions.ts` has worked examples of al
 - `pricing: 'team'` charges the captain once and members $0; `'person'` charges everyone.
 
 **Rounds.** `rounds: [{ name: 'Prelims', advance: 10 }, { name: 'Finals' }]`.
+
+**Age split (preview).** `split: { above: 15, minBracket: 5, labels: ['Youth', 'Adult'] }` on a division. With more than `above` paid entrants, the run-order screen shows a preview of splitting it into a younger and an older bracket, with a suggested cut age and a field to try another. Each bracket must have at least `minBracket` players. Nothing is applied: a split isn't wired into the run order or results yet.
 - Rounds apply to freestyle, panel and manual divisions only.
 - Scores and run order carry `round` (1-based).
 - Advancing takes the top `advance` from a round's standings into the next round's run order;
