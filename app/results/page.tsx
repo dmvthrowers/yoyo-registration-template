@@ -109,11 +109,15 @@ function StandingsList({ rows, label, champions }: { rows: StandingRow[]; label:
   );
 }
 
+/** The division whose release gates results: an add-on follows its parent. */
+const gateCode = (d: { code: string; scoring: { format: string } }): string =>
+  d.scoring.format === 'addon' ? (d.scoring as unknown as { parent: string }).parent : d.code;
+
 export default async function ResultsPage() {
   const vis = await getVisibility();
   const resultsPublished = vis.all;
   // Divisions with at least one released round, in config order.
-  const shown = competition.divisions.filter((d) => isPublished(vis, d.code));
+  const shown = competition.divisions.filter((d) => isPublished(vis, gateCode(d)));
   const standings = shown.length ? await getStandings() : null;
   const total = standings
     ? shown.reduce((n, d) => n + (standings[d.code]?.final.length ?? 0), 0)
@@ -179,8 +183,9 @@ export default async function ResultsPage() {
             const full = standings[code];
             if (!full) return null;
             // Released rounds only; the overall order waits for the last round's release.
-            const rounds = full.rounds.filter((_, i) => isPublished(vis, code, i + 1));
-            const finalOut = full.rounds.length <= 1 || isPublished(vis, code, full.rounds.length);
+            const gate = gateCode(d);
+            const rounds = full.rounds.filter((_, i) => isPublished(vis, gate, i + 1));
+            const finalOut = full.rounds.length <= 1 || isPublished(vis, gate, full.rounds.length);
             const ds = { ...full, rounds, final: finalOut ? full.final : [] };
             const multiRound = full.rounds.length > 1;
             const champs = stateChampions(ds.final, contest.stateChampion.state);
