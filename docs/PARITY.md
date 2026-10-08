@@ -56,7 +56,6 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Division split | `lib/division-split.ts`, `components/SplitPreviewPanel.tsx`, `/api/admin/division-split` | |
 | Prizes | `lib/prizes.ts`, `components/PrizePlanPanel.tsx`, `/api/admin/prizes` | |
 | Score status | `lib/score-status.ts`, `/api/admin/score-status` | Groundwork for the scores-in board (T1) |
-| DJ battle view | `lib/battle-cue.ts`, `components/DjBattleView.tsx`, `/api/dj/battle` | |
 | Payment dispute flags | `lib/stripe-dispute*.ts`, migration 0046 | |
 | Bot check on public forms | `lib/turnstile.ts`, `components/Turnstile.tsx` | Port as an optional service that switches off when its key is blank |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
