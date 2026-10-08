@@ -188,3 +188,12 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Photo and video release
+
+`contest.photoConsent` is `'required'` by default: everyone ticks the release to enter, as before. Set it to
+`'optional'` and the box can stay empty (a guardian's choice for minors). The registration form says so, a walk-up
+no longer assumes consent, and the media team gets a **Do-not-photograph list** at `/media/consent`
+(`media.upload` or `media.publish`) with entrants and volunteers who opted out. Apply migration
+`0055_photo_consent_optional.sql` first: it stops the database insisting on the box. There is no per-person
+photo gallery in the template yet, so the list is how consent is honored today.

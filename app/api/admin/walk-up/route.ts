@@ -112,7 +112,7 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
       registration_source:      'walk_up',
       music_upload_token:       musicUploadToken,
       liability_waiver_accepted: data.liability_waiver_accepted,
-      photo_video_consent:       true,   // assumed at walk-up
+      photo_video_consent:       contest.photoConsent === 'required',   // assumed at walk-up only when the release is required to enter
       code_of_conduct_accepted:  data.code_of_conduct_accepted,
       emergency_contact_name:    null,
       emergency_contact_phone:   null,

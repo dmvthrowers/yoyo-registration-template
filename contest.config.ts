@@ -82,6 +82,14 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Photo and video release at registration. 'required' (default): everyone must tick it to enter,
+   * as before. 'optional': the box can stay empty (a guardian's for minors), and staff get a
+   * "do not photograph" list at /media/consent. Switching to 'optional' is a policy choice for the
+   * organizer; apply migration 0055 first so the database stops insisting on the box.
+   */
+  photoConsent: 'required' as 'required' | 'optional',
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',

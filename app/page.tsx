@@ -906,12 +906,12 @@ export default function RegisterPage() {
             {/* Photo/video */}
             <label className="flex gap-3 items-start cursor-pointer">
               <input
-                {...register('photo_video_consent', { required: 'Check this box to agree to the photo and video release.' })}
+                {...register('photo_video_consent', contest.photoConsent === 'required' ? { required: 'Check this box to agree to the photo and video release.' } : {})}
                 type="checkbox"
                 className="mt-0.5 w-4 h-4 accent-gold flex-shrink-0"
               />
               <span className="text-sm text-text-body">
-                <strong className="text-white">Photo / Video Consent (Required):</strong> I consent to being photographed and recorded at {contest.shortName}, including livestream broadcast, and for use in {contest.organizer.name} promotional and archival materials.
+                <strong className="text-white">Photo / Video Consent{contest.photoConsent === 'required' ? ' (Required)' : ' (Optional)'}:</strong> I consent to being photographed and recorded at {contest.shortName}, including livestream broadcast, and for use in {contest.organizer.name} promotional and archival materials.{contest.photoConsent === 'optional' && ' Leave this empty and you can still enter: the media team will be told not to photograph or feature you.'}
               </span>
             </label>
             {errors.photo_video_consent && <p className="text-error text-xs mt-1">{errors.photo_video_consent.message}</p>}
