@@ -188,3 +188,12 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## MC cards
+
+`/mc/cards` (`mc.script`: admin and the MC) shows one card per competitor in run order, for any division and round:
+the name to read, how to say it, how they want to be introduced, their sponsor and club. Players fill three optional
+boxes on the registration form ("How to Say Your Name", "Sponsor", "How Should the Announcer Introduce You?"). **Print**
+gives a plain black-on-white fallback. The announcer reads names to the room, so cards follow the public-name rules:
+a minor whose guardian hasn't opted into public listing appears as a handle or first name + last initial, with no
+location and no pronunciation (it would spell the surname). Needs migration `0056_mc_card_fields.sql`.
