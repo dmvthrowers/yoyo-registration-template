@@ -82,6 +82,23 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Rules with a changelog (docs/FORMATS.md → Rules page). /rules shows the current version, how each
+   * division is scored, and every change with its date. Leave `changes` empty to hide the page's
+   * changelog; set `enabled: false` to drop the page and its footer link.
+   */
+  rulesPage: {
+    enabled: true,
+    /** The current version, e.g. "1.1". Must match the newest entry in `changes`. */
+    version: '1.0',
+    /** The rules were first published on this date (YYYY-MM-DD) */
+    publishedOn: '2027-01-01',
+    /** Newest first. */
+    changes: [
+      { version: '1.0', date: '2027-01-01', summary: ['First published.'] },
+    ] as { version: string; date: string; summary: string[] }[],
+  },
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',

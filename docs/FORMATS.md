@@ -188,3 +188,10 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Rules page
+
+`/rules` shows the current rules version, each division's scoring in a line, and a dated list of every change, newest
+first (`contest.rulesPage` in `contest.config.ts`). When you change a rule, add an entry at the top of `changes` and
+set `version` to match; a test fails if they disagree or a date is malformed. Publish it before registration opens.
+`enabled: false` drops the page and its footer link. Your own full rules page (`contest.links.rules`) is linked from it.
