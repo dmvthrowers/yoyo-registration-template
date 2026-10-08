@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { requireAdminRequest } from '@/lib/auth/admin-request';
+import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { competition, divisionByCode } from '@/contest.config';
 import { previewSplit } from '@/lib/division-split';
 
 /**
- * GET /api/admin/division-split[?division=<code>&cut_age=<n>] (admin)
+ * GET /api/admin/division-split[?division=<code>&cut_age=<n>] (needs the event.configure capability: admin)
  *
  * Read-only preview of splitting a big division into a younger and an older bracket (site issue
  * #81). For every division with a `split` rule (or just `division`): how many paid entrants, their
@@ -14,7 +14,7 @@ import { previewSplit } from '@/lib/division-split';
  * `cut_age` with `division` to see what a different cut would give. Nothing is saved or applied.
  */
 export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
-  const auth = await requireAdminRequest(req, requestId);
+  const auth = await requireCapabilityRequest(req, requestId, 'event.configure');
   if (auth instanceof NextResponse) return auth;
 
   const only = req.nextUrl.searchParams.get('division');
