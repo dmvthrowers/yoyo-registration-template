@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { contest, competition, venueCity, longDate } from '@/contest.config';
+import { Turnstile } from '@/components/Turnstile';
 import { Field, inputCls } from '@/components/form/Field';
 
 /** Optional setup fields, labelled from competition.gear. A "" label hides the field. */
@@ -44,6 +45,8 @@ export default function SpectatePage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [cocOpen, setCocOpen] = useState(false);
 
   const {
@@ -89,6 +92,7 @@ export default function SpectatePage() {
         volunteer_interest: values.volunteer_interest,
         liability_accepted: values.liability_accepted,
         code_of_conduct_accepted: values.code_of_conduct_accepted,
+        turnstileToken,
       };
 
       const res = await fetch('/api/spectator-register', {
@@ -108,6 +112,7 @@ export default function SpectatePage() {
     } catch {
       setServerError('Network error — please check your connection and try again.');
     } finally {
+      setTurnstileResetKey((k) => k + 1);
       setSubmitting(false);
     }
   };
@@ -283,6 +288,7 @@ export default function SpectatePage() {
           )}
 
           <div className="pt-2">
+            <Turnstile onToken={setTurnstileToken} resetKey={turnstileResetKey} />
             <button
               type="submit"
               disabled={submitting}

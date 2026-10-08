@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { spectatorSchema } from '@/lib/validation';
@@ -22,6 +23,12 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
   let body: unknown;
   try { body = await req.json(); } catch {
     return apiError('bad_request', 'Invalid JSON body', requestId);
+  }
+
+  // 2b. Turnstile bot check (no-op until TURNSTILE_SECRET_KEY is set)
+  const turnstileToken = (body as { turnstileToken?: unknown } | null)?.turnstileToken;
+  if (!(await verifyTurnstile(turnstileToken, ip))) {
+    return apiError('forbidden', 'Please complete the security check and try again.', requestId);
   }
 
   const parsed = spectatorSchema.safeParse(body);
