@@ -188,3 +188,9 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Prize table
+
+`/prizes` shows what each division awards, in words, by how many people enter: the contest default
+(`contest.prizes.places`) or a division's own `prizes.tiers`, and whether the home-state champion also gets a prize. It
+reads the same rules as the prize plan on the admin dashboard, so the two can't disagree. Showcase divisions are left out.

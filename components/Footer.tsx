@@ -21,6 +21,7 @@ const FOOTER_LINKS = [
   { label: 'Venue',       href: contest.links.venue },
   { label: 'FAQ',         href: contest.links.faq },
   { label: 'Policies',    href: '/policies' },
+  { label: 'Prizes',      href: '/prizes' },
   { label: 'Staff',       href: '/staff' },
   { label: 'Resources',   href: contest.links.resources },
   { label: 'GitHub',      href: contest.links.sourceCode },
