@@ -1,26 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
+import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import { roundsOf } from '@/lib/divisions-core';
 import { runOrderDisplayName } from '@/lib/display-name';
 import { computeScoreStatus } from '@/lib/score-status';
 
 /**
- * GET /api/admin/score-status?division=<code>&round=<n>   (admin or judge)
+ * GET /api/admin/score-status?division=<code>&round=<n>   (needs the scores.review capability: admin and judges)
  *
  * Live status of one round's judging (site issue #83): per competitor, who has scored them and who
  * hasn't, the median and spread, and scores far from the judges' median; plus a "ready to publish"
  * verdict with the blockers and warnings behind it. Read-only. Staff see full names, so it's never cached.
  */
 export const GET = withErrorHandling(async (requestId, req: NextRequest) => {
-  const token = getBearerToken(req);
-  if (!token) return apiError('unauthorized', 'Missing bearer token', requestId);
-  const identity = await getStaffIdentityFromToken(token);
-  if (!identity?.isActive || !['admin', 'judge'].includes(identity.role)) {
-    return apiError('forbidden', 'Admin or judge access required', requestId);
-  }
+  const auth = await requireCapabilityRequest(req, requestId, 'scores.review');
+  if (auth instanceof NextResponse) return auth;
 
   const division = req.nextUrl.searchParams.get('division');
   if (!division || !DIVISION_CODES.includes(division)) {
