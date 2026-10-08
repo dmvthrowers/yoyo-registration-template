@@ -3,7 +3,7 @@
 /** Site footer. Names, links, and the sponsor come from contest.config.ts. */
 
 import Image from 'next/image';
-import { contest, contestYear, fullTitle, whenWhere } from '@/contest.config';
+import { competition, contest, contestYear, fullTitle, whenWhere } from '@/contest.config';
 
 const SITE_HOME = contest.links.home || '/';
 
@@ -21,6 +21,7 @@ const FOOTER_LINKS = [
   { label: 'Venue',       href: contest.links.venue },
   { label: 'FAQ',         href: contest.links.faq },
   { label: 'Policies',    href: '/policies' },
+  ...(competition.divisions.some((d) => d.scoring.format === 'ladder') ? [{ label: 'Tricks', href: '/tricks' }] : []),
   { label: 'Staff',       href: '/staff' },
   { label: 'Resources',   href: contest.links.resources },
   { label: 'GitHub',      href: contest.links.sourceCode },

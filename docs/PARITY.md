@@ -71,6 +71,7 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
 | Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
 | Bracket match scores | `lib/match-score.ts`, `/api/admin/bracket/score`, `applyScore` in `lib/bracket-server.ts`, `BracketView` score entry, migration 0058 | Off unless a bracket division sets `matchScoring` |
+| Trick lists page, kendama preset | `app/tricks`, `presets/competitions.ts` | Config only, no migration. The preset battle uses match scores (stacked on the bracket-scores PR) |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 
