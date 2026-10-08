@@ -70,6 +70,7 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Role pages | `app/mc`, `app/media`, `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff` | Depend on roles |
 | Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
 | Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
+| Published draws | `lib/draw.ts`, `/api/run-order/draw`, draw record in `/api/admin/run-order`, migration 0053 | Off unless `dayOf.publishedDraws` is true |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 

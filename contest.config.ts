@@ -432,9 +432,16 @@ export const dayOf: {
   schedule: ScheduleItem[];
   /** Let blocks start before their planned time when the day runs ahead (default: no) */
   allowEarlyStarts: boolean;
+  /**
+   * Every saved run order must say how it was made (random draw with seed, a rule, or a hand edit
+   * with a reason), and the public run-order page shows it (docs/FORMATS.md → Published draws).
+   * Off by default: orders save as before, and a draw is recorded only when one is sent.
+   */
+  publishedDraws: boolean;
   sideEvents: SideEventDef[];
 } = {
   allowEarlyStarts: false,
+  publishedDraws: false,
   schedule: [
     { id: 'doors', title: 'Doors open & check-in', start: '09:30', minutes: 30, kind: 'other' },
     { id: 'sbj', title: 'Sport / Beginner / Junior', start: '10:00', minutes: 45, division: 'SBJ' },

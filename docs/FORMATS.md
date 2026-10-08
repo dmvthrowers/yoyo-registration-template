@@ -188,3 +188,18 @@ Pages:
 - `/schedule` and `/side-events` are public.
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
+
+## Published draws
+
+Every saved run order can say how it was made, and the public run-order page (`/results/run-order`) shows it:
+
+- **Random draw**: the **Random draw** button picks a seed and orders everyone by it. The seed is published; the
+  page re-runs the draw in the visitor's browser and says whether the order matches. The algorithm is in
+  `lib/draw.ts` (sort the registration ids, then Fisher–Yates driven by sfc32 seeded from the seed text), so anyone
+  can re-run it. The server refuses a "random" order that isn't what its seed draws.
+- **Rule**: **Auto-sort by pref** and the next-round advance record the rule in words.
+- **Hand edit**: needs a reason, shown publicly.
+
+Off by default. Set `dayOf.publishedDraws: true` and a save that doesn't say how the order was made is refused.
+With it off, orders save as before and a draw is recorded only when one is sent. Needs migration
+`0053_run_order_draws.sql`.
