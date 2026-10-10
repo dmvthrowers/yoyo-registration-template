@@ -68,6 +68,17 @@ export const contest = {
     title: 'IL State Champion',
   },
 
+  /**
+   * Prizes. `places` is how many podium places win a prize in each division (1st to Nth, ties
+   * included). A division can change that with its own `prizes` (by how many entered) or turn off
+   * its champion prize. The home-state champion's prize (above) is on top of the podium. This sets
+   * the prize plan on the admin dashboard; the winners list for the survey invites still uses the
+   * top 3 until the champion-rule port (build plan 4.1) wires these rules into it.
+   */
+  prizes: {
+    places: 3,
+  },
+
   /** Presenting sponsor ("Brought to you by ..."). Leave name "" for none. */
   presentedBy: {
     name: '',
@@ -82,6 +93,62 @@ export const contest = {
    * Your contest's public website pages (e.g. a site built with yoyo-contest-template).
    * Leave a link "" to hide it from the nav and footer.
    */
+  /**
+   * Version of the code of conduct people accept at sign-up. It is stored with each registration,
+   * spectator and volunteer, so after you revise the code, bump this and you can see who accepted
+   * the old one (docs/FORMATS.md → Code of conduct version).
+   */
+  codeOfConductVersion: '1',
+  /**
+   * Photo and video release at registration. 'required' (default): everyone must tick it to enter,
+   * as before. 'optional': the box can stay empty (a guardian's for minors), and staff get a
+   * "do not photograph" list at /media/consent. Switching to 'optional' is a policy choice for the
+   * organizer; apply migration 0055 first so the database stops insisting on the box.
+   */
+  photoConsent: 'required' as 'required' | 'optional',
+  /**
+   * Shade each row of the results tables by how close it is to the best score, so the gaps between
+   * places show without reading every number (docs/FORMATS.md → How it was scored). Off by default.
+   */
+  resultsShading: false,
+  /**
+   * Rules with a changelog (docs/FORMATS.md → Rules page). /rules shows the current version, how each
+   * division is scored, and every change with its date. Leave `changes` empty to hide the page's
+   * changelog; set `enabled: false` to drop the page and its footer link.
+   */
+  rulesPage: {
+    enabled: true,
+    /** The current version, e.g. "1.1". Must match the newest entry in `changes`. */
+    version: '1.0',
+    /** The rules were first published on this date (YYYY-MM-DD) */
+    publishedOn: '2027-01-01',
+    /** Newest first. */
+    changes: [
+      { version: '1.0', date: '2027-01-01', summary: ['First published.'] },
+    ] as { version: string; date: string; summary: string[] }[],
+  },
+  /**
+   * Shown on the public budget page: where any money left after the event goes ("" hides it).
+   * Plain sentence, e.g. "Anything left over pays for next year's venue deposit and loaner yo-yos."
+   */
+  budgetLeftoverNote: '',
+  /**
+   * The public contest guide at /guide (docs/FORMATS.md → Contest guide): everything a player needs
+   * before signing up, built from the settings in this file. `enabled: false` drops the page and its
+   * footer link. `bring` is the "what to bring" list for a first-timer; mark newcomer-friendly
+   * divisions with `beginnerFriendly: true` on the division.
+   */
+  guide: {
+    enabled: true,
+    intro: 'New here? This page has what you need before you sign up.',
+    bring: [
+      'Your yo-yos and spare string',
+      'A water bottle and a snack',
+      'A photo ID if you are 18 or older',
+      'A parent or guardian, if you are under 18',
+    ] as readonly string[],
+  },
+
   links: {
     home: 'https://example.org/',
     about: 'https://example.org/',
@@ -266,6 +333,19 @@ export interface RoundDef {
   seconds?: number;
 }
 
+/**
+ * How many rounds a division runs depends on how many entered. Tiers are checked in order and the
+ * first whose `upTo` is at least the entrant count wins; leave `upTo` off the last tier to catch
+ * everyone else. `rounds` names the division's rounds that run (by round key, see RoundDef.key)
+ * and how many advance from each. Rounds a tier leaves out are skipped, and keep their numbers.
+ * Example (1A): ≤25 → Final only; ≤50 → Prelims (top 15) + Final; more → Prelims (top 20) +
+ * Semi-final (top 10) + Final. The organizer confirms the plan before it's applied.
+ */
+export interface RoundTier {
+  upTo?: number;
+  rounds: { key: string; advance?: number }[];
+}
+
 /** One music track a player uploads for a division, e.g. { key: 'battle', label: 'Battle music' }. */
 export interface MusicSlotDef {
   /** Stable ID: lowercase letters, numbers, - or _ (up to 30). "main" is reserved for the single routine track. */
@@ -305,11 +385,30 @@ export interface DivisionDef {
   styles?: { options: StyleDef[]; min: number; max: number };
   /** Division codes this one can't be entered together with */
   cannotCombineWith?: string[];
+  /** Shown as a good place to start on the contest guide's first-contest path */
+  beginnerFriendly?: boolean;
   scoring: Scoring;
   /** Solo (default) or team entries */
   entry?: EntryDef;
   /** Rounds for freestyle, panel and manual divisions. Default: one round. */
   rounds?: RoundDef[];
+  /** Which rounds run, by how many entered. Needs `rounds`. Without it every round always runs. */
+  roundPlan?: RoundTier[];
+  /**
+   * Prizes for this division. `tiers` changes the number of podium places by how many entered: the
+   * first tier whose `upTo` is at least the entrant count applies, and the last tier leaves `upTo`
+   * out. `champion: false` turns off the home-state champion prize here. Leave out to use
+   * `contest.prizes.places`.
+   */
+  prizes?: { tiers?: { upTo?: number; places: number }[]; champion?: boolean };
+  /**
+   * Split a big division by age: with more than `above` entrants it can split into a younger and an
+   * older bracket, each with its own podium, provided both have at least `minBracket` players (a floor
+   * only: a bracket can be as large as it needs). Age is age on contest day. The organizer sees a preview
+   * on the run-order screen and chooses the cut; the app only suggests one. Preview only for now: a split
+   * isn't applied to the run order or the results.
+   */
+  split?: { above: number; minBracket: number; labels: [string, string] };
   /**
    * How long a routine runs, in seconds. The DJ page shows it and times it so a track isn't cut
    * early. A round's own `seconds` wins. Leave out when it varies or doesn't matter.
@@ -378,6 +477,7 @@ export const competition: {
       priceCents: 2000,
       music: true,
       cannotCombineWith: ['1A', 'X'],
+      beginnerFriendly: true,
       scoring: { format: 'freestyle', techCap: 20, evalCap: 20, negativeClicks: false, deductions: null },
     },
   ],
@@ -432,9 +532,22 @@ export const dayOf: {
   schedule: ScheduleItem[];
   /** Let blocks start before their planned time when the day runs ahead (default: no) */
   allowEarlyStarts: boolean;
+  /**
+   * Hold a round's results back until every score is in and the head judge has checked them
+   * (docs/FORMATS.md → Release gates). Off by default: publishing works as it always has.
+   */
+  releaseGates: boolean;
+  /**
+   * Every saved run order must say how it was made (random draw with seed, a rule, or a hand edit
+   * with a reason), and the public run-order page shows it (docs/FORMATS.md → Published draws).
+   * Off by default: orders save as before, and a draw is recorded only when one is sent.
+   */
+  publishedDraws: boolean;
   sideEvents: SideEventDef[];
 } = {
   allowEarlyStarts: false,
+  releaseGates: false,
+  publishedDraws: false,
   schedule: [
     { id: 'doors', title: 'Doors open & check-in', start: '09:30', minutes: 30, kind: 'other' },
     { id: 'sbj', title: 'Sport / Beginner / Junior', start: '10:00', minutes: 45, division: 'SBJ' },
