@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...(contest.rulesPage.enabled ? ['/rules'] : []),
     ...(contest.guide.enabled ? ['/guide'] : []),
     ...(competition.divisions.some((d) => d.scoring.format === 'ladder') ? ['/tricks'] : []),
+    '/prizes',
     '/fee-calculator',
     '/directory',
     '/results',

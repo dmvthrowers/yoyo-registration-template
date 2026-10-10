@@ -301,3 +301,8 @@ division exists. Nothing to write by hand.
 `manual` division (lowest seconds wins, best of two runs); **Kendama Battle** is a `bracket` with
 `matchScoring: { to: 3, finalsTo: 5 }` (trade tricks from the deck, a point per trick won); the **Trick Ladder** and
 **Freestyle** stay as they were. Copy it over `competition` in `contest.config.ts` and run `npm run divisions`.
+## Prize table
+
+`/prizes` shows what each division awards, in words, by how many people enter: the contest default
+(`contest.prizes.places`) or a division's own `prizes.tiers`, and whether the home-state champion also gets a prize. It
+reads the same rules as the prize plan on the admin dashboard, so the two can't disagree. Showcase divisions are left out.

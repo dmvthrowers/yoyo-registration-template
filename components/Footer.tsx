@@ -24,6 +24,7 @@ const FOOTER_LINKS = [
   ...(contest.rulesPage.enabled ? [{ label: 'Rules', href: '/rules' }] : []),
   ...(contest.guide.enabled ? [{ label: 'Guide', href: '/guide' }] : []),
   ...(competition.divisions.some((d) => d.scoring.format === 'ladder') ? [{ label: 'Tricks', href: '/tricks' }] : []),
+  { label: 'Prizes',      href: '/prizes' },
   { label: 'Staff',       href: '/staff' },
   { label: 'Resources',   href: contest.links.resources },
   { label: 'GitHub',      href: contest.links.sourceCode },
