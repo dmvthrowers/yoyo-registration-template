@@ -19,6 +19,7 @@ export const CAPABILITIES = [
   'event.configure', // events, divisions, prices, rounds, prizes, schedule setup
   'staff.manage', // grant and revoke roles, deactivate accounts
   'audit.view',
+  'forms.review', // read and handle answers to the public forms (contact, reports)
   // people
   'registrations.view',
   'registrations.edit', // mark paid, change divisions, comp codes, walk-ups
@@ -227,6 +228,7 @@ export const PORTALS: readonly PortalDef[] = [
   { id: 'finance', label: 'Finance', href: '/finance', needs: ['finance.view', 'finance.edit'], ready: true },
   { id: 'registrations', label: 'Registrations', href: '/admin-dashboard', needs: ['registrations.view', 'registrations.edit'], ready: true },
   { id: 'walk-up', label: 'Walk-up registration', href: '/admin/walk-up', needs: ['registrations.edit'], ready: true },
+  { id: 'forms', label: 'Form answers', href: '/forms-review', needs: ['forms.review'], ready: true },
   { id: 'staff', label: 'Staff and roles', href: '/admin/staff', needs: ['staff.manage'], ready: true },
   { id: 'event', label: 'Event setup', href: '/admin/event', needs: ['event.configure'], ready: true },
 ];

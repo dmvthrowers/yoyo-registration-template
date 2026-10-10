@@ -26,6 +26,9 @@ today's single-role staff accounts to the full model.
 | **Volunteer** | Their own shifts and check-in (granted automatically when they volunteer) |
 | **Player** | Their own registration and music (granted automatically when they register) |
 
+`forms.review` (read and handle answers to the public forms at `/forms-review`) is held by **Admin** only for now. Who else should hold it,
+for example a conduct team, is an owner decision (build plan 0.7): give it to a role with one line in `ROLES` once that is decided.
+
 Roles are data in `ROLES`; a capability is a string like `scores.enter` in `CAPABILITIES`. Adding a role is
 adding a row. **Admin is computed as "every capability"**, so a capability added tomorrow is admin's the day
 it exists, and a test fails if any other role is as powerful.
