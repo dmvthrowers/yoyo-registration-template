@@ -48,7 +48,7 @@ Owner rule (2026-10-10): **the template and the live repo stay in parity.** Core
 the live repo may differ only where it holds real data or its own config and content. A feature in one
 goes into the other, in the same way as above (port, log, or say it's live-only).
 
-Audited 2026-10-10 by comparing the two repos' `main` branches file by file (app, lib, components,
+Audited 2026-10-10 (rows closed since: schedule clash check, guide/rules/trick pages, setup safety, local deadline display; the auth-email renderer is live-only, VA-States' auth emails are hand-written) by comparing the two repos' `main` branches file by file (app, lib, components,
 scripts, workflows, docs). Remove a row when it's closed. The static-site pairs are tracked in
 `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("Parity fixes") and `docs/BUILD_PLAN.md`.
 
@@ -69,12 +69,9 @@ scripts, workflows, docs). Remove a row when it's closed. The static-site pairs 
 |---|---|---|
 | Roles, grants and the `/staff` single pane | `lib/roles.ts`, `lib/modules*.ts`, `components/StaffPane.tsx`, `components/ModuleBoard.tsx`, `/api/admin/roles`, `/api/staff/modules`, migrations 0044, 0045, 0047 | Owner: yes. The biggest port and the one that touches sign-in, so it goes last, behind a flag, with route tests |
 | Role pages | `app/mc`, `app/media` (+ `consent`), `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff`, `/api/staff/media-consent`, `lib/media-consent.ts` | Depend on roles. MC cards already ported (admin only) |
-| Schedule clash check | `lib/schedule-conflicts.ts`, `components/ScheduleConflicts.tsx`, `/api/admin/schedule-conflicts` | No migration; reads paid registrations |
-| Public pages: contest guide, rules with changelog, trick lists | `app/guide`, `app/rules`, `app/tricks`, `lib/contest-guide.ts`, `lib/rules-changelog.ts` | Config-driven; content stays in VA-States' config |
 | Forms on our own system | `lib/forms.ts`, `lib/forms-server.ts`, `/api/forms/[id]`, `/api/admin/forms`, `/forms/[id]`, `/forms-review`, migration 0061 | Off unless `contest.forms` has a form. Owner: parity applies, so it ports; VA-States adds forms as it needs them |
-| Setup safety | `lib/email-stub.ts`, `lib/first-admin.ts`, `scripts/first-admin.ts`, `scripts/render-auth-emails.mjs` | Email log stub and first admin once |
-| Local deadline display | `components/LocalDeadline.tsx` | |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
+| Events and organizers foundation | `lib/events.ts`, `eventOf()` and friends in `contest.config.ts`, `contest.eventId` | Multi-event stage 1a (`docs/MULTI_EVENT.md`). Pure and unused until the readers move over; VA-States pins `eventId: 'vsyc26'` |
 
 ### Both
 
