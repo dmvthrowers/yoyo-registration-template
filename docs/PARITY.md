@@ -63,6 +63,7 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Role pages | `app/mc`, `app/media`, `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff` | Depend on roles |
 | Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
 | Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
+| Scores-in board | `lib/scores-in-board.ts`, `components/ScoresInBoard.tsx` | Built on score status (VA-States #83 has the route); the judge page also gets a "you still owe" line |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 
