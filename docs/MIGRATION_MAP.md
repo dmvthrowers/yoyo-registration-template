@@ -25,20 +25,20 @@ Both repos start the same through **0036**.
 | 0052–0059 | (not used yet) | `0052_release_checks`, `0053_run_order_draws`, `0054_conduct_version`, `0055_photo_consent_optional`, `0056_mc_card_fields`, `0057_open_books`, `0058_bracket_match_scores`, `0059_addon_divisions` |
 | 0060 | `0060_season_purge` | (not used yet) |
 | 0061 | (not used yet) | `0061_form_submissions` |
+| 0062 | (not used yet) | `0062_home_state_eligibility` (same change as VA-States 0047) |
 
 Same change, different label: music per division and music slots (VA 0043/0044 = template 0042/0043), round plans
-(VA 0045 = template 0050), payment dispute flags (VA 0046 = template 0051), sponsor form settings (both 0049).
+(VA 0045 = template 0050), payment dispute flags (VA 0046 = template 0051), home-state eligibility (VA 0047 = template 0062), sponsor form settings (both 0049).
 
 Only in one repo:
 - **Only in the template:** generic judge roles (0038), role grants and the module items tables (template 0044, 0045, 0046, 0047). Build plan 4.2 ports
   roles into VA-States.
-- **Only in VA-States:** home-state eligibility (VA 0047). It collects a home address, so the template port waits for an owner
-  decision (build plan 4.1, champion rule).
+- **Only in VA-States:** season purge (VA 0060). The template port is parity row 8.2.
 
 ## Rule from here on
 
 1. **Same change, same label.** A migration that both repos get takes the next number above the highest label either repo has used
-   (today that is **0062**) in both repos.
+   (today that is **0063**) in both repos.
 2. A repo that does not need it **skips the number** and adds a line to this table, so the labels keep lining up.
 3. Pending ports keep the label they already have until they merge, then this table is updated.
 4. Table names differ by prefix only: `vsyc_*` in VA-States, `contest_*` in the template. The one exception is the survey table

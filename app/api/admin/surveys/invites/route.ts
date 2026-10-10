@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCapabilityRequest } from '@/lib/auth/admin-request';
 import { logAudit } from '@/lib/audit';
 import { sendSurveyInviteBatch, type SurveyInviteRecipient } from '@/lib/email';
-import { fetchStandings, winnersFrom, type Winner } from '@/lib/standings';
+import { fetchHomeStateEligible, fetchStandings, winnersFrom, type Winner } from '@/lib/standings';
 import { contest, divisionByCode } from '@/contest.config';
 import { isTeamDivision } from '@/lib/divisions-core';
 
@@ -29,7 +29,7 @@ const AUDIENCES: Record<string, {
     label: 'podium finishers',
     emailLabel: 'competitors',
     survey: 'winner',
-    extraLine: 'You made the podium, so we also want to hear what you thought of your prizes.',
+    extraLine: 'You won a prize, so we also want to hear what you thought of your prizes.',
   },
   competitor: { label: 'competitors', emailLabel: 'competitors', survey: 'competitor' },
   spectator: { label: 'spectators', emailLabel: 'spectators', survey: 'spectator' },
@@ -46,7 +46,10 @@ function isAudience(v: unknown): v is Audience {
 }
 
 async function loadWinners(): Promise<Winner[]> {
-  return winnersFrom(await fetchStandings(createAdminClient()));
+  const supabase = createAdminClient();
+  const [standings, eligible] = await Promise.all([fetchStandings(supabase), fetchHomeStateEligible(supabase, contest.stateChampion.state)]);
+  // Each division's home-state champion has a prize of their own, so they get the winner survey too.
+  return winnersFrom(standings, { state: contest.stateChampion.state, eligible });
 }
 
 /**

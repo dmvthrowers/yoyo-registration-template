@@ -3,7 +3,7 @@ import { getEventFlagBoolean } from '@/lib/event-flags';
 import { isPublished, publishedDivisions, visibilityFrom, type ResultsVisibility } from '@/lib/results-visibility';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import { fetchStandings, stateChampions, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
+import { fetchHomeStateEligible, fetchStandings, stateChampions, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
 import { contest, competition, monthDay, bannerLine } from '@/contest.config';
 import { formatSummary } from '@/lib/divisions-core';
 import { howScored, shadeValues } from '@/lib/how-scored';
@@ -12,8 +12,10 @@ import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/
 // Public results are gated by the results_published flag (admin toggle, env fallback) or, per
 // division and round, by Publish results on the admin schedule (lib/results-visibility.ts).
 
-async function getStandings(): Promise<Record<Division, DivisionStandings>> {
-  return fetchStandings(createAdminClient());
+async function getStandings(): Promise<{ standings: Record<Division, DivisionStandings>; eligible: Set<string> | null }> {
+  const supabase = createAdminClient();
+  const [standings, eligible] = await Promise.all([fetchStandings(supabase), fetchHomeStateEligible(supabase, contest.stateChampion.state)]);
+  return { standings, eligible };
 }
 
 /** Which results are public. Without database credentials (e.g. a CI build), only the global flag counts. */
@@ -123,7 +125,9 @@ export default async function ResultsPage() {
   const resultsPublished = vis.all;
   // Divisions with at least one released round, in config order.
   const shown = competition.divisions.filter((d) => isPublished(vis, gateCode(d)));
-  const standings = shown.length ? await getStandings() : null;
+  const loaded = shown.length ? await getStandings() : null;
+  const standings = loaded?.standings ?? null;
+  const eligible = loaded?.eligible ?? undefined;
   const total = standings
     ? shown.reduce((n, d) => n + (standings[d.code]?.final.length ?? 0), 0)
     : 0;
@@ -202,7 +206,7 @@ export default async function ResultsPage() {
             const played = ds.rounds.filter((r) => r.rows.length > 0);
             const multiRound = full.rounds.filter((r) => r.rows.length > 0).length > 1;
             const scored = ds.format === 'freestyle' || ds.format === 'panel' || ds.format === 'manual';
-            const champs = stateChampions(ds.final, contest.stateChampion.state);
+            const champs = stateChampions(ds.final, contest.stateChampion.state, eligible);
             return (
               <section key={code} aria-labelledby={`div-${code}`} style={{ marginBottom: '2.5rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.25rem 0.75rem', marginBottom: '0.35rem' }}>
