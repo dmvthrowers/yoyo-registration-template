@@ -56,7 +56,6 @@ scripts, workflows, docs). Remove a row when it's closed. The static-site pairs 
 
 | Gap | Files in VA-States | Note |
 |---|---|---|
-| Season purge and reset | `lib/season-purge.ts`, `scripts/purge.ts`, `scripts/results-gaps.sql`, migration 0060 | Template has the design (`docs/SEASON_ARCHIVE.md`) but no code |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
 | Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
 | Registration audit and spec docs | `docs/REGISTRATION_AUDIT.md`, `docs/specs/*` | Keep what is generic |

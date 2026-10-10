@@ -23,7 +23,7 @@ Both repos start the same through **0036**.
 | 0050 | (not used yet) | `0050_round_plans` (same change as VA-States 0045) |
 | 0051 | (not used yet) | `0051_payment_dispute_flags` (same change as VA-States 0046) |
 | 0052–0059 | (not used yet) | `0052_release_checks`, `0053_run_order_draws`, `0054_conduct_version`, `0055_photo_consent_optional`, `0056_mc_card_fields`, `0057_open_books`, `0058_bracket_match_scores`, `0059_addon_divisions` |
-| 0060 | `0060_season_purge` | (not used yet) |
+| 0060 | `0060_season_purge` | `0060_season_purge` (same change) |
 | 0061 | (not used yet) | `0061_form_submissions` |
 | 0062 | (not used yet) | `0062_home_state_eligibility` (same change as VA-States 0047) |
 
@@ -33,7 +33,7 @@ Same change, different label: music per division and music slots (VA 0043/0044 =
 Only in one repo:
 - **Only in the template:** generic judge roles (0038), role grants and the module items tables (template 0044, 0045, 0046, 0047). Build plan 4.2 ports
   roles into VA-States.
-- **Only in VA-States:** season purge (VA 0060). The template port is parity row 8.2.
+- **Only in VA-States:** nothing at present.
 
 ## Rule from here on
 
