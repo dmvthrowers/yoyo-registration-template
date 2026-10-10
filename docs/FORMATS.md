@@ -28,6 +28,8 @@ type, and optionally rounds. `presets/competitions.ts` has worked examples of al
 - Advancing takes the top `advance` from a round's standings into the next round's run order;
   ties at the cut all go through.
 
+**Age split (preview).** `split: { above: 15, minBracket: 5, labels: ['Youth', 'Adult'] }` on a division. With more than `above` paid entrants, the run-order screen shows a preview of splitting it into a younger and an older bracket, with a suggested cut age and a field to try another. Each bracket must have at least `minBracket` players. Nothing is applied: a split isn't wired into the run order or results yet.
+
 ## Rules that live in one place
 
 `lib/divisions-core.ts` is pure, unit-tested logic used by pages, API routes and tests:
@@ -189,6 +191,40 @@ Pages:
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
 
+## Release gates
+
+Off by default. Set `dayOf.releaseGates: true` in `contest.config.ts` and a round's results can be published
+(from **Run the Day**) only when two things are true:
+
+1. The scores-in board is full: the round has a run order, every competitor has finished performing and has a
+   score from every judge who scored anyone (the same check as `/api/admin/score-status`).
+2. The head judge has tapped **Mark scores checked** (`results.publish` capability: admin and judges).
+
+If a score is added or edited after the check, the gate closes again until it is re-checked. Resetting a block
+takes back its check. Publishing without a check answers 409 with the reasons, and **Run the Day** shows them.
+The global `results_published` switch on `/admin/event` skips the gates on purpose: it is the "show everything"
+override. Needs migration `0052_release_checks.sql`.
+## Published draws
+
+Every saved run order can say how it was made, and the public run-order page (`/results/run-order`) shows it:
+
+- **Random draw**: the **Random draw** button picks a seed and orders everyone by it. The seed is published; the
+  page re-runs the draw in the visitor's browser and says whether the order matches. The algorithm is in
+  `lib/draw.ts` (sort the registration ids, then Fisher–Yates driven by sfc32 seeded from the seed text), so anyone
+  can re-run it. The server refuses a "random" order that isn't what its seed draws.
+- **Rule**: **Auto-sort by pref** and the next-round advance record the rule in words.
+- **Hand edit**: needs a reason, shown publicly.
+
+Off by default. Set `dayOf.publishedDraws: true` and a save that doesn't say how the order was made is refused.
+With it off, orders save as before and a draw is recorded only when one is sent. Needs migration
+`0053_run_order_draws.sql`.
+## Code of conduct version
+
+`contest.codeOfConductVersion` (default `'1'`) is stored as `code_of_conduct_version` on every registration,
+walk-up, spectator and volunteer when they accept the code. The registrations CSV export has the column. After you
+revise the code, bump the version: `lib/conduct-version.ts` sorts people into `current`, `outdated` (accepted an
+older version) and `unrecorded` (signed up before versions were stored, null in the database). Judges, staff and
+sponsors don't accept the code in a form today, so they aren't covered yet. Needs migration `0054_conduct_version.sql`.
 ## Photo and video release
 
 `contest.photoConsent` is `'required'` by default: everyone ticks the release to enter, as before. Set it to

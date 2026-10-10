@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { Division } from '@/lib/pricing';
 import { calculateFeePreview, displayPrice, formatCents, PRICES_TBD } from '@/lib/pricing';
+import { describeRoundPlan } from '@/lib/round-plan';
 import { cleanStyles, selectionIssues, entryOf, formatSummary, freeTeamJoins, styleCap, type DivisionStyles } from '@/lib/divisions-core';
 import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice } from '@/lib/team-entries';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef } from '@/contest.config';
+import { Turnstile } from '@/components/Turnstile';
 import { Field, inputCls } from '@/components/form/Field';
 
 type FormValues = {
@@ -143,6 +145,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [cocOpen, setCocOpen] = useState(false);
   const [liabilityScrolled, setLiabilityScrolled] = useState(false);
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
@@ -326,6 +330,7 @@ export default function RegisterPage() {
         // value — these can differ on mobile when paste/autofill bypasses onChange.
         comp_code: (codeApplied && validatedCode) ? validatedCode : undefined,
         teams,
+        turnstileToken,
       };
 
       const res = await fetch('/api/register', {
@@ -368,6 +373,7 @@ export default function RegisterPage() {
     } catch {
       setServerError('Network error — please check your connection and try again.');
     } finally {
+      setTurnstileResetKey((k) => k + 1);
       setSubmitting(false);
     }
   };
@@ -529,6 +535,11 @@ export default function RegisterPage() {
                           <div className="font-bold text-white text-sm">{d.name}</div>
                           <div className="text-xs text-text-body mt-0.5">{d.description}</div>
                           <div className="text-xs text-gold/60 mt-1">{divisionFacts(d)}</div>
+                          {d.roundPlan && (
+                            <div className="text-xs text-gold/60 mt-1">
+                              <strong>Rounds depend on how many enter.</strong> {describeRoundPlan(d).join(' ')} We confirm the rounds when registration closes and post who advances after each one.
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className="font-display font-bold text-gold text-lg flex-shrink-0 text-right">
@@ -926,6 +937,7 @@ export default function RegisterPage() {
 
           {/* Submit */}
           <div className="pt-2">
+            <Turnstile onToken={setTurnstileToken} resetKey={turnstileResetKey} />
             <button
               type="submit"
               disabled={submitting}
