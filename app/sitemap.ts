@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { contest } from '@/contest.config';
+import { competition, contest } from '@/contest.config';
 
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
 
@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/policies',
     ...(contest.rulesPage.enabled ? ['/rules'] : []),
     ...(contest.guide.enabled ? ['/guide'] : []),
+    ...(competition.divisions.some((d) => d.scoring.format === 'ladder') ? ['/tricks'] : []),
     '/fee-calculator',
     '/directory',
     '/results',

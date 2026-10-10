@@ -289,3 +289,15 @@ would (advancing, filling the third-place match), and a score that is no longer 
 Play stops at the target, so a score above it, or both sides on it, is refused. Running scores show on the public
 bracket. Taking a result back removes the scores of any later match whose entrants change. Needs migration
 `0058_bracket_match_scores.sql`. Without `matchScoring`, brackets work as before.
+## Trick lists page
+
+`/tricks` lists the tricks of every `ladder` division in order, with how the ladder works (tries per trick, or points).
+It is built from `competition.divisions`, so it appears, with a footer link and a sitemap entry, only when a ladder
+division exists. Nothing to write by hand.
+
+## Kendama preset
+
+`presets/competitions.ts` → `kendama` now describes kendama with today's formats: the **Speed Ladder** is a timed
+`manual` division (lowest seconds wins, best of two runs); **Kendama Battle** is a `bracket` with
+`matchScoring: { to: 3, finalsTo: 5 }` (trade tricks from the deck, a point per trick won); the **Trick Ladder** and
+**Freestyle** stay as they were. Copy it over `competition` in `contest.config.ts` and run `npm run divisions`.
