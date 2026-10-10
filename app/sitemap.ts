@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/spectate',
     '/policies',
     ...(contest.rulesPage.enabled ? ['/rules'] : []),
+    ...(contest.guide.enabled ? ['/guide'] : []),
     '/fee-calculator',
     '/directory',
     '/results',
