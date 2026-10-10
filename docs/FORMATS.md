@@ -28,6 +28,8 @@ type, and optionally rounds. `presets/competitions.ts` has worked examples of al
 - Advancing takes the top `advance` from a round's standings into the next round's run order;
   ties at the cut all go through.
 
+**Age split (preview).** `split: { above: 15, minBracket: 5, labels: ['Youth', 'Adult'] }` on a division. With more than `above` paid entrants, the run-order screen shows a preview of splitting it into a younger and an older bracket, with a suggested cut age and a field to try another. Each bracket must have at least `minBracket` players. Nothing is applied: a split isn't wired into the run order or results yet.
+
 ## Rules that live in one place
 
 `lib/divisions-core.ts` is pure, unit-tested logic used by pages, API routes and tests:
@@ -189,6 +191,116 @@ Pages:
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
 
+## Release gates
+
+Off by default. Set `dayOf.releaseGates: true` in `contest.config.ts` and a round's results can be published
+(from **Run the Day**) only when two things are true:
+
+1. The scores-in board is full: the round has a run order, every competitor has finished performing and has a
+   score from every judge who scored anyone (the same check as `/api/admin/score-status`).
+2. The head judge has tapped **Mark scores checked** (`results.publish` capability: admin and judges).
+
+If a score is added or edited after the check, the gate closes again until it is re-checked. Resetting a block
+takes back its check. Publishing without a check answers 409 with the reasons, and **Run the Day** shows them.
+The global `results_published` switch on `/admin/event` skips the gates on purpose: it is the "show everything"
+override. Needs migration `0052_release_checks.sql`.
+## Published draws
+
+Every saved run order can say how it was made, and the public run-order page (`/results/run-order`) shows it:
+
+- **Random draw**: the **Random draw** button picks a seed and orders everyone by it. The seed is published; the
+  page re-runs the draw in the visitor's browser and says whether the order matches. The algorithm is in
+  `lib/draw.ts` (sort the registration ids, then Fisher–Yates driven by sfc32 seeded from the seed text), so anyone
+  can re-run it. The server refuses a "random" order that isn't what its seed draws.
+- **Rule**: **Auto-sort by pref** and the next-round advance record the rule in words.
+- **Hand edit**: needs a reason, shown publicly.
+
+Off by default. Set `dayOf.publishedDraws: true` and a save that doesn't say how the order was made is refused.
+With it off, orders save as before and a draw is recorded only when one is sent. Needs migration
+`0053_run_order_draws.sql`.
+## Code of conduct version
+
+`contest.codeOfConductVersion` (default `'1'`) is stored as `code_of_conduct_version` on every registration,
+walk-up, spectator and volunteer when they accept the code. The registrations CSV export has the column. After you
+revise the code, bump the version: `lib/conduct-version.ts` sorts people into `current`, `outdated` (accepted an
+older version) and `unrecorded` (signed up before versions were stored, null in the database). Judges, staff and
+sponsors don't accept the code in a form today, so they aren't covered yet. Needs migration `0054_conduct_version.sql`.
+## Photo and video release
+
+`contest.photoConsent` is `'required'` by default: everyone ticks the release to enter, as before. Set it to
+`'optional'` and the box can stay empty (a guardian's choice for minors). The registration form says so, a walk-up
+no longer assumes consent, and the media team gets a **Do-not-photograph list** at `/media/consent`
+(`media.upload` or `media.publish`) with entrants and volunteers who opted out. Apply migration
+`0055_photo_consent_optional.sql` first: it stops the database insisting on the box. There is no per-person
+photo gallery in the template yet, so the list is how consent is honored today.
+## How it was scored
+
+The results page ends with each division's scoring in plain words, with a "How it's scored" note for every number
+(`lib/how-scored.ts`). The words are built from the division's own scoring config, so changing a cap or a deduction
+in `contest.config.ts` changes the explanation too.
+
+`contest.resultsShading: true` shades each row of the freestyle, panel and manual results tables by how close it is to
+the best score (best row filled to the right edge, worst almost clear), so the gaps between places show without reading
+every number. Off by default. The score is always printed too, so shading is never the only signal.
+
+Not built yet: a per-judge, per-category public score sheet for each player (the second half of T11). That needs
+decisions on how judges are named publicly; see the build plan.
+## MC cards
+
+`/mc/cards` (`mc.script`: admin and the MC) shows one card per competitor in run order, for any division and round:
+the name to read, how to say it, how they want to be introduced, their sponsor and club. Players fill three optional
+boxes on the registration form ("How to Say Your Name", "Sponsor", "How Should the Announcer Introduce You?"). **Print**
+gives a plain black-on-white fallback. The announcer reads names to the room, so cards follow the public-name rules:
+a minor whose guardian hasn't opted into public listing appears as a handle or first name + last initial, with no
+location and no pronunciation (it would spell the surname). Needs migration `0056_mc_card_fields.sql`.
+## Rules page
+
+`/rules` shows the current rules version, each division's scoring in a line, and a dated list of every change, newest
+first (`contest.rulesPage` in `contest.config.ts`). When you change a rule, add an entry at the top of `changes` and
+set `version` to match; a test fails if they disagree or a date is malformed. Publish it before registration opens.
+`enabled: false` drops the page and its footer link. Your own full rules page (`contest.links.rules`) is linked from it.
+## Open books
+
+The public budget page (`/budget`) adds a **By Category** section: income and costs by category, with a **Planned**
+column next to **Actual**. In the admin Budget tab, tick **Planned figure** to publish a number before the event;
+planned rows never count toward the totals or the fundraising goal. Categories: registration (planned only, since
+actual registration income is read live from paid fees), sponsor, merch, spectator income, venue, prizes, equipment,
+printing, food, insurance and other. `contest.budgetLeftoverNote` says where any surplus goes. Needs migration
+`0057_open_books.sql`.
+## Contest guide
+
+`/guide` is one public page built from `contest.config.ts`: date and venue, every division with its fee, how it is
+judged and its routine length, the registration and music-upload deadlines (in the venue's time zone and, when it
+differs, the reader's own), and a "Never competed before?" path: divisions marked `beginnerFriendly: true`, the
+`contest.guide.bring` list and the day's planned schedule. Nothing to write by hand; change the config and the page
+follows. `contest.guide.enabled: false` drops the page and its footer link.
+## Bracket match scores
+
+For battles won on points (kendama trick-deck battles, best-of-N), add `matchScoring` to a bracket division:
+
+```ts
+scoring: { format: 'bracket', seeding: 'random', thirdPlaceMatch: true, matchScoring: { to: 3, finalsTo: 5 } }
+```
+
+First to `to` wins a match; the final plays to `finalsTo` (default: same as `to`); the third-place match plays to
+`to`. On the admin and judge bracket screens the selected match shows a **+ / −** counter for each side; **Save score**
+stores it (`/api/admin/bracket/score`). When a side reaches the target it is set as the winner exactly as **Confirm**
+would (advancing, filling the third-place match), and a score that is no longer decisive takes a standing winner back.
+Play stops at the target, so a score above it, or both sides on it, is refused. Running scores show on the public
+bracket. Taking a result back removes the scores of any later match whose entrants change. Needs migration
+`0058_bracket_match_scores.sql`. Without `matchScoring`, brackets work as before.
+## Trick lists page
+
+`/tricks` lists the tricks of every `ladder` division in order, with how the ladder works (tries per trick, or points).
+It is built from `competition.divisions`, so it appears, with a footer link and a sitemap entry, only when a ladder
+division exists. Nothing to write by hand.
+
+## Kendama preset
+
+`presets/competitions.ts` → `kendama` now describes kendama with today's formats: the **Speed Ladder** is a timed
+`manual` division (lowest seconds wins, best of two runs); **Kendama Battle** is a `bracket` with
+`matchScoring: { to: 3, finalsTo: 5 }` (trade tricks from the deck, a point per trick won); the **Trick Ladder** and
+**Freestyle** stay as they were. Copy it over `competition` in `contest.config.ts` and run `npm run divisions`.
 ## Prize table
 
 `/prizes` shows what each division awards, in words, by how many people enter: the contest default
