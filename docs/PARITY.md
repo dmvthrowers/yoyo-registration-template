@@ -52,7 +52,6 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Gap | Files in VA-States | Note |
 |---|---|---|
 | Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set, `fetchHomeStateEligible`), migration 0047 | The template still uses the old "entered the champion's state" rule |
-| Payment dispute flags | `lib/stripe-dispute*.ts`, migration 0046 | |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
 | Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
 
