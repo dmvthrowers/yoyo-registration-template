@@ -54,11 +54,7 @@ scripts, workflows, docs). Remove a row when it's closed. The static-site pairs 
 
 ### VA-States → template (port into the template)
 
-| Gap | Files in VA-States | Note |
-|---|---|---|
-| Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
-| Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
-| Registration audit and spec docs | `docs/REGISTRATION_AUDIT.md`, `docs/specs/*` | Keep what is generic |
+None open. Left in VA-States on purpose: `docs/DAY_OF.md` (this repo's `docs/FORMATS.md` already documents the same features), `docs/REGISTRATION_AUDIT.md` (an audit of the live app) and `scripts/results-gaps.sql` (a one-off diagnostic of VA-States data).
 
 ### Template → VA-States (port into the live app)
 

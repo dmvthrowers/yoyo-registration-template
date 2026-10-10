@@ -205,6 +205,18 @@ On the day:
   `&bg=1`) to preview on a solid background.
 - The dashboard's `results_published` flag still publishes everything at once.
 
+## Backups
+
+`.github/workflows/db-backup.yml` takes a nightly encrypted dump of the database and keeps it as a 30-day
+workflow artifact. It does nothing until you set, under Settings → Secrets and variables → Actions:
+
+- secret `SUPABASE_DB_URL`: the session pooler connection string (Supabase → Connect; the direct host is IPv6-only).
+- variable `BACKUP_AGE_RECIPIENT`: an [age](https://github.com/FiloSottile/age) public key (`age1...`). Keep the private key off GitHub.
+- secret `HEALTHCHECKS_PING_KEY` (optional): alerts you when a backup fails or stops running.
+
+Restore with `age -d -i key.txt db-backup-*.tar.gz.age | tar -xz`, then load `roles.sql`, `schema.sql` and `data.sql`
+with `psql`. Test a restore once before the contest: the season purge (`npm run purge --apply`) asks you to say you did.
+
 ## After the contest
 
 - Judges score at `/judge` on the day. Publish each division from `/admin/schedule` as it
