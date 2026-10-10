@@ -7,6 +7,8 @@
  * Safe to import from both server and browser code: nothing secret belongs in this file.
  */
 
+import type { FormDef } from './lib/forms';
+
 export const contest = {
   /** Full name, e.g. "Springfield Yo-Yo Open" */
   name: 'Springfield Yo-Yo Open',
@@ -175,6 +177,22 @@ export const contest = {
     livestream: '',
     divisions: {} as Record<string, string>,
   },
+
+  /**
+   * Forms on our own system (docs/FORMS.md): a list of simple forms, each at /forms/<id>. Describe the
+   * fields here; answers are saved in your own database and shown to staff with the `forms.review`
+   * capability. An empty list turns the whole feature off. Example:
+   *
+   *   { id: 'contact', title: 'Contact the organizers', enabled: true,
+   *     fields: [
+   *       { id: 'name', label: 'Your name', type: 'text', required: true },
+   *       { id: 'email', label: 'Email', type: 'email', required: true },
+   *       { id: 'message', label: 'Message', type: 'longtext', required: true },
+   *     ] }
+   *
+   * Field types: text, longtext, email, phone, url, number, select, multiselect, checkbox.
+   */
+  forms: [] as FormDef[],
 
   /**
    * The public "Want to sponsor?" form at /sponsor. Tiers are what you offer; the form lists them in
