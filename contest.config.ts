@@ -114,6 +114,12 @@ export const contest = {
    */
   resultsShading: false,
   /**
+   * Judges' Scores at /results/judges: every judge's score for every competitor in a released round
+   * (docs/FORMATS.md → Judges' Scores). Off by default. Judges show as Judge A, B, C unless
+   * `showJudgeNames` is true: a judge did not agree to be named just by scoring, so ask first.
+   */
+  judgesScores: { enabled: false, showJudgeNames: false },
+  /**
    * Rules with a changelog (docs/FORMATS.md → Rules page). /rules shows the current version, how each
    * division is scored, and every change with its date. Leave `changes` empty to hide the page's
    * changelog; set `enabled: false` to drop the page and its footer link.
