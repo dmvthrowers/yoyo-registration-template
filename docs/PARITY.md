@@ -44,30 +44,37 @@ logged here, before the PR merges.
 
 ## Known gaps
 
-Audited 2026-10-07 by comparing the two repos' `main` branches. Remove a row when it's closed. The
-static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("Parity fixes").
+Owner rule (2026-10-10): **the template and the live repo stay in parity.** Core features exist in both;
+the live repo may differ only where it holds real data or its own config and content. A feature in one
+goes into the other, in the same way as above (port, log, or say it's live-only).
+
+Audited 2026-10-10 by comparing the two repos' `main` branches file by file (app, lib, components,
+scripts, workflows, docs). Remove a row when it's closed. The static-site pairs are tracked in
+`dmvthrowers.github.io`'s `docs/ROADMAP.md` ("Parity fixes") and `docs/BUILD_PLAN.md`.
 
 ### VA-States → template (port into the template)
 
 | Gap | Files in VA-States | Note |
 |---|---|---|
-| Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set, `fetchHomeStateEligible`), migration 0047 | The template still uses the old "entered the champion's state" rule |
+| Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set), migration 0047 | Owner: a config option, off when `stateChampion.state` is blank. The template still uses the old rule |
+| Season purge and reset | `lib/season-purge.ts`, `scripts/purge.ts`, `scripts/results-gaps.sql`, migration 0060 | Template has the design (`docs/SEASON_ARCHIVE.md`) but no code |
+| Money-path route test harness | `lib/testing/route-harness.mjs`, `lib/testing/stubs/*` | Stubs for Stripe, Supabase, auth, email, Turnstile; the route tests that use them come with it |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
 | Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
+| Registration audit and spec docs | `docs/REGISTRATION_AUDIT.md`, `docs/specs/*` | Keep what is generic |
 
 ### Template → VA-States (port into the live app)
 
 | Gap | Files in the template | Note |
 |---|---|---|
-| Roles, grants and the `/staff` single pane | `lib/roles.ts`, `lib/modules*.ts`, `components/StaffPane.tsx`, `components/ModuleBoard.tsx`, `/api/admin/roles`, `/api/staff/modules`, migrations 0044, 0045, 0047 | A separate project; until then VA-States sponsors stay admin-only |
-| Role pages | `app/mc`, `app/media`, `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff` | Depend on roles |
-| Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
-| Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
-| Scores-in board | `lib/scores-in-board.ts`, `components/ScoresInBoard.tsx` | Built on score status (VA-States #83 has the route); the judge page also gets a "you still owe" line |
-| Release gates | `lib/release-gate*.ts`, `/api/admin/release-check`, publish check in `/api/admin/schedule`, migration 0052 | Off unless `dayOf.releaseGates` is true; builds on the scores-in board |
-| Forms on our own system | `lib/forms.ts`, `lib/forms-server.ts`, `/api/forms/[id]`, `/api/admin/forms`, `/forms/[id]`, `/forms-review`, `forms.review`, migration 0061 | Off unless `contest.forms` has a form. VA-States keeps its forms on the club site; port only if it needs a form of its own |
+| Roles, grants and the `/staff` single pane | `lib/roles.ts`, `lib/modules*.ts`, `components/StaffPane.tsx`, `components/ModuleBoard.tsx`, `/api/admin/roles`, `/api/staff/modules`, migrations 0044, 0045, 0047 | Owner: yes. The biggest port and the one that touches sign-in, so it goes last, behind a flag, with route tests |
+| Role pages | `app/mc`, `app/media` (+ `consent`), `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff`, `/api/staff/media-consent`, `lib/media-consent.ts` | Depend on roles. MC cards already ported (admin only) |
+| Schedule clash check | `lib/schedule-conflicts.ts`, `components/ScheduleConflicts.tsx`, `/api/admin/schedule-conflicts` | No migration; reads paid registrations |
+| Public pages: contest guide, rules with changelog, trick lists | `app/guide`, `app/rules`, `app/tricks`, `lib/contest-guide.ts`, `lib/rules-changelog.ts` | Config-driven; content stays in VA-States' config |
+| Forms on our own system | `lib/forms.ts`, `lib/forms-server.ts`, `/api/forms/[id]`, `/api/admin/forms`, `/forms/[id]`, `/forms-review`, migration 0061 | Off unless `contest.forms` has a form. Owner: parity applies, so it ports; VA-States adds forms as it needs them |
+| Setup safety | `lib/email-stub.ts`, `lib/first-admin.ts`, `scripts/first-admin.ts`, `scripts/render-auth-emails.mjs` | Email log stub and first admin once |
+| Local deadline display | `components/LocalDeadline.tsx` | |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
-| Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 
 ### Both
 
