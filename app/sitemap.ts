@@ -12,6 +12,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...(contest.sponsors.enabled ? ['/sponsor'] : []),
     '/spectate',
     '/policies',
+    ...(contest.rulesPage.enabled ? ['/rules'] : []),
+    ...(contest.guide.enabled ? ['/guide'] : []),
     '/fee-calculator',
     '/directory',
     '/results',
