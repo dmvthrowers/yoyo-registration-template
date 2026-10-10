@@ -122,6 +122,7 @@ Import the repo in Vercel (or use the README's button) and add these environment
 | `NEXT_PUBLIC_CONTACT_EMAIL` | recommended | Public contact address |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO` | optional | Resend → API Keys, after verifying your domain. Without them, emails are logged (recipient masked) and stay queued; nothing is lost or marked failed, and they go out once a key is set |
 | `SPONSOR_NOTICE_EMAIL` | optional | Where "new sponsor inquiry" notices go (the public form at `/sponsor`). Falls back to `ADMIN_ALERT_EMAIL`, then the contest contact address |
+| `FORMS_NOTICE_EMAIL` | optional | Where "a form was submitted" notices go (the forms in `contest.forms`, docs/FORMS.md). The notice never includes the answers. Falls back to `ADMIN_ALERT_EMAIL`, then the contest contact address |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | optional | Vercel → Storage → Upstash Redis. Without them, rate limiting is off |
 | `NEXT_PUBLIC_SENTRY_DSN`, `HEALTHCHECKS_PING_KEY`, `QSTASH_*` | optional | Error reports, job monitoring, email backstop |
 
