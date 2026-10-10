@@ -1,6 +1,6 @@
 # Multi-event, multi-organizer: design
 
-Status: **proposal for the owner's review.** Nothing here is built. It turns the owner's rule (2026-10-10) into stages, so each can ship on its own.
+Status: **approved by the owner (2026-10-10); built in stages, nothing built yet.** It turns the owner's rule (2026-10-10) into stages, so each can ship on its own.
 
 > **The rule.** Every event is treated as one of many, and an event can have its own organizers. A deployment that runs one event keeps working exactly as it does today.
 
@@ -63,9 +63,23 @@ Production care for VA-States: it uses the `vsyc_` prefix and holds real registr
 
 ## Stage 1d: roles and organizers
 
-`contest_role_grants` already has `event_id`. Add an `organizer_id` alongside it (null = every organizer), so a grant can be: everywhere, one organizer's events, or one event. `can(grants, capability, event)` already takes an event; it learns the organizer.
+**Access waterfall (owner rule).** Access flows down, never up. Each level of admin has full access to everything beneath it:
 
-The **Organizer** role stays "runs the day-to-day, no settings or role changes" for the events it is granted. A new top-level **Platform admin** (the person who runs the deployment) can create organizers and events; organizer admins can create events within their organizer. Everything else about roles is unchanged.
+| Level | Scope | Can do |
+|---|---|---|
+| **Platform admin** | the whole deployment | everything, in every organizer and event; creates organizers |
+| **Organizer admin** | one organizer | everything in that organizer's events; creates events; grants roles within the organizer |
+| **Event admin** | one event | everything in that event; grants roles within the event |
+| **Role staff** (judge, MC, finance, form answers reader, …) | one event, or every event of one organizer | only what the role allows |
+
+It is one rule, not four role types. A grant is a role plus a **scope**: the whole deployment, one organizer, or one event. `contest_role_grants` already has `event_id`; add `organizer_id` beside it. A grant at a wider scope covers everything inside it, so `admin` with no scope is the platform admin, `admin` scoped to an organizer is that organizer's admin, and `admin` scoped to an event is the event admin. `can(grants, capability, { event, organizer })` returns true when any grant whose scope contains that event holds the capability.
+
+Two limits that keep the waterfall safe:
+
+- **Nobody grants above their own scope.** An event admin can grant roles in their event only; an organizer admin cannot make a platform admin. The last platform admin cannot be removed (the existing last-admin guard, widened).
+- **Scope never leaks sideways.** An admin of organizer A has no access to organizer B, and an event admin has no access to the organizer's other events, unless a grant says so.
+
+The **Organizer** role stays "runs the day-to-day, no settings or role changes", now scoped like any other.
 
 ## Data separation between organizers
 
@@ -98,13 +112,13 @@ Each organizer sets its name, from-address (domain must be verified with the ema
 
 The template and the live app stay in parity (owner rule). Order: design review → template stage 1a → port 1a → template 1b migrations → apply to VA-States in the SQL editor → port 1b code → 1c → 1d. VA-States keeps its own config and data; the code is shared. Each step is its own PR, each lists its parity line, and nothing ships to VA-States that has not run against a copy of its data first.
 
-## Decisions I need (with my recommendation)
+## Decisions (owner, 2026-10-10)
 
-1. **Payments per organizer.** Recommend: a Stripe key per organizer now; Stripe Connect only if outside organizers appear.
-2. **Who creates organizers and events.** Recommend: platform admin creates organizers; an organizer admin creates events; both start as config edits (stage 1) and get a screen in stage 2.
-3. **Do sponsors and budget span events?** Recommend: sponsors are organizer-level (a sponsor can back several events); budget lines belong to one event, with an organizer roll-up.
-4. **Player identity across events.** Recommend: a player account is per organizer, so a returning player keeps their profile within one organizer and is never visible to another.
-5. **URL shape.** Recommend: `/e/<event>/…` with the default event on today's routes.
+1. **Payments per organizer:** a Stripe key per organizer now; Stripe Connect only if outside organizers appear.
+2. **Who creates organizers and events:** the platform admin creates organizers; organizer admins create events. Config edits first, a screen later. Access follows the waterfall above.
+3. **Sponsors** are organizer-level (a sponsor can back several of an organizer's events); **budget lines** belong to one event, with an organizer roll-up.
+4. **Player accounts** are per organizer.
+5. **URL shape:** `/e/<event>/…`, with the default event on today's routes.
 
 ## Out of scope here
 
