@@ -205,7 +205,17 @@ export const kendama: CompetitionConfig = {
     {
       code: 'KBATTLE', name: 'Kendama Battle', description: 'Head-to-head trick battles, judge vote, single elimination.', priceCents: 1000,
       music: { routine: false, extra: [{ key: 'battle', label: 'Battle music' }] },
-      scoring: { format: 'bracket', seeding: 'random', thirdPlaceMatch: false, matchFormat: 'trade tricks, best of three' },
+      // Trick-deck battle: each trick won is a point; first to 3 wins a match, the final is first to 5.
+      scoring: {
+        format: 'bracket', seeding: 'random', thirdPlaceMatch: false,
+        matchFormat: 'trade tricks from the deck, first to 3 (final first to 5)',
+        matchScoring: { to: 3, finalsTo: 5 },
+      },
+    },
+    {
+      // Speed ladder: the whole list as fast as you can. Lowest time wins, so it is a timed `manual` division.
+      code: 'KSPEED', name: 'Speed Ladder', description: 'Land the whole trick list in order as fast as you can. Best of two runs, lowest time wins.', priceCents: 1000, music: false,
+      scoring: { format: 'manual', max: 600, better: 'lower', unit: 'seconds', attempts: 2 },
     },
     { ...doubles('kendama'), description: 'Two players trade and share tricks in one routine.' },
     {

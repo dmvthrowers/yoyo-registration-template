@@ -52,13 +52,6 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Gap | Files in VA-States | Note |
 |---|---|---|
 | Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set, `fetchHomeStateEligible`), migration 0047 | The template still uses the old "entered the champion's state" rule |
-| Round plans | `lib/round-plan*.ts`, `lib/use-round-plans.ts`, `components/RoundPlanPanel.tsx`, `/api/rounds/plan`, `/api/admin/rounds/plan`, migration 0045 | |
-| Division split | `lib/division-split.ts`, `components/SplitPreviewPanel.tsx`, `/api/admin/division-split` | |
-| Prizes | `lib/prizes.ts`, `components/PrizePlanPanel.tsx`, `/api/admin/prizes` | |
-| Score status | `lib/score-status.ts`, `/api/admin/score-status` | Groundwork for the scores-in board (T1) |
-| DJ battle view | `lib/battle-cue.ts`, `components/DjBattleView.tsx`, `/api/dj/battle` | |
-| Payment dispute flags | `lib/stripe-dispute*.ts`, migration 0046 | |
-| Bot check on public forms | `lib/turnstile.ts`, `components/Turnstile.tsx` | Port as an optional service that switches off when its key is blank |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
 | Day-of runbook | `docs/DAY_OF.md` | Make it generic (no VSYC names) |
 
@@ -70,7 +63,8 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Role pages | `app/mc`, `app/media`, `app/merch`, `app/stream`, `app/volunteers`, `app/finance`, `app/admin/event`, `app/admin/staff` | Depend on roles |
 | Migration replay in CI | `migrations` job in `.github/workflows/ci.yml`, `scripts/check-migrations.sh` | Proves a fresh database sets up cleanly |
 | Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
-| $0 add-on divisions | `AddOnScoring` in `contest.config.ts`, `addOnStandings` in `lib/standings.ts`, `selectionIssues` age and parent checks, migration 0059 | Off until a division uses `format: 'addon'` |
+| Scores-in board | `lib/scores-in-board.ts`, `components/ScoresInBoard.tsx` | Built on score status (VA-States #83 has the route); the judge page also gets a "you still owe" line |
+| Release gates | `lib/release-gate*.ts`, `/api/admin/release-check`, publish check in `/api/admin/schedule`, migration 0052 | Off unless `dayOf.releaseGates` is true; builds on the scores-in board |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 

@@ -120,7 +120,7 @@ Import the repo in Vercel (or use the README's button) and add these environment
 | `NEXT_PUBLIC_BASE_URL` | yes | Your app's URL, e.g. `https://register.example.org` |
 | `CRON_SECRET` | yes | The value you stored in Vault in step 3 |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | recommended | Public contact address |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO` | optional | Resend → API Keys, after verifying your domain. Without them, emails queue but aren't sent |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO` | optional | Resend → API Keys, after verifying your domain. Without them, emails are logged (recipient masked) and stay queued; nothing is lost or marked failed, and they go out once a key is set |
 | `SPONSOR_NOTICE_EMAIL` | optional | Where "new sponsor inquiry" notices go (the public form at `/sponsor`). Falls back to `ADMIN_ALERT_EMAIL`, then the contest contact address |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | optional | Vercel → Storage → Upstash Redis. Without them, rate limiting is off |
 | `NEXT_PUBLIC_SENTRY_DSN`, `HEALTHCHECKS_PING_KEY`, `QSTASH_*` | optional | Error reports, job monitoring, email backstop |
@@ -130,16 +130,24 @@ and redeploy.
 
 ## 6. Make yourself an admin
 
-1. Supabase → **Authentication → Users → Add user**: your email and a strong password.
-2. Copy the new user's ID, then in **SQL Editor**:
+From your own machine, with `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`:
 
-   ```sql
-   insert into public.contest_staff_accounts (auth_user_id, role, display_name)
-   values ('<user id>', 'admin', '<your name>');
-   ```
+```sh
+npm run first-admin -- --email you@example.org --name "Your Name"
+```
 
-3. Sign in at `/admin-dashboard`. Add judges, DJs and audio techs the same way, with role
-   `judge`, `dj` or `audio_tech`.
+It creates your sign-in (no default password), makes you an admin, and prints a one-time link to set your own
+password. It only works while no admin exists: run it again and it changes nothing. Add `--dry-run` to see what
+it would do. Then sign in at `/admin-dashboard` and add judges, DJs and audio techs from there, or by hand with
+role `judge`, `dj` or `audio_tech`.
+
+If you would rather do it by hand: Supabase → **Authentication → Users → Add user**, copy the user's ID, then in
+**SQL Editor**:
+
+```sql
+insert into public.contest_staff_accounts (auth_user_id, role, display_name)
+values ('<user id>', 'admin', '<your name>');
+```
 
 ## 7. Test everything (still test mode)
 

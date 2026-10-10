@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DIVISION_CODES, divisionByCode } from '@/contest.config';
 import { roundsOf } from '@/lib/divisions-core';
+import { advanceCount as advanceFor, nextActiveRound, roundTabs } from '@/lib/round-plan';
+import { useRoundPlans, useFollowRunningRound } from '@/lib/use-round-plans';
+import RoundPlanPanel from '@/components/RoundPlanPanel';
+import SplitPreviewPanel from '@/components/SplitPreviewPanel';
+import { drawOrder, newSeed, type DrawMeta } from '@/lib/draw';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -65,9 +70,19 @@ const PREF_COLORS: Record<string, string> = {
 export default function RunOrderManager({ token }: { token: string }) {
   const [division, setDivision] = useState<Division>(DIVISIONS[0] ?? '');
   const [round, setRound] = useState(1);
-  const rounds = roundsOf(divisionByCode(division));
-  const nextRound = rounds[round] ?? null;
-  const advanceCount = rounds[round - 1]?.advance;
+  const def = divisionByCode(division);
+  const plans = useRoundPlans();
+  const plan = plans[division] ?? null;
+  const rounds = roundsOf(def);
+  const tabs = roundTabs(def, plan);
+  const nextRoundNo = nextActiveRound(def, plan, round);
+  const nextRound = nextRoundNo ? rounds[nextRoundNo - 1] : null;
+  const advanceCount = advanceFor(def, plan, round);
+  const needsPlan = !!def?.roundPlan?.length && !plan;
+  // A tie across the cut waits here for the organizer's decision.
+  const [tie, setTie] = useState<{ slots: number; tied: { registration_id: string; display_name: string }[] } | null>(null);
+  const [tiePick, setTiePick] = useState<string[]>([]);
+  useFollowRunningRound(tabs, round, setRound);
   const [promoting, setPromoting] = useState(false);
   const [promoteMsg, setPromoteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [data, setData] = useState<AdminRunOrderData | null>(null);
@@ -78,6 +93,9 @@ export default function RunOrderManager({ token }: { token: string }) {
   const [advanceMsg, setAdvanceMsg] = useState<string | null>(null);
 
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
+  // How the unsaved order was made (published draws): sent with the save, cleared when it loads or saves.
+  const [draw, setDraw] = useState<DrawMeta | null>(null);
+  const [drawReason, setDrawReason] = useState('');
   const [uploadStatus, setUploadStatus] = useState<Record<string, 'uploading' | 'done' | 'error'>>({});
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -92,6 +110,8 @@ export default function RunOrderManager({ token }: { token: string }) {
         const json: AdminRunOrderData = await res.json();
         setData(json);
         setOrderedIds(json.ordered.map((r) => r.registration_id));
+        setDraw(null);
+        setDrawReason('');
       }
     } catch {}
     setLoading(false);
@@ -112,6 +132,7 @@ export default function RunOrderManager({ token }: { token: string }) {
     next.splice(fromIdx, 1);
     next.splice(toIdx, 0, id);
     setOrderedIds(next);
+    setDraw({ method: 'manual' });
   }
 
   function moveUp(idx: number) {
@@ -126,10 +147,14 @@ export default function RunOrderManager({ token }: { token: string }) {
 
   function removeFromOrder(id: string) {
     setOrderedIds(orderedIds.filter((x) => x !== id));
+    setDraw({ method: 'manual' });
   }
 
   function addToOrder(id: string) {
-    if (!orderedIds.includes(id)) setOrderedIds([...orderedIds, id]);
+    if (!orderedIds.includes(id)) {
+      setOrderedIds([...orderedIds, id]);
+      setDraw({ method: 'manual' });
+    }
   }
 
   function handleDragStart(idx: number) {
@@ -181,6 +206,17 @@ export default function RunOrderManager({ token }: { token: string }) {
     });
 
     setOrderedIds(unique);
+    setDraw({ method: 'rule', rule: 'Time preferences: early first, then no preference, then late, conflicts last. Ties keep their registration order.' });
+  }
+
+  /** Random draw of everyone who can be in the order (paid, not yet performing). The seed is published with it. */
+  function randomDraw() {
+    if (!data) return;
+    if (orderedIds.some(isLocked)) return;
+    const ids = [...new Set([...orderedIds, ...data.unscheduled.filter((u) => u.paid).map((u) => u.registration_id)])];
+    const seed = newSeed();
+    setOrderedIds(drawOrder(ids, seed));
+    setDraw({ method: 'random', seed });
   }
 
   async function saveOrder() {
@@ -190,7 +226,10 @@ export default function RunOrderManager({ token }: { token: string }) {
       const res = await fetch('/api/admin/run-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ division, round, registration_ids: orderedIds }),
+        body: JSON.stringify({
+          division, round, registration_ids: orderedIds,
+          ...(draw ? { draw: draw.method === 'manual' ? { method: 'manual', reason: drawReason.trim() } : draw } : {}),
+        }),
       });
       const json = await res.json();
       if (res.ok) {
@@ -237,27 +276,47 @@ export default function RunOrderManager({ token }: { token: string }) {
     fetchData(division, round);
   }
 
-  /** Build the next round's run order from this round's standings (admin only). */
-  async function handlePromote() {
+  /**
+   * Build the next round's run order from this round's standings (admin only). A first dry run
+   * finds any tie across the cut, which waits for the organizer: advance everyone tied, or pick.
+   */
+  async function handlePromote(decision?: { ties: 'all' | 'pick'; pick?: string[] }) {
     if (!nextRound || !advanceCount) return;
     setPromoting(true);
     setPromoteMsg(null);
-    const send = (replace: boolean) => fetch('/api/admin/rounds/advance', {
+    const send = (extra: Record<string, unknown>) => fetch('/api/admin/rounds/advance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ division, from_round: round, replace }),
+      body: JSON.stringify({ division, from_round: round, ...extra }),
     });
     try {
-      let res = await send(false);
+      if (!decision) {
+        const dry = await send({ dry_run: true });
+        const preview = await dry.json();
+        if (!dry.ok) {
+          setPromoteMsg({ ok: false, text: preview.error?.message ?? 'Advance failed.' });
+          setPromoting(false);
+          return;
+        }
+        if (preview.tie) {
+          setTie(preview.tie);
+          setTiePick([]);
+          setPromoting(false);
+          return;
+        }
+      }
+      const extra = decision ?? {};
+      let res = await send(extra);
       let json = await res.json();
       if (res.status === 409 && /replace/i.test(json.error?.message ?? '')
         && confirm(`${nextRound.name} already has a run order. Replace it with the top ${advanceCount} from ${rounds[round - 1].name}?`)) {
-        res = await send(true);
+        res = await send({ ...extra, replace: true });
         json = await res.json();
       }
       setPromoteMsg(res.ok
         ? { ok: true, text: `${json.count} advanced to ${json.to_round_name}.` }
         : { ok: false, text: json.error?.message ?? 'Advance failed.' });
+      if (res.ok) setTie(null);
     } catch {
       setPromoteMsg({ ok: false, text: 'Network error.' });
     }
@@ -329,19 +388,23 @@ export default function RunOrderManager({ token }: { token: string }) {
         </nav>
       </div>
 
-      {rounds.length > 1 && (
+      <RoundPlanPanel token={token} />
+
+      <SplitPreviewPanel token={token} />
+
+      {tabs.length > 1 && (
         <nav aria-label="Round" className="flex gap-2 flex-wrap mb-6 -mt-2">
-          {rounds.map((r, i) => (
+          {tabs.map((r) => (
             <button
               key={r.name}
               type="button"
-              aria-pressed={round === i + 1}
-              onClick={() => { setRound(i + 1); setData(null); setSaveMsg(null); setAdvanceMsg(null); setPromoteMsg(null); }}
+              aria-pressed={round === r.round}
+              onClick={() => { setRound(r.round); setData(null); setSaveMsg(null); setAdvanceMsg(null); setPromoteMsg(null); setTie(null); }}
               className={`px-3 py-1 text-xs font-bold tracking-caps border ${
-                round === i + 1 ? 'border-gold text-gold' : 'bg-transparent text-text-muted border-navy-border'
+                round === r.round ? 'border-gold text-gold' : 'bg-transparent text-text-muted border-navy-border'
               }`}
             >
-              {i + 1}. {r.name}{r.advance ? ` · top ${r.advance}` : ''}
+              {r.round}. {r.name}{r.advance ? ` · top ${r.advance}` : ''}
             </button>
           ))}
         </nav>
@@ -362,6 +425,14 @@ export default function RunOrderManager({ token }: { token: string }) {
               </button>
               <button
                 type="button"
+                onClick={randomDraw}
+                disabled={orderedIds.some(isLocked)}
+                className="border border-navy-border text-text-body px-3 py-1.5 text-xs font-bold tracking-caps disabled:opacity-50"
+              >
+                Random draw
+              </button>
+              <button
+                type="button"
                 onClick={saveOrder}
                 disabled={saving}
                 className={`px-4 py-1.5 text-xs font-black tracking-caps ${saving ? 'bg-navy-border text-text-muted' : 'bg-gold text-navy-deep'}`}
@@ -370,6 +441,25 @@ export default function RunOrderManager({ token }: { token: string }) {
               </button>
               {saveMsg && <span className={`text-sm font-bold ${saveMsg.ok ? 'text-[#7fff7f]' : 'text-[#ff6b6b]'}`}>{saveMsg.text}</span>}
             </div>
+
+            {draw && (
+              <div className="mb-4 text-sm text-text-body">
+                {draw.method === 'random' && <p>Random draw, seed <code>{draw.seed}</code>. The seed is published with the order so anyone can re-run it.</p>}
+                {draw.method === 'rule' && <p>Rule: {draw.rule}</p>}
+                {draw.method === 'manual' && (
+                  <label className="block">
+                    <span className="text-xs font-black tracking-caps text-text-muted">Reason for the hand edit (shown publicly)</span>
+                    <input
+                      type="text"
+                      value={drawReason}
+                      onChange={(e) => setDrawReason(e.target.value)}
+                      maxLength={300}
+                      className="mt-1 w-full border border-navy-border bg-navy-deep px-3 py-2 text-sm text-white"
+                    />
+                  </label>
+                )}
+              </div>
+            )}
 
             <div className="border border-navy-border min-h-[80px]">
               {orderedIds.length === 0 && (
@@ -481,16 +571,55 @@ export default function RunOrderManager({ token }: { token: string }) {
                 <div className="text-xs font-black tracking-caps text-text-muted">ROUNDS</div>
                 <button
                   type="button"
-                  onClick={handlePromote}
+                  onClick={() => handlePromote()}
                   disabled={promoting}
                   className={`px-5 py-2 font-black text-xs tracking-caps ${promoting ? 'bg-navy-border text-text-muted' : 'bg-gold text-navy-deep'}`}
                 >
                   {promoting ? 'Working…' : `Advance top ${advanceCount} to ${nextRound.name}`}
                 </button>
-                <span className="text-xs text-text-muted">From this round&rsquo;s standings; ties at the cut go through; best seed performs last. Admins only.</span>
+                <span className="text-xs text-text-muted">From this round&rsquo;s standings; a tie at the cut asks you to decide; best seed performs last. Admins only.</span>
                 {promoteMsg && (
                   <span role="status" className={`text-sm font-bold ${promoteMsg.ok ? 'text-[#7fff7f]' : 'text-[#ff6b6b]'}`}>{promoteMsg.text}</span>
                 )}
+              </div>
+            )}
+            {needsPlan && (
+              <p className="mt-3 text-xs text-[#ff6b6b] font-bold">Confirm this division&rsquo;s round plan above before advancing anyone.</p>
+            )}
+            {tie && (
+              <div role="group" aria-label="Tie at the cut" className="mt-3 bg-navy border border-gold p-4">
+                <div className="text-xs font-black tracking-caps text-gold mb-1">TIE AT THE CUT</div>
+                <p className="text-sm text-text-body mb-2">
+                  {tie.tied.length} entrants share the cutoff score for {tie.slots} open spot{tie.slots === 1 ? '' : 's'}. Advance all {tie.tied.length}, or pick {tie.slots}.
+                </p>
+                <ul className="mb-3">
+                  {tie.tied.map((t) => (
+                    <li key={t.registration_id}>
+                      <label className="flex items-center gap-2 text-sm text-white py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={tiePick.includes(t.registration_id)}
+                          onChange={(e) => setTiePick((p) => e.target.checked ? [...p, t.registration_id] : p.filter((x) => x !== t.registration_id))}
+                        />
+                        {t.display_name}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2 flex-wrap">
+                  <button type="button" disabled={promoting} onClick={() => handlePromote({ ties: 'all' })} className="px-4 py-2 font-black text-xs tracking-caps bg-gold text-navy-deep">
+                    Advance all {tie.tied.length}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={promoting || tiePick.length !== tie.slots}
+                    onClick={() => handlePromote({ ties: 'pick', pick: tiePick })}
+                    className={`px-4 py-2 font-black text-xs tracking-caps border ${tiePick.length === tie.slots ? 'border-gold text-gold' : 'border-navy-border text-text-muted'}`}
+                  >
+                    Advance the {tiePick.length} picked (need {tie.slots})
+                  </button>
+                  <button type="button" onClick={() => setTie(null)} className="px-4 py-2 text-xs text-text-muted">Cancel</button>
+                </div>
               </div>
             )}
           </div>

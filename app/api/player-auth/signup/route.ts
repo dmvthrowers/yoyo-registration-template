@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { z } from 'zod';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -23,6 +24,12 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest) => {
     body = await req.json();
   } catch {
     return apiError('bad_request', 'Invalid JSON body', requestId);
+  }
+
+  // 2b. Turnstile bot check (no-op until TURNSTILE_SECRET_KEY is set)
+  const turnstileToken = (body as { turnstileToken?: unknown } | null)?.turnstileToken;
+  if (!(await verifyTurnstile(turnstileToken, ip))) {
+    return apiError('forbidden', 'Please complete the security check and try again.', requestId);
   }
 
   const parsed = signupSchema.safeParse(body);
