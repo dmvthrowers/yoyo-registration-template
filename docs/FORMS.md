@@ -46,12 +46,12 @@ and 4000). Field ids are the keys in the saved answers, so do not rename one aft
 ## Reading the answers
 
 `/forms-review` (also in the staff menu as "Form answers") lists answers newest first. Filter by form and status (`new`, `read`,
-`handled`, `dismissed`), add a private note, and change the status. It needs the `forms.review` capability, which only **Admin**
-holds today (see `docs/ROLES.md`). Answers are not cached, and the page is not indexed by search engines.
+`handled`, `dismissed`), add a private note, and change the status. It needs the `forms.review` capability, which **Admin** holds and
+an admin can grant to chosen staff with the **Form answers reader** role (see `docs/ROLES.md`). Answers are not cached, and the page is not indexed by search engines.
 
 ## Before you collect anything sensitive
 
-- Decide who may read the answers, and give that role `forms.review`.
+- Decide who may read the answers: admins always can; grant the **Form answers reader** role to anyone else who should.
 - Decide how long to keep them. There is no deletion job yet; answers stay until someone deletes the rows (see
   `docs/SEASON_ARCHIVE.md`).
 - Forms are not listed in the sitemap and are not indexed, but anyone with the link can send one.

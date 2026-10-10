@@ -122,6 +122,11 @@ export const ROLES = {
     description: 'Merch inventory, orders and pickup.',
     capabilities: ['merch.manage'],
   },
+  form_reader: {
+    label: 'Form answers reader',
+    description: 'Reads and handles answers to the public forms (contact, conduct reports). Granted by an admin to chosen staff.',
+    capabilities: ['forms.review'],
+  },
   sponsor: {
     label: 'Sponsor',
     description: 'A sponsor\'s view of their own tier, deliverables and exposure.',

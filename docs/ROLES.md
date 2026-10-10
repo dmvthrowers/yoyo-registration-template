@@ -23,11 +23,14 @@ today's single-role staff accounts to the full model.
 | **Video & pictures** | Upload, organize and publish photos and video |
 | **MC** | The announcer view: run of show, who's up, shoutouts |
 | **Merch** | Inventory, orders, pickup |
+| **Form answers reader** | Reads and handles answers to the public forms (contact, conduct reports) at `/forms-review`. Nothing else |
 | **Volunteer** | Their own shifts and check-in (granted automatically when they volunteer) |
 | **Player** | Their own registration and music (granted automatically when they register) |
 
-`forms.review` (read and handle answers to the public forms at `/forms-review`) is held by **Admin** only for now. Who else should hold it,
-for example a conduct team, is an owner decision (build plan 0.7): give it to a role with one line in `ROLES` once that is decided.
+`forms.review` (read and handle answers to the public forms at `/forms-review`) is held by **Admin** and by anyone an admin grants the
+**Form answers reader** role. That is the owner's rule (2026-10-10): admins, plus staff an admin picks. Grant it per person on
+`/admin/staff`, for one event or all of them. The role holds no other capability, so a conduct team member sees the answers and nothing
+else.
 
 Roles are data in `ROLES`; a capability is a string like `scores.enter` in `CAPABILITIES`. Adding a role is
 adding a row. **Admin is computed as "every capability"**, so a capability added tomorrow is admin's the day
