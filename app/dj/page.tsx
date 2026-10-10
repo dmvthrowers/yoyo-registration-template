@@ -3,11 +3,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
+import DjBattleView from '@/components/DjBattleView';
 import { contest, DIVISION_CODES, divisionByCode } from '@/contest.config';
-import { formatRoutineTime, roundsOf } from '@/lib/divisions-core';
+import { formatRoutineTime } from '@/lib/divisions-core';
+import { roundTabs } from '@/lib/round-plan';
+import { useRoundPlans, useFollowRunningRound } from '@/lib/use-round-plans';
 import { holdsAnyRole } from '@/lib/roles';
 
 const DIVISIONS = DIVISION_CODES;
+const isBattleDivision = (code: string) => divisionByCode(code)?.scoring.format === 'bracket';
 type Division = string;
 
 interface Performer {
@@ -60,7 +64,9 @@ export default function DJPage() {
   // Routine timer: started when the track starts, so nobody cuts it before the routine ends.
   const [timerStart, setTimerStart] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(0);
-  const rounds = roundsOf(divisionByCode(division));
+  const plans = useRoundPlans();
+  const rounds = roundTabs(divisionByCode(division), plans[division]);
+  useFollowRunningRound(rounds, round, setRound);
   const [data, setData] = useState<RunOrderResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -188,7 +194,7 @@ export default function DJPage() {
   }, [fetchStaffMe]);
 
   useEffect(() => {
-    if (!staff || !token) return;
+    if (!staff || !token || isBattleDivision(division)) return;
     fetchRunOrder(division, round, token);
     pollingRef.current = setInterval(() => fetchRunOrder(division, round, token), 15000);
     return () => {
@@ -398,20 +404,22 @@ export default function DJPage() {
           <section style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '1rem' }}>
             <RunOrderManager token={token} />
           </section>
+        ) : isBattleDivision(division) ? (
+          <DjBattleView token={token} division={division} />
         ) : (
         <>
         {rounds.length > 1 && (
           <div role="group" aria-label="Round" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            {rounds.map((r, i) => (
+            {rounds.map((r) => (
               <button
                 key={r.name}
                 type="button"
-                aria-pressed={round === i + 1}
-                onClick={() => { setRound(i + 1); setData(null); setTimerStart(null); }}
+                aria-pressed={round === r.round}
+                onClick={() => { setRound(r.round); setData(null); setTimerStart(null); }}
                 style={{
                   background: 'transparent',
-                  color: round === i + 1 ? 'var(--gold)' : 'var(--text-muted)',
-                  border: `1px solid ${round === i + 1 ? 'var(--gold)' : 'var(--navy-border)'}`,
+                  color: round === r.round ? 'var(--gold)' : 'var(--text-muted)',
+                  border: `1px solid ${round === r.round ? 'var(--gold)' : 'var(--navy-border)'}`,
                   padding: '0.3rem 0.8rem', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer',
                 }}
               >

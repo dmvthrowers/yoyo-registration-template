@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { Division } from '@/lib/pricing';
 import { calculateFeePreview, displayPrice, formatCents, PRICES_TBD } from '@/lib/pricing';
+import { describeRoundPlan } from '@/lib/round-plan';
 import { cleanStyles, selectionIssues, entryOf, formatSummary, freeTeamJoins, styleCap, type DivisionStyles } from '@/lib/divisions-core';
 import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice } from '@/lib/team-entries';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef } from '@/contest.config';
+import { Turnstile } from '@/components/Turnstile';
 import { Field, inputCls } from '@/components/form/Field';
 
 type FormValues = {
@@ -24,6 +26,9 @@ type FormValues = {
   city: string;
   state: string;
   club_affiliation: string;
+  name_pronunciation: string;
+  intro_note: string;
+  sponsor_name: string;
   parent_name: string;
   parent_email: string;
   parent_consented: boolean;
@@ -143,6 +148,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [cocOpen, setCocOpen] = useState(false);
   const [liabilityScrolled, setLiabilityScrolled] = useState(false);
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
@@ -326,6 +333,7 @@ export default function RegisterPage() {
         // value — these can differ on mobile when paste/autofill bypasses onChange.
         comp_code: (codeApplied && validatedCode) ? validatedCode : undefined,
         teams,
+        turnstileToken,
       };
 
       const res = await fetch('/api/register', {
@@ -368,6 +376,7 @@ export default function RegisterPage() {
     } catch {
       setServerError('Network error — please check your connection and try again.');
     } finally {
+      setTurnstileResetKey((k) => k + 1);
       setSubmitting(false);
     }
   };
@@ -481,6 +490,19 @@ export default function RegisterPage() {
                 <input {...register('club_affiliation')} className={inputCls(false)} placeholder={`${contest.organizer.name}`} />
               </Field>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <Field label="How to Say Your Name" hint="Optional. For the announcer, e.g. “sam RIV-air-ah”">
+                <input {...register('name_pronunciation')} maxLength={60} className={inputCls(false)} />
+              </Field>
+              <Field label="Sponsor" hint="Optional. Who gets a shout-out">
+                <input {...register('sponsor_name')} maxLength={80} className={inputCls(false)} />
+              </Field>
+            </div>
+            <div className="mt-4">
+              <Field label="How Should the Announcer Introduce You?" hint="Optional. One line, up to 200 characters">
+                <input {...register('intro_note')} maxLength={200} className={inputCls(false)} />
+              </Field>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <div className="col-span-2">
                 <Field label="City *" error={errors.city?.message}>
@@ -529,6 +551,11 @@ export default function RegisterPage() {
                           <div className="font-bold text-white text-sm">{d.name}</div>
                           <div className="text-xs text-text-body mt-0.5">{d.description}</div>
                           <div className="text-xs text-gold/60 mt-1">{divisionFacts(d)}</div>
+                          {d.roundPlan && (
+                            <div className="text-xs text-gold/60 mt-1">
+                              <strong>Rounds depend on how many enter.</strong> {describeRoundPlan(d).join(' ')} We confirm the rounds when registration closes and post who advances after each one.
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className="font-display font-bold text-gold text-lg flex-shrink-0 text-right">
@@ -906,12 +933,12 @@ export default function RegisterPage() {
             {/* Photo/video */}
             <label className="flex gap-3 items-start cursor-pointer">
               <input
-                {...register('photo_video_consent', { required: 'Check this box to agree to the photo and video release.' })}
+                {...register('photo_video_consent', contest.photoConsent === 'required' ? { required: 'Check this box to agree to the photo and video release.' } : {})}
                 type="checkbox"
                 className="mt-0.5 w-4 h-4 accent-gold flex-shrink-0"
               />
               <span className="text-sm text-text-body">
-                <strong className="text-white">Photo / Video Consent (Required):</strong> I consent to being photographed and recorded at {contest.shortName}, including livestream broadcast, and for use in {contest.organizer.name} promotional and archival materials.
+                <strong className="text-white">Photo / Video Consent{contest.photoConsent === 'required' ? ' (Required)' : ' (Optional)'}:</strong> I consent to being photographed and recorded at {contest.shortName}, including livestream broadcast, and for use in {contest.organizer.name} promotional and archival materials.{contest.photoConsent === 'optional' && ' Leave this empty and you can still enter: the media team will be told not to photograph or feature you.'}
               </span>
             </label>
             {errors.photo_video_consent && <p className="text-error text-xs mt-1">{errors.photo_video_consent.message}</p>}
@@ -926,6 +953,7 @@ export default function RegisterPage() {
 
           {/* Submit */}
           <div className="pt-2">
+            <Turnstile onToken={setTurnstileToken} resetKey={turnstileResetKey} />
             <button
               type="submit"
               disabled={submitting}
