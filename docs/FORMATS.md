@@ -233,3 +233,15 @@ no longer assumes consent, and the media team gets a **Do-not-photograph list** 
 (`media.upload` or `media.publish`) with entrants and volunteers who opted out. Apply migration
 `0055_photo_consent_optional.sql` first: it stops the database insisting on the box. There is no per-person
 photo gallery in the template yet, so the list is how consent is honored today.
+## How it was scored
+
+The results page ends with each division's scoring in plain words, with a "How it's scored" note for every number
+(`lib/how-scored.ts`). The words are built from the division's own scoring config, so changing a cap or a deduction
+in `contest.config.ts` changes the explanation too.
+
+`contest.resultsShading: true` shades each row of the freestyle, panel and manual results tables by how close it is to
+the best score (best row filled to the right edge, worst almost clear), so the gaps between places show without reading
+every number. Off by default. The score is always printed too, so shading is never the only signal.
+
+Not built yet: a per-judge, per-category public score sheet for each player (the second half of T11). That needs
+decisions on how judges are named publicly; see the build plan.

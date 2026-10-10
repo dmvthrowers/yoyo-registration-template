@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { fetchStandings, stateChampions, type Division, type DivisionStandings, type StandingRow } from '@/lib/standings';
 import { contest, competition, monthDay, bannerLine } from '@/contest.config';
 import { formatSummary } from '@/lib/divisions-core';
+import { howScored, shadeValues } from '@/lib/how-scored';
 import { DIVISION_PLAYLIST_URLS, LIVESTREAM_URL, WINNERS_PLAYLIST_URL } from '@/lib/contest-videos';
 
 // Public results are gated by the results_published flag (admin toggle, env fallback) or, per
@@ -49,7 +50,7 @@ function ChampionBadge() {
   );
 }
 
-function StandingsList({ rows, label, champions }: { rows: StandingRow[]; label: string; champions?: Set<string> }) {
+function StandingsList({ rows, label, champions, better }: { rows: StandingRow[]; label: string; champions?: Set<string>; better?: 'higher' | 'lower' }) {
   if (rows.length === 0) {
     return (
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, paddingLeft: '1rem' }}>
@@ -57,6 +58,8 @@ function StandingsList({ rows, label, champions }: { rows: StandingRow[]; label:
       </p>
     );
   }
+  // Optional shading (contest.resultsShading): only for numeric formats, where `value` ranks the rows.
+  const shades = contest.resultsShading && better && rows.length > 1 ? shadeValues(rows.map((r) => r.value), better) : null;
   return (
     <ol aria-label={label} style={{ listStyle: 'none', margin: 0, padding: 0, border: '1px solid var(--navy-border)' }}>
       {rows.map((c, i) => {
@@ -72,7 +75,9 @@ function StandingsList({ rows, label, champions }: { rows: StandingRow[]; label:
               gap: '0.75rem',
               padding: '0.85rem 1rem',
               borderBottom: i < rows.length - 1 ? '1px solid var(--navy-border)' : 'none',
-              background: top ? '#1a1400' : i % 2 === 0 ? 'var(--navy)' : 'transparent',
+              background: shades
+                ? `linear-gradient(to right, rgba(201, 168, 76, ${(0.08 + 0.3 * shades[i]).toFixed(2)}) ${Math.round(shades[i] * 100)}%, transparent ${Math.round(shades[i] * 100)}%)`
+                : top ? '#1a1400' : i % 2 === 0 ? 'var(--navy)' : 'transparent',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
@@ -185,6 +190,7 @@ export default async function ResultsPage() {
             // A round a division skipped (final only under 25 entrants) has no rows and isn't shown.
             const played = ds.rounds.filter((r) => r.rows.length > 0);
             const multiRound = full.rounds.filter((r) => r.rows.length > 0).length > 1;
+            const scored = ds.format === 'freestyle' || ds.format === 'panel' || ds.format === 'manual';
             const champs = stateChampions(ds.final, contest.stateChampion.state);
             return (
               <section key={code} aria-labelledby={`div-${code}`} style={{ marginBottom: '2.5rem' }}>
@@ -225,7 +231,7 @@ export default async function ResultsPage() {
                         {champs.map((c) => `${c.display_name} · ${[c.city, c.state].filter(Boolean).join(', ')} · ${c.value_label} · ${ordinal(c.place)} overall`).join('; ')}
                       </p>
                     )}
-                    {finalOut && <StandingsList rows={ds.final} label={`${d.name} standings`} champions={new Set(champs.map((c) => c.registration_id))} />}
+                    {finalOut && <StandingsList rows={ds.final} label={`${d.name} standings`} champions={new Set(champs.map((c) => c.registration_id))} better={scored ? ds.better : undefined} />}
                     {ds.format === 'bracket' && (
                       <p style={{ margin: '0.6rem 0 0', fontSize: '0.8rem' }}>
                         <a href={`/results/bracket?division=${encodeURIComponent(code)}`} style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
@@ -239,7 +245,7 @@ export default async function ResultsPage() {
                           {r.name} ({r.rows.length}){played[i + 1] ? ` · ${played[i + 1].rows.length} advanced to ${played[i + 1].name}` : ''}
                         </summary>
                         <div style={{ marginTop: '0.5rem' }}>
-                          <StandingsList rows={r.rows} label={`${d.name} ${r.name}`} />
+                          <StandingsList rows={r.rows} label={`${d.name} ${r.name}`} better={scored ? ds.better : undefined} />
                         </div>
                       </details>
                     ))}
@@ -255,9 +261,22 @@ export default async function ResultsPage() {
             How each division is judged:
           </p>
           <ul style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.4rem 0 0', paddingLeft: '1.1rem' }}>
-            {competition.divisions.map((d) => (
-              <li key={d.code}>{d.name}: {formatSummary(d)}.</li>
-            ))}
+            {competition.divisions.map((d) => {
+              const how = howScored(d);
+              return (
+                <li key={d.code}>
+                  {d.name}: {how.headline}.
+                  {how.notes.length > 0 && (
+                    <details style={{ marginTop: '0.2rem' }}>
+                      <summary style={{ cursor: 'pointer' }}>How it&rsquo;s scored</summary>
+                      <ul style={{ margin: '0.3rem 0 0.5rem', paddingLeft: '1.1rem' }}>
+                        {how.notes.map((n) => <li key={n}>{n}</li>)}
+                      </ul>
+                    </details>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           {contest.links.rules && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.5rem 0 0' }}>

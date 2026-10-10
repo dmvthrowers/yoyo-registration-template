@@ -106,6 +106,11 @@ export const contest = {
    * organizer; apply migration 0055 first so the database stops insisting on the box.
    */
   photoConsent: 'required' as 'required' | 'optional',
+  /**
+   * Shade each row of the results tables by how close it is to the best score, so the gaps between
+   * places show without reading every number (docs/FORMATS.md → How it was scored). Off by default.
+   */
+  resultsShading: false,
 
   links: {
     home: 'https://example.org/',
