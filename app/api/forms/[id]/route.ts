@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { verifyTurnstile, withoutTurnstileToken } from '@/lib/turnstile';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { parseSubmission, publicForm, submissionRow } from '@/lib/forms';
 import { findForm } from '@/lib/forms-server';
@@ -38,7 +39,13 @@ export const POST = withErrorHandling(async (requestId, req: NextRequest, ctx: {
     return apiError('bad_request', 'Invalid JSON body', requestId);
   }
 
-  const parsed = parseSubmission(form, body);
+  // Turnstile bot check (no-op until TURNSTILE_SECRET_KEY is set)
+  const turnstileToken = (body as { turnstileToken?: unknown } | null)?.turnstileToken;
+  if (!(await verifyTurnstile(turnstileToken, getClientIp(req.headers)))) {
+    return apiError('forbidden', 'Please complete the security check and try again.', requestId);
+  }
+
+  const parsed = parseSubmission(form, withoutTurnstileToken(body));
   if (!parsed.ok) return apiError('bad_request', parsed.message, requestId);
   // Honeypot: look successful so a bot doesn't retry.
   if (parsed.bot) return NextResponse.json({ ok: true }, { status: 201, headers: { 'x-request-id': requestId } });

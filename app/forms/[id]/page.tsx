@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { Field, inputCls } from '@/components/form/Field';
+import { Turnstile } from '@/components/Turnstile';
 import { contest } from '@/contest.config';
 import type { Answer, FieldDef } from '@/lib/forms';
 
@@ -20,6 +21,8 @@ export default function FormPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   useEffect(() => {
     fetch(`/api/forms/${encodeURIComponent(id)}`)
@@ -43,13 +46,14 @@ export default function FormPage() {
         if (val === undefined || val === '') continue;
         body[f.id] = val;
       }
-      const res = await fetch(`/api/forms/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await fetch(`/api/forms/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, turnstileToken }) });
       if (res.ok) { setDone(true); return; }
       const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
       setError(j?.error?.message ?? 'That did not send. Please try again, or email us.');
     } catch {
       setError('That did not send. Check your connection and try again.');
     } finally {
+      setTurnstileResetKey((k) => k + 1);
       setBusy(false);
     }
   }
@@ -124,6 +128,7 @@ export default function FormPage() {
         }
       })}
       {error && <p role="alert" className="text-sm text-red">{error}</p>}
+      <Turnstile onToken={setTurnstileToken} resetKey={turnstileResetKey} />
       <button type="submit" disabled={busy} className="bg-gold text-navy-deep font-black text-xs tracking-widest px-6 py-3 disabled:opacity-60">{busy ? 'SENDING' : form.submitLabel.toUpperCase()}</button>
     </form>
   ));
