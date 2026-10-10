@@ -65,6 +65,7 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Setup scripts | `scripts/sync-divisions.mjs`, `scripts/render-auth-emails.mjs` | |
 | Scores-in board | `lib/scores-in-board.ts`, `components/ScoresInBoard.tsx` | Built on score status (VA-States #83 has the route); the judge page also gets a "you still owe" line |
 | Release gates | `lib/release-gate*.ts`, `/api/admin/release-check`, publish check in `/api/admin/schedule`, migration 0052 | Off unless `dayOf.releaseGates` is true; builds on the scores-in board |
+| Schedule clash check | `lib/schedule-conflicts.ts`, `components/ScheduleConflicts.tsx`, `/api/admin/schedule-conflicts` | Read only, no migration. Registrations are read from `vsyc_registrations` (`paid`, `divisions`) in VA-States |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 
