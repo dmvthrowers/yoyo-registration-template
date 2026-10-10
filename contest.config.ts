@@ -8,8 +8,14 @@
  */
 
 import type { FormDef } from './lib/forms';
+import { buildEvents, buildOrganizers, eventOf as pickEvent, type EventInput, type OrganizerDef } from './lib/events.ts';
 
 export const contest = {
+  /**
+   * The id of this event in URLs and in its data (`/e/<id>/…`, `event_id`): a short lowercase slug. Leave "" to derive
+   * it from `shortName` ("SYO-27" → "syo-27"). Set it once and keep it: it is how this event's data is found later.
+   */
+  eventId: '',
   /** Full name, e.g. "Springfield Yo-Yo Open" */
   name: 'Springfield Yo-Yo Open',
   /** Short name used in email subjects, tabs, and badges, e.g. "SYO-27" */
@@ -713,3 +719,19 @@ export function zonedDate(dateIso: string, hhmm: string, timeZone: string): Date
 export function zonedStamp(dateIso: string, hhmm: string, timeZone: string): string {
   return zonedDate(dateIso, hhmm, timeZone).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
+
+// ── Events and organizers (docs/MULTI_EVENT.md, stage 1a) ────────────────────────────────────────────────────────────
+// Every deployment holds at least one event run by at least one organizer. The first of each is built from `contest`
+// above, so a single-event contest changes nothing. To run more, list them here (each needs an organizer that exists).
+
+/** Organizers besides the one in `contest.organizer`. */
+export const extraOrganizers: OrganizerDef[] = [];
+/** Events besides the one described by `contest` and `dayOf`. */
+export const extraEvents: EventInput[] = [];
+
+export const organizers = buildOrganizers(contest, extraOrganizers);
+export const events = buildEvents(contest, extraEvents);
+/** The event the current routes show: the first one. */
+export const defaultEvent = events[0];
+/** The event with this id, or the default when none is given; undefined for an id that matches nothing. */
+export const eventOf = (id?: string | null) => pickEvent(events, id);

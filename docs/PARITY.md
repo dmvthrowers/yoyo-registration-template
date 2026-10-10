@@ -76,6 +76,8 @@ scripts, workflows, docs). Remove a row when it's closed. The static-site pairs 
 | Local deadline display | `components/LocalDeadline.tsx` | |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 
+| Events and organizers foundation | `lib/events.ts`, `eventOf()` and friends in `contest.config.ts`, `contest.eventId` | Multi-event stage 1a (`docs/MULTI_EVENT.md`). Pure and unused until the readers move over; VA-States pins `eventId: 'vsyc26'` |
+
 ### Both
 
 | Gap | Note |

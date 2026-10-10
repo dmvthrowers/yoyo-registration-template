@@ -14,6 +14,16 @@ This replaces the "one organizer or separate organizers?" question in [`HUB_ROAD
 
 An event belongs to exactly one organizer. A person can have a role at several.
 
+## Progress
+
+- **1a, foundation (built):** `lib/events.ts` (pure) defines `OrganizerDef` and `EventDef` and builds the **default event** from `contest`, plus any extra
+  events listed in `extraEvents` in `contest.config.ts`. `eventOf(id?)` returns the named event, the default when none is named, and `undefined` for an
+  unknown id (so a route can answer 404 instead of quietly showing the default). `eventIssues` names problems in plain words, and a test fails if the
+  shipped config has any. Nothing reads these yet, so behavior is unchanged. `contest.eventId` pins the default event's id (leave it blank to derive
+  it from `shortName`); set it once and keep it, because it is how the event's data is found later.
+- **1a, next:** move the readers of `contest.date`, `contest.name`, `dayOf` and friends (about 30 files) onto `eventOf()`, a few at a time.
+- 1b, 1c, 1d: not started.
+
 ## What does not change
 
 - A single-event deployment, including VA-States today. It gets a default organizer and a default event (`vsyc26`) through a backfill, and every URL it has now keeps working.
