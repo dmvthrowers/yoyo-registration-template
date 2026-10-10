@@ -253,3 +253,9 @@ boxes on the registration form ("How to Say Your Name", "Sponsor", "How Should t
 gives a plain black-on-white fallback. The announcer reads names to the room, so cards follow the public-name rules:
 a minor whose guardian hasn't opted into public listing appears as a handle or first name + last initial, with no
 location and no pronunciation (it would spell the surname). Needs migration `0056_mc_card_fields.sql`.
+## Rules page
+
+`/rules` shows the current rules version, each division's scoring in a line, and a dated list of every change, newest
+first (`contest.rulesPage` in `contest.config.ts`). When you change a rule, add an entry at the top of `changes` and
+set `version` to match; a test fails if they disagree or a date is malformed. Publish it before registration opens.
+`enabled: false` drops the page and its footer link. Your own full rules page (`contest.links.rules`) is linked from it.
