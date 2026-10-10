@@ -6,6 +6,7 @@ import { roundsOf } from '@/lib/divisions-core';
 import { advanceCount as advanceFor, nextActiveRound, roundTabs } from '@/lib/round-plan';
 import { useRoundPlans, useFollowRunningRound } from '@/lib/use-round-plans';
 import RoundPlanPanel from '@/components/RoundPlanPanel';
+import SplitPreviewPanel from '@/components/SplitPreviewPanel';
 
 const DIVISIONS = DIVISION_CODES;
 type Division = string;
@@ -363,6 +364,8 @@ export default function RunOrderManager({ token }: { token: string }) {
       </div>
 
       <RoundPlanPanel token={token} />
+
+      <SplitPreviewPanel token={token} />
 
       {tabs.length > 1 && (
         <nav aria-label="Round" className="flex gap-2 flex-wrap mb-6 -mt-2">

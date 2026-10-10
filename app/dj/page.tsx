@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
+import DjBattleView from '@/components/DjBattleView';
 import { contest, DIVISION_CODES, divisionByCode } from '@/contest.config';
 import { formatRoutineTime } from '@/lib/divisions-core';
 import { roundTabs } from '@/lib/round-plan';
@@ -10,6 +11,7 @@ import { useRoundPlans, useFollowRunningRound } from '@/lib/use-round-plans';
 import { holdsAnyRole } from '@/lib/roles';
 
 const DIVISIONS = DIVISION_CODES;
+const isBattleDivision = (code: string) => divisionByCode(code)?.scoring.format === 'bracket';
 type Division = string;
 
 interface Performer {
@@ -192,7 +194,7 @@ export default function DJPage() {
   }, [fetchStaffMe]);
 
   useEffect(() => {
-    if (!staff || !token) return;
+    if (!staff || !token || isBattleDivision(division)) return;
     fetchRunOrder(division, round, token);
     pollingRef.current = setInterval(() => fetchRunOrder(division, round, token), 15000);
     return () => {
@@ -402,6 +404,8 @@ export default function DJPage() {
           <section style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '1rem' }}>
             <RunOrderManager token={token} />
           </section>
+        ) : isBattleDivision(division) ? (
+          <DjBattleView token={token} division={division} />
         ) : (
         <>
         {rounds.length > 1 && (
