@@ -13,6 +13,9 @@ for f in $(ls supabase/migrations/*.sql | sort); do
   echo "apply ${f##*/}"
   psql_ -f "$f" > /dev/null
 done
+# The season purge function (migration 0060) against a small seeded season; rolls back when done. Runs before the
+# demo seed so its counts are exact.
+psql_ -At -f supabase/ci/purge-test.sql | grep "purge test OK" > /dev/null
 psql_ -f supabase/divisions.sql   # generated from contest.config.ts
 psql_ -f supabase/divisions.sql   # and safe to re-apply
 psql_ -f supabase/seed-demo.sql
@@ -25,4 +28,4 @@ if [ -n "$missing" ]; then
   echo "RLS is off on: $missing" >&2
   exit 1
 fi
-echo "migrations OK: $(ls supabase/migrations/*.sql | wc -l) files, demo seed loaded, RLS on every table"
+echo "migrations OK: $(ls supabase/migrations/*.sql | wc -l) files, demo seed loaded, RLS on every table, season purge test passes"
