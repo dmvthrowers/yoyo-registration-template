@@ -28,6 +28,8 @@ type, and optionally rounds. `presets/competitions.ts` has worked examples of al
 - Advancing takes the top `advance` from a round's standings into the next round's run order;
   ties at the cut all go through.
 
+**Age split (preview).** `split: { above: 15, minBracket: 5, labels: ['Youth', 'Adult'] }` on a division. With more than `above` paid entrants, the run-order screen shows a preview of splitting it into a younger and an older bracket, with a suggested cut age and a field to try another. Each bracket must have at least `minBracket` players. Nothing is applied: a split isn't wired into the run order or results yet.
+
 ## Rules that live in one place
 
 `lib/divisions-core.ts` is pure, unit-tested logic used by pages, API routes and tests:
@@ -189,6 +191,19 @@ Pages:
 - `/admin/schedule` and `/staff/side-events` are for staff and admins.
 - `/overlay/schedule` and `/overlay/side-event?code=` are OBS browser sources.
 
+## Release gates
+
+Off by default. Set `dayOf.releaseGates: true` in `contest.config.ts` and a round's results can be published
+(from **Run the Day**) only when two things are true:
+
+1. The scores-in board is full: the round has a run order, every competitor has finished performing and has a
+   score from every judge who scored anyone (the same check as `/api/admin/score-status`).
+2. The head judge has tapped **Mark scores checked** (`results.publish` capability: admin and judges).
+
+If a score is added or edited after the check, the gate closes again until it is re-checked. Resetting a block
+takes back its check. Publishing without a check answers 409 with the reasons, and **Run the Day** shows them.
+The global `results_published` switch on `/admin/event` skips the gates on purpose: it is the "show everything"
+override. Needs migration `0052_release_checks.sql`.
 ## Published draws
 
 Every saved run order can say how it was made, and the public run-order page (`/results/run-order`) shows it:

@@ -4,10 +4,12 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import RunOrderManager from '@/components/RunOrderManager';
+import ScoresInBoard from '@/components/ScoresInBoard';
 import MusicManager from '@/components/MusicManager';
 import VolunteerManager from '@/components/VolunteerManager';
 import BudgetManager from '@/components/BudgetManager';
 import SurveyResults from '@/components/SurveyResults';
+import PrizePlanPanel from '@/components/PrizePlanPanel';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { contest } from '@/contest.config';
 import { holdsAnyRole } from '@/lib/roles';
@@ -644,6 +646,12 @@ export default function AdminDashboardPage() {
           </section>
         )}
 
+        {activeTab === 'run-order' && token && (
+          <section className="border border-navy-border bg-navy p-4 mt-4">
+            <ScoresInBoard token={token} />
+          </section>
+        )}
+
         {activeTab === 'music' && token && (
           <section className="border border-navy-border bg-navy p-4">
             <MusicManager token={token} />
@@ -932,6 +940,8 @@ export default function AdminDashboardPage() {
                 </table>
               </div>
             </section>
+
+            {token && <PrizePlanPanel token={token} />}
 
             <section className="border border-navy-border bg-navy p-4 mb-8">
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
