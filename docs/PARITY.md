@@ -56,7 +56,6 @@ scripts, workflows, docs). Remove a row when it's closed. The static-site pairs 
 
 | Gap | Files in VA-States | Note |
 |---|---|---|
-| Home-state eligibility and the current champion rule | `lib/residency.ts`, `lib/standings.ts` (`eligible` set), migration 0047 | Owner: a config option, off when `stateChampion.state` is blank. The template still uses the old rule |
 | Season purge and reset | `lib/season-purge.ts`, `scripts/purge.ts`, `scripts/results-gaps.sql`, migration 0060 | Template has the design (`docs/SEASON_ARCHIVE.md`) but no code |
 | Money-path route test harness | `lib/testing/route-harness.mjs`, `lib/testing/stubs/*` | Stubs for Stripe, Supabase, auth, email, Turnstile; the route tests that use them come with it |
 | Nightly encrypted database backup | `.github/workflows/db-backup.yml` | |
