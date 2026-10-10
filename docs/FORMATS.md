@@ -28,6 +28,8 @@ type, and optionally rounds. `presets/competitions.ts` has worked examples of al
 - Advancing takes the top `advance` from a round's standings into the next round's run order;
   ties at the cut all go through.
 
+**Age split (preview).** `split: { above: 15, minBracket: 5, labels: ['Youth', 'Adult'] }` on a division. With more than `above` paid entrants, the run-order screen shows a preview of splitting it into a younger and an older bracket, with a suggested cut age and a field to try another. Each bracket must have at least `minBracket` players. Nothing is applied: a split isn't wired into the run order or results yet.
+
 ## Rules that live in one place
 
 `lib/divisions-core.ts` is pure, unit-tested logic used by pages, API routes and tests:
