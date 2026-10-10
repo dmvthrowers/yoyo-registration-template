@@ -90,7 +90,7 @@ function Board({ token }: { token: string }) {
 
 export default function FormsReviewPage() {
   return (
-    <BracketStaffGate title="Form answers" roles={['admin']} landmark={false}>
+    <BracketStaffGate title="Form answers" roles={['admin', 'form_reader']} landmark={false}>
       {({ token }) => <Board token={token} />}
     </BracketStaffGate>
   );
