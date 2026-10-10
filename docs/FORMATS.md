@@ -218,3 +218,10 @@ Every saved run order can say how it was made, and the public run-order page (`/
 Off by default. Set `dayOf.publishedDraws: true` and a save that doesn't say how the order was made is refused.
 With it off, orders save as before and a draw is recorded only when one is sent. Needs migration
 `0053_run_order_draws.sql`.
+## Code of conduct version
+
+`contest.codeOfConductVersion` (default `'1'`) is stored as `code_of_conduct_version` on every registration,
+walk-up, spectator and volunteer when they accept the code. The registrations CSV export has the column. After you
+revise the code, bump the version: `lib/conduct-version.ts` sorts people into `current`, `outdated` (accepted an
+older version) and `unrecorded` (signed up before versions were stored, null in the database). Judges, staff and
+sponsors don't accept the code in a form today, so they aren't covered yet. Needs migration `0054_conduct_version.sql`.
