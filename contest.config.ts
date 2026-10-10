@@ -311,6 +311,14 @@ export interface DivisionDef {
   /** Rounds for freestyle, panel and manual divisions. Default: one round. */
   rounds?: RoundDef[];
   /**
+   * Split a big division by age: with more than `above` entrants it can split into a younger and an
+   * older bracket, each with its own podium, provided both have at least `minBracket` players (a floor
+   * only: a bracket can be as large as it needs). Age is age on contest day. The organizer sees a preview
+   * on the run-order screen and chooses the cut; the app only suggests one. Preview only for now: a split
+   * isn't applied to the run order or the results.
+   */
+  split?: { above: number; minBracket: number; labels: [string, string] };
+  /**
    * How long a routine runs, in seconds. The DJ page shows it and times it so a track isn't cut
    * early. A round's own `seconds` wins. Leave out when it varies or doesn't matter.
    */
