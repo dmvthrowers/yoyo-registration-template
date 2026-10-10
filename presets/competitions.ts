@@ -223,6 +223,12 @@ export const kendama: CompetitionConfig = {
       cannotCombineWith: ['KLAD'],
       scoring: { format: 'ladder', attemptsPerTrick: 3, tricks: ['Big Cup', 'Small Cup', 'Base Cup', 'Spike', 'Around Japan', 'Around the World'].map((name) => ({ name })) },
     },
+    {
+      // A free add-on: tick it with Freestyle and you are also placed among the others who ticked it,
+      // from the Freestyle results. No extra stage time, no extra fee.
+      code: 'KGIRLS', name: 'Girls Freestyle', description: 'A free add-on for girls and women who enter Freestyle: placed among the others who tick it.', priceCents: 0, music: false,
+      scoring: { format: 'addon', parent: 'KFREE' },
+    },
   ],
   combos: [{ divisions: ['KFREE', 'KLAD'], priceCents: 3500 }],
   pricing,
