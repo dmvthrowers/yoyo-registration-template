@@ -7,8 +7,10 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import RunOrderManager from '@/components/RunOrderManager';
 import LadderSheet from '@/components/LadderSheet';
 import { contest, competition, divisionByCode } from '@/contest.config';
+import { roundTabs } from '@/lib/round-plan';
+import { useRoundPlans, useFollowRunningRound } from '@/lib/use-round-plans';
 import {
-  betterOf, effectiveStyle, formatSummary, freestyleBreakdown, manualBest, manualBreakdown, panelMax, panelTotal, roundsOf, styleMultiplier, usesRunOrder as usesRunOrderFormat, usesScoreSheet,
+  betterOf, effectiveStyle, formatSummary, freestyleBreakdown, manualBest, manualBreakdown, panelMax, panelTotal, styleMultiplier, usesRunOrder as usesRunOrderFormat, usesScoreSheet,
 } from '@/lib/divisions-core';
 import { holdsAnyRole } from '@/lib/roles';
 import {
@@ -436,7 +438,9 @@ export default function JudgePage() {
   const panel = scoring?.format === 'panel' ? scoring : null;
   const manual = scoring?.format === 'manual' ? scoring : null;
   const deductions = freestyle?.deductions ?? null;
-  const rounds = roundsOf(divDef);
+  const plans = useRoundPlans();
+  const rounds = roundTabs(divDef, plans[division]);
+  useFollowRunningRound(rounds, round, setRound);
   const manualUnit = manual?.unit ?? 'points';
   const lowerWins = betterOf(scoring) === 'lower';
   const multiAttempt = !!manual && (manual.attempts ?? 1) > 1;
@@ -776,22 +780,22 @@ export default function JudgePage() {
           </div>
           {rounds.length > 1 && (
             <nav aria-label="Rounds" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {rounds.map((r, i) => (
+              {rounds.map((r) => (
                 <button
                   key={r.name}
                   type="button"
-                  aria-pressed={round === i + 1}
+                  aria-pressed={round === r.round}
                   onClick={() => {
-                    if (round === i + 1) return;
-                    setRound(i + 1);
+                    if (round === r.round) return;
+                    setRound(r.round);
                     setSelectedId(null);
                     setRunOrder([]);
                     setMyScores([]);
                   }}
                   style={{
-                    background: round === i + 1 ? 'var(--gold)' : 'transparent',
-                    color: round === i + 1 ? 'var(--navy-deep)' : 'var(--text-body)',
-                    border: '1px solid', borderColor: round === i + 1 ? 'var(--gold)' : 'var(--navy-border)',
+                    background: round === r.round ? 'var(--gold)' : 'transparent',
+                    color: round === r.round ? 'var(--navy-deep)' : 'var(--text-body)',
+                    border: '1px solid', borderColor: round === r.round ? 'var(--gold)' : 'var(--navy-border)',
                     padding: '0.35rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', cursor: 'pointer',
                   }}
                 >
@@ -826,7 +830,7 @@ export default function JudgePage() {
         <div style={{ flex: '999 1 420px', minWidth: 0 }}>
           <section style={{ marginBottom: '1.5rem' }}>
             <div style={{ fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.5rem' }}>
-              {rounds.length > 1 ? `RUN ORDER: ${rounds[round - 1]?.name.toUpperCase() ?? `ROUND ${round}`}` : 'CURRENT DIVISION ORDER'}
+              {rounds.length > 1 ? `RUN ORDER: ${rounds.find((r) => r.round === round)?.name.toUpperCase() ?? `ROUND ${round}`}` : 'CURRENT DIVISION ORDER'}
             </div>
             <div style={{ border: '1px solid var(--navy-border)' }}>
               {runOrder.length === 0 ? (
@@ -881,7 +885,7 @@ export default function JudgePage() {
           <section style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '1rem' }}>
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)' }}>
-                SCORE ENTRY{rounds.length > 1 ? ` · ${rounds[round - 1]?.name.toUpperCase() ?? `ROUND ${round}`}` : ''}
+                SCORE ENTRY{rounds.length > 1 ? ` · ${rounds.find((r) => r.round === round)?.name.toUpperCase() ?? `ROUND ${round}`}` : ''}
               </div>
               <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, marginTop: '0.25rem' }}>
                 {selectedPerformer ? selectedPerformer.display_name : 'Select a competitor'}
@@ -1103,7 +1107,7 @@ export default function JudgePage() {
         <aside style={{ flex: '1 1 280px', minWidth: 0 }}>
           <section style={{ background: 'var(--navy)', border: '1px solid var(--navy-border)', padding: '1rem' }}>
             <div style={{ fontSize: '0.6rem', letterSpacing: '0.16em', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.75rem' }}>
-              MY SCORES ({division}{rounds.length > 1 ? ` · ${rounds[round - 1]?.name ?? `Round ${round}`}` : ''})
+              MY SCORES ({division}{rounds.length > 1 ? ` · ${rounds.find((r) => r.round === round)?.name ?? `Round ${round}`}` : ''})
             </div>
             {myScores.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>No scores submitted yet.</p>
