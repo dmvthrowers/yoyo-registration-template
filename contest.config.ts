@@ -68,6 +68,17 @@ export const contest = {
     title: 'IL State Champion',
   },
 
+  /**
+   * Prizes. `places` is how many podium places win a prize in each division (1st to Nth, ties
+   * included). A division can change that with its own `prizes` (by how many entered) or turn off
+   * its champion prize. The home-state champion's prize (above) is on top of the podium. This sets
+   * the prize plan on the admin dashboard; the winners list for the survey invites still uses the
+   * top 3 until the champion-rule port (build plan 4.1) wires these rules into it.
+   */
+  prizes: {
+    places: 3,
+  },
+
   /** Presenting sponsor ("Brought to you by ..."). Leave name "" for none. */
   presentedBy: {
     name: '',
@@ -310,6 +321,13 @@ export interface DivisionDef {
   entry?: EntryDef;
   /** Rounds for freestyle, panel and manual divisions. Default: one round. */
   rounds?: RoundDef[];
+  /**
+   * Prizes for this division. `tiers` changes the number of podium places by how many entered: the
+   * first tier whose `upTo` is at least the entrant count applies, and the last tier leaves `upTo`
+   * out. `champion: false` turns off the home-state champion prize here. Leave out to use
+   * `contest.prizes.places`.
+   */
+  prizes?: { tiers?: { upTo?: number; places: number }[]; champion?: boolean };
   /**
    * Split a big division by age: with more than `above` entrants it can split into a younger and an
    * older bracket, each with its own podium, provided both have at least `minBracket` players (a floor
