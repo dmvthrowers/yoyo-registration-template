@@ -204,3 +204,17 @@ If a score is added or edited after the check, the gate closes again until it is
 takes back its check. Publishing without a check answers 409 with the reasons, and **Run the Day** shows them.
 The global `results_published` switch on `/admin/event` skips the gates on purpose: it is the "show everything"
 override. Needs migration `0052_release_checks.sql`.
+## Published draws
+
+Every saved run order can say how it was made, and the public run-order page (`/results/run-order`) shows it:
+
+- **Random draw**: the **Random draw** button picks a seed and orders everyone by it. The seed is published; the
+  page re-runs the draw in the visitor's browser and says whether the order matches. The algorithm is in
+  `lib/draw.ts` (sort the registration ids, then Fisher–Yates driven by sfc32 seeded from the seed text), so anyone
+  can re-run it. The server refuses a "random" order that isn't what its seed draws.
+- **Rule**: **Auto-sort by pref** and the next-round advance record the rule in words.
+- **Hand edit**: needs a reason, shown publicly.
+
+Off by default. Set `dayOf.publishedDraws: true` and a save that doesn't say how the order was made is refused.
+With it off, orders save as before and a draw is recorded only when one is sent. Needs migration
+`0053_run_order_draws.sql`.
