@@ -127,6 +127,11 @@ export const contest = {
       { version: '1.0', date: '2027-01-01', summary: ['First published.'] },
     ] as { version: string; date: string; summary: string[] }[],
   },
+  /**
+   * Shown on the public budget page: where any money left after the event goes ("" hides it).
+   * Plain sentence, e.g. "Anything left over pays for next year's venue deposit and loaner yo-yos."
+   */
+  budgetLeftoverNote: '',
 
   links: {
     home: 'https://example.org/',
