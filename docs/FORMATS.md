@@ -225,3 +225,11 @@ walk-up, spectator and volunteer when they accept the code. The registrations CS
 revise the code, bump the version: `lib/conduct-version.ts` sorts people into `current`, `outdated` (accepted an
 older version) and `unrecorded` (signed up before versions were stored, null in the database). Judges, staff and
 sponsors don't accept the code in a form today, so they aren't covered yet. Needs migration `0054_conduct_version.sql`.
+## Photo and video release
+
+`contest.photoConsent` is `'required'` by default: everyone ticks the release to enter, as before. Set it to
+`'optional'` and the box can stay empty (a guardian's choice for minors). The registration form says so, a walk-up
+no longer assumes consent, and the media team gets a **Do-not-photograph list** at `/media/consent`
+(`media.upload` or `media.publish`) with entrants and volunteers who opted out. Apply migration
+`0055_photo_consent_optional.sql` first: it stops the database insisting on the box. There is no per-person
+photo gallery in the template yet, so the list is how consent is honored today.

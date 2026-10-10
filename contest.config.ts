@@ -99,6 +99,13 @@ export const contest = {
    * the old one (docs/FORMATS.md → Code of conduct version).
    */
   codeOfConductVersion: '1',
+  /**
+   * Photo and video release at registration. 'required' (default): everyone must tick it to enter,
+   * as before. 'optional': the box can stay empty (a guardian's for minors), and staff get a
+   * "do not photograph" list at /media/consent. Switching to 'optional' is a policy choice for the
+   * organizer; apply migration 0055 first so the database stops insisting on the box.
+   */
+  photoConsent: 'required' as 'required' | 'optional',
 
   links: {
     home: 'https://example.org/',

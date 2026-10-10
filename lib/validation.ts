@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { competition } from '@/contest.config';
+import { competition, contest } from '@/contest.config';
 import { selectionIssues } from './divisions-core';
 import { JOIN_CODE_RE, TEAM_NAME_MAX, normalizeJoinCode, teamChoiceIssues, type TeamChoice } from './team-entries';
 import { VOLUNTEER_ROLE_KEYS, SHIFT_PREFERENCES, OTHER_ROLE_KEY, isExperienceRequired } from './volunteer-roles';
@@ -82,7 +82,10 @@ export const registrationSchema = z.object({
 
   // Waivers — all must be true
   liability_waiver_accepted: z.literal(true, { errorMap: () => ({ message: 'Liability waiver is required' }) }),
-  photo_video_consent:       z.literal(true, { errorMap: () => ({ message: 'Photo/video consent is required' }) }),
+  // Photo/video: required unless contest.photoConsent is 'optional'
+  photo_video_consent:       contest.photoConsent === 'optional'
+    ? z.boolean().optional().default(false)
+    : z.literal(true, { errorMap: () => ({ message: 'Photo/video consent is required' }) }),
   code_of_conduct_accepted:  z.literal(true, { errorMap: () => ({ message: 'Code of Conduct agreement is required' }) }),
 
   // Required for competitors
