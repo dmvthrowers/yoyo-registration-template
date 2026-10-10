@@ -66,7 +66,7 @@ static-site pairs are tracked in `dmvthrowers.github.io`'s `docs/ROADMAP.md` ("P
 | Scores-in board | `lib/scores-in-board.ts`, `components/ScoresInBoard.tsx` | Built on score status (VA-States #83 has the route); the judge page also gets a "you still owe" line |
 | Release gates | `lib/release-gate*.ts`, `/api/admin/release-check`, publish check in `/api/admin/schedule`, migration 0052 | Off unless `dayOf.releaseGates` is true; builds on the scores-in board |
 | Forms on our own system | `lib/forms.ts`, `lib/forms-server.ts`, `/api/forms/[id]`, `/api/admin/forms`, `/forms/[id]`, `/forms-review`, `forms.review`, migration 0061 | Off unless `contest.forms` has a form. VA-States keeps its forms on the club site; port only if it needs a form of its own |
-| Turnstile on every public form | `lib/turnstile.ts` (`verifyTurnstile`, `withoutTurnstileToken`), `components/Turnstile.tsx`, the public POST routes | Registration, spectator, volunteer, player sign-up, sponsor inquiry, forms engine. Off until both keys are set. VA-States has it on the first five |
+| Turnstile on every public form | `lib/turnstile.ts` (`verifyTurnstile`, `withoutTurnstileToken`), `components/Turnstile.tsx`, the public POST routes | Registration, spectator, volunteer, player sign-up, sponsor inquiry, forms engine. Off until both keys are set. VA-States has it on registration, spectator and player sign-up |
 | Dependency versions | `resend` 6, `@vercel/analytics` 2 | VA-States is still on 4 and 1 |
 | Tests | `lib/divisions-core.test.mjs`, `lib/formats.test.mjs`, `lib/routine-length.test.mjs` | |
 
