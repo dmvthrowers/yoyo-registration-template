@@ -54,6 +54,12 @@ export async function requireRunOrderEditorRequest(req: NextRequest, requestId: 
  * capability that matches what they do (docs/ROLES.md), so a role added later gets exactly what it should.
  */
 export async function requireCapabilityRequest(req: NextRequest, requestId: string, ...capabilities: Capability[]) {
+  // Same per-IP limit as requireAdminRequest: most admin routes ask for a capability, and they stay throttled.
+  const allowed = await checkRateLimit(getClientIp(req.headers), 'admin', ADMIN_RATE_LIMIT.max, ADMIN_RATE_LIMIT.windowMinutes);
+  if (!allowed) {
+    return apiError('rate_limited', 'Too many requests. Wait a minute and try again.', requestId, { 'Retry-After': '60' });
+  }
+
   const token = getBearerToken(req);
   if (!token) {
     return apiError('unauthorized', 'Missing bearer token', requestId);
