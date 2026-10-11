@@ -14,6 +14,17 @@ Need a public contest website too? Pair it with
 **Start here: [`docs/SETUP.md`](docs/SETUP.md)**, the step-by-step checklist from a blank
 copy to open registration.
 
+## Prerequisites
+
+Free accounts on GitHub, Vercel, Supabase, and Stripe cover the whole app — see the
+[Services](#services) table below for exactly what each one does and what the free tiers include.
+On top of that:
+
+| You need | Free / low-cost option |
+|---|---|
+| Shared contest email | Gmail (free) — used as the sender for confirmation, reminder, and survey emails |
+| Custom domain (optional) | [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) or [Porkbun](https://porkbun.com) (~$10–15/yr). Required if you want Resend to send from your own address instead of its test domain |
+
 ## Quick start
 
 - **Time:** about 2 hours the first time. **Cost:** free accounts on GitHub, Vercel, Supabase and
