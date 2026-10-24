@@ -67,6 +67,11 @@ DATABASE_URL=postgres://... scripts/check-migrations.sh   # empty Postgres 15+
 CI needs placeholder `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to build
 (see `.github/workflows/ci.yml`).
 
+TypeScript is installed twice on purpose: `tsc` is TypeScript 7 (`@typescript/native`), and the
+`typescript` package is the TypeScript 6 API (`@typescript/typescript6`) for typescript-eslint, Next's
+build-time type check and editors. TypeScript 7.0 has no API yet; drop the alias once typescript-eslint
+supports 7.x.
+
 ## Relationship to the live app
 
 This template is derived from [VA-States](https://github.com/dmvthrowers/VA-States), the live
