@@ -6,7 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { sendVolunteerConfirmedEmail } from '@/lib/email';
 import { VOLUNTEER_ROLE_KEYS, VOLUNTEER_STATUSES, getVolunteerRole } from '@/lib/volunteer-roles';
 import { generateReadableCode } from '@/lib/tokens';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { contest, zonedDate } from '@/contest.config';
 import { can } from '@/lib/roles';
 

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { apiError } from '@/lib/api-error';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { can } from '@/lib/roles';
@@ -15,7 +15,7 @@ export const sponsorFields = z.object({
   contact_email: z.string().trim().email().max(320).nullish().or(z.literal('')),
   notes: z.string().trim().max(2000).nullish(),
   deliverables: z.array(z.object({ label: z.string(), done: z.boolean().optional() })).max(20).optional(),
-  auth_user_id: z.string().uuid().nullish(),
+  auth_user_id: z.string().guid().nullish(),
 });
 
 export async function sponsorAuth(req: NextRequest, requestId: string) {
