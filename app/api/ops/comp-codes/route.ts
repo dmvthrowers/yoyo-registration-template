@@ -3,7 +3,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { logAudit } from '@/lib/audit';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { contest, zonedDate } from '@/contest.config';
 import { can } from '@/lib/roles';
 
