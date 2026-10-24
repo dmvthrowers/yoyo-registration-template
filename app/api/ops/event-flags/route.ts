@@ -3,7 +3,7 @@ import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
 import { clearEventFlagCache, getEventFlagBoolean } from '@/lib/event-flags';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { can } from '@/lib/roles';
 
 const eventFlagsPatchSchema = z.object({

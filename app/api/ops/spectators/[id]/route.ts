@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { can } from '@/lib/roles';
 
 const updateSpectatorSchema = z.object({

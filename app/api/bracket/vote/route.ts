@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { withErrorHandling, apiError } from '@/lib/api-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBearerToken, getStaffIdentityFromToken } from '@/lib/auth/staff';
@@ -7,7 +7,7 @@ import { bracketDivision } from '@/lib/bracket-server';
 import { can } from '@/lib/roles';
 
 const voteSchema = z.object({
-  match_id: z.string().uuid(),
+  match_id: z.string().guid(),
   pick: z.enum(['a', 'b']),
 });
 
