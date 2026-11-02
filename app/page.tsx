@@ -12,7 +12,8 @@ import { cleanStyles, selectionIssues, entryOf, formatSummary, freeTeamJoins, st
 import { JOIN_CODE_RE, TEAM_NAME_MAX, entrySummary, normalizeJoinCode, teamPricingNote, type TeamChoice } from '@/lib/team-entries';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef } from '@/contest.config';
+import SeasonClosed from '@/components/SeasonClosed';
+import { contest, competition, divisionByCode, venueCity, longDate, monthDay, shortMonthDay, deadlineLabel, presentedLine, contestYear, type DivisionDef, seasonClosed } from '@/contest.config';
 import { Turnstile } from '@/components/Turnstile';
 import { Field, inputCls } from '@/components/form/Field';
 
@@ -387,6 +388,8 @@ export default function RegisterPage() {
     }
   };
 
+  // The season is archived: sign-ups stay closed until the next edition is set (contest.archive).
+  if (seasonClosed()) return <SeasonClosed title="Registration Is Closed" activePage="register" />;
   // After the online cutoff the form can't be submitted (the API refuses it), so don't show it.
   if (Date.now() > new Date(contest.deadlines.onlineRegistration).getTime()) {
     return <RegistrationClosed />;

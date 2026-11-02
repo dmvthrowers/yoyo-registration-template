@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { contest, dayOf, longDate, shortMonthDay, venueLine } from '@/contest.config';
+import { contest, dayOf, longDate, seasonClosed, shortMonthDay, venueLine } from '@/contest.config';
 
 const SITE_HOME = contest.links.home || '/';
 
@@ -75,23 +75,42 @@ export default function NavBar({ activePage }: NavBarProps) {
   return (
     <>
       {/* Top bar — gold strip matching UI kit #top-bar */}
-      <div className="bg-gold px-3 py-1.5 flex justify-between items-center gap-3 flex-wrap md:px-6">
-        <span className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep tracking-caps font-extrabold uppercase">
-          <span className="hidden sm:inline">
-            {[contest.shortName, contest.presentedBy.name && `Brought to you by ${contest.presentedBy.name}`, longDate(), venueLine]
-              .filter(Boolean).join(' · ')}
+      {seasonClosed() ? (
+        <div className="bg-gold px-3 py-1.5 flex justify-between items-center gap-3 flex-wrap md:px-6">
+          <span className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep tracking-caps font-extrabold uppercase">
+            <span className="hidden sm:inline">
+              {contest.shortName} ARCHIVE · HELD {longDate()}{contest.nextShortName ? ` · ${contest.nextShortName}: ${contest.next.date === 'TBD' ? 'DATE AND VENUE TBD' : `${contest.next.date} · ${contest.next.venue}`}` : ''}
+            </span>
+            <span className="sm:hidden">{contest.shortName} ARCHIVE{contest.nextShortName ? ` · ${contest.nextShortName} ${contest.next.date}` : ''}</span>
           </span>
-          <span className="sm:hidden">{contest.shortName} · {shortMonthDay()}</span>
-        </span>
-        {contest.links.sponsors && (
-          <a
-            href={contest.links.sponsors}
-            className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep font-extrabold tracking-caps uppercase underline whitespace-nowrap"
-          >
-            BECOME A SPONSOR →
-          </a>
-        )}
-      </div>
+          {contest.next.url && contest.nextShortName && (
+            <a
+              href={contest.next.url}
+              className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep font-extrabold tracking-caps uppercase underline whitespace-nowrap"
+            >
+              {contest.nextShortName} →
+            </a>
+          )}
+        </div>
+      ) : (
+        <div className="bg-gold px-3 py-1.5 flex justify-between items-center gap-3 flex-wrap md:px-6">
+          <span className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep tracking-caps font-extrabold uppercase">
+            <span className="hidden sm:inline">
+              {[contest.shortName, contest.presentedBy.name && `Brought to you by ${contest.presentedBy.name}`, longDate(), venueLine]
+                .filter(Boolean).join(' · ')}
+            </span>
+            <span className="sm:hidden">{contest.shortName} · {shortMonthDay()}</span>
+          </span>
+          {contest.links.sponsors && (
+            <a
+              href={contest.links.sponsors}
+              className="font-condensed text-[0.62rem] md:text-[0.72rem] text-navy-deep font-extrabold tracking-caps uppercase underline whitespace-nowrap"
+            >
+              BECOME A SPONSOR →
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Main nav */}
       <nav aria-label="Site navigation" className="bg-navy-deep border-b border-navy-border sticky top-0 z-[200]">
