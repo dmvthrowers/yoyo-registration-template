@@ -22,6 +22,26 @@ export const contest = {
   shortName: 'SYO-27',
   /** The next edition's short name, used in post-event surveys ("help us plan SYO-28") */
   nextShortName: 'SYO-28',
+  /**
+   * The next edition, shown on the closed pages once this one is archived (see `archive`). Keep date and venue as
+   * 'TBD' until they are set. `url` is its page on your site; "" hides that button.
+   */
+  next: {
+    date: 'TBD',
+    venue: 'TBD',
+    url: '',
+  },
+  /**
+   * Season archive (docs/specs/season-archive.md). Leave `closedAfter` as "" while the contest is running. After the
+   * contest, set it (ISO timestamp with the venue's offset, usually the end of contest day): from then on every public
+   * sign-up (competitors, volunteers, spectators) is closed, page and API, and those pages thank people, link the
+   * frozen record at `url` ("" hides that button) and point to `next`. Results and the other read-only pages keep
+   * working until the purge. To open sign-ups for the next edition, reset the season and clear or move this date.
+   */
+  archive: {
+    closedAfter: '',
+    url: '',
+  },
   /** One line under the name. "" to hide. */
   tagline: 'All ages, all levels. Free to watch.',
 
@@ -658,6 +678,10 @@ export function shortMonthDay(iso: string = contest.date): string {
 
 /** Contest year as a number */
 export const contestYear = parts(contest.date).y;
+
+/** True once the season is archived (`contest.archive.closedAfter` is set and has passed): public sign-ups are closed. */
+export const seasonClosed = (now: number = Date.now()): boolean =>
+  !!contest.archive.closedAfter && now > new Date(contest.archive.closedAfter).getTime();
 
 /** "Springfield, IL" */
 export const venueCity = `${contest.venue.city}, ${contest.venue.region}`;

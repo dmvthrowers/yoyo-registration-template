@@ -34,6 +34,21 @@ or the legal name of a competitor who is not public.
 Review the pages, copy `archive/<season>/` into your site repo, and merge it as a pull request. `/archive/` is gitignored
 here on purpose: the app never publishes it.
 
+## Close sign-ups (archive mode)
+
+Once the contest is over, set `archive.closedAfter` in `contest.config.ts` (usually the end of contest day, e.g.
+`'2027-03-13T23:59:59-05:00'`). After that time:
+
+- the home page, `/volunteer` and `/spectate` show a closed page instead of their forms: a thank-you, a "coming next" box
+  for `nextShortName` with `next.date` and `next.venue` (keep them `'TBD'` until set), and buttons to `/results`, the
+  frozen record (`archive.url`, once it is live) and the next edition's page (`next.url`);
+- `/api/volunteer-register` and `/api/spectator-register` refuse new sign-ups (the competitor form already closes at
+  `deadlines.onlineRegistration`);
+- the gold top bar reads "<shortName> ARCHIVE" and links `next.url`.
+
+Results, the directory and the other read-only pages keep working from the database. Leave `closedAfter` as `""` while
+the contest is running. To open sign-ups for the next edition, reset the season and clear or move the date.
+
 ## Not built yet
 
 Purge and reset, which delete the season's music, scores, registrants and so on and start the next season clean. They
